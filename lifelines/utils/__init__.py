@@ -1868,6 +1868,11 @@ class CovariateParameterMappings:
             else:
                 raise ValueError("Unexpected transform.")
 
+    @classmethod
+    def add_intercept_col(cls, df):
+        df[cls.INTERCEPT_COL] = 1
+        return df
+
     def transform_df(self, df: pd.DataFrame):
 
         import patsy
@@ -1878,7 +1883,7 @@ class CovariateParameterMappings:
                 (X,) = patsy.build_design_matrices([transform], df, return_type="dataframe")
             elif isinstance(transform, list):
                 if self.force_intercept:
-                    df[self.INTERCEPT_COL] = 1.0
+                    df = self.add_intercept_col(df)
                 X = df[transform]
             else:
                 raise ValueError("Unexpected transform.")

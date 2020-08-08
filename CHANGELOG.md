@@ -7,6 +7,7 @@
 
 ##### API Changes
  - a small parameterization change of the spline `CoxPHFitter`. The linear term in the spline part was moved to a new `Intercept` term in the `beta_`.
+ - `n_baseline_knots` in the spline `CoxPHFitter` now refers to _all_ knots, and not just interior knots (this was confusing to me, the author.). So add 2 to `n_baseline_knots` to recover the identical model as previously.
 
 ##### Bug fixes
  - fix splines `CoxPHFitter` with  when `predict_hazard` was called.

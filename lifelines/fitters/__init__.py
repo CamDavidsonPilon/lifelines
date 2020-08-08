@@ -1950,6 +1950,9 @@ class ParametricRegressionFitter(RegressionFitter):
             else:
                 entries = np.zeros_like(E, dtype=float)
 
+            if self.strata:
+                df = df.set_index(self.strata)
+
             Xs = self.regressors.transform_df(df)
 
             return -self._neg_likelihood(self.params_.values, Ts, E, W, entries, utils.DataframeSlicer(Xs))
@@ -2043,6 +2046,10 @@ class ParametricRegressionFitter(RegressionFitter):
         )
 
     @property
+    def _ll_null_dof(self):
+        return len(self._fitted_parameter_names)
+
+    @property
     def _ll_null(self):
         if hasattr(self, "_ll_null_"):
             return self._ll_null_
@@ -2068,7 +2075,6 @@ class ParametricRegressionFitter(RegressionFitter):
                 df["T"], df["E"] = self.durations, self.event_observed
                 model.fit_left_censoring(df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors)
         self._ll_null_ = model.log_likelihood_
-        self._ll_null_dof = model.params_.shape[0]
         return self._ll_null_
 
     def log_likelihood_ratio_test(self):
