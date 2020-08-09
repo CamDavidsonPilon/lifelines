@@ -645,7 +645,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         """
 
-        justify = utils.string_justify(25)
+        justify = utils.string_rjustify(25)
 
         p = Printer(
             self,
@@ -1193,6 +1193,13 @@ class RegressionFitter(BaseFitter):
     def __init__(self, *args, **kwargs):
         super(RegressionFitter, self).__init__(*args, **kwargs)
 
+    def plot_covariate_groups(*args, **kwargs):
+        """
+        Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
+        """
+        warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
+        return plot_partial_effects_on_outcome(*args, **kwargs)
+
     def _compute_central_values_of_raw_training_data(self, df, strata=None, name="baseline"):
         """
         Compute our "baseline" observation for function like plot_partial_effects_on_outcome.
@@ -1206,8 +1213,15 @@ class RegressionFitter(BaseFitter):
             # apply this function within each stratified dataframe
             central_stats = []
             for stratum, df_ in df.groupby(strata):
-                central_stats.append(self._compute_central_values_of_raw_training_data(df_, name=stratum).drop(strata, axis=1))
-            return pd.concat(central_stats)
+                central_stats_ = self._compute_central_values_of_raw_training_data(df_, name=stratum)
+                try:
+                    central_stats_ = central_stats_.drop(strata, axis=1)
+                except:
+                    pass
+                central_stats.append(central_stats_)
+            v = pd.concat(central_stats)
+            v.index.rename(utils.make_simpliest_hashable(strata), inplace=True)
+            return v
 
         else:
             described = df.describe(include="all")
@@ -1251,7 +1265,7 @@ class RegressionFitter(BaseFitter):
         return resids
 
 
-class SemiParametricRegressionFittter(RegressionFitter):
+class SemiParametricRegressionFitter(RegressionFitter):
     @property
     def AIC_partial_(self) -> float:
         """
@@ -1266,6 +1280,7 @@ class ParametricRegressionFitter(RegressionFitter):
     _scipy_fit_options: Dict[str, Any] = dict()
     fit_intercept = False
     regressors = None
+    strata = None
 
     def __init__(self, alpha: float = 0.05, penalizer: Union[float, np.array] = 0.0, l1_ratio: float = 0.0, **kwargs):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha, **kwargs)
@@ -1711,7 +1726,7 @@ class ParametricRegressionFitter(RegressionFitter):
         self.event_observed = E.copy()
         self.entry = entries.copy()
         self.weights = weights.copy()
-        self._central_values = self._compute_central_values_of_raw_training_data(df)
+        self._central_values = self._compute_central_values_of_raw_training_data(df, self.strata)
 
         regressors = utils.coalesce(regressors, self.regressors, {p: None for p in self._fitted_parameter_names})
         self.regressors = utils.CovariateParameterMappings(regressors, df, force_intercept=self.fit_intercept)
@@ -1935,6 +1950,9 @@ class ParametricRegressionFitter(RegressionFitter):
             else:
                 entries = np.zeros_like(E, dtype=float)
 
+            if self.strata:
+                df = df.set_index(self.strata)
+
             Xs = self.regressors.transform_df(df)
 
             return -self._neg_likelihood(self.params_.values, Ts, E, W, entries, utils.DataframeSlicer(Xs))
@@ -2028,6 +2046,10 @@ class ParametricRegressionFitter(RegressionFitter):
         )
 
     @property
+    def _ll_null_dof(self):
+        return len(self._fitted_parameter_names)
+
+    @property
     def _ll_null(self):
         if hasattr(self, "_ll_null_"):
             return self._ll_null_
@@ -2052,9 +2074,7 @@ class ParametricRegressionFitter(RegressionFitter):
             if utils.CensoringType.is_left_censoring(self):
                 df["T"], df["E"] = self.durations, self.event_observed
                 model.fit_left_censoring(df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors)
-
         self._ll_null_ = model.log_likelihood_
-        self._ll_null_dof = model.params_.shape[0]
         return self._ll_null_
 
     def log_likelihood_ratio_test(self):
@@ -2067,7 +2087,6 @@ class ParametricRegressionFitter(RegressionFitter):
 
         ll_null = self._ll_null
         ll_alt = self.log_likelihood_
-
         test_stat = 2 * ll_alt - 2 * ll_null
         degrees_freedom = self.params_.shape[0] - self._ll_null_dof  # delta in number of parameters between models
         p_value = _chisq_test_p_value(test_stat, degrees_freedom=degrees_freedom)
@@ -2122,7 +2141,7 @@ class ParametricRegressionFitter(RegressionFitter):
             multiple outputs.
 
         """
-        justify = utils.string_justify(25)
+        justify = utils.string_rjustify(25)
         headers = []
 
         if utils.CensoringType.is_interval_censoring(self):
@@ -2234,7 +2253,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
     def predict_percentile(self, df, *, p=0.5, conditional_after=None) -> pd.Series:
         if isinstance(df, pd.Series):
-            df = df.to_frame().infer_objects().infer_objects().T
+            df = df.to_frame().infer_objects().T
         subjects = utils._get_index(df)
 
         warnings.warn(
@@ -2301,7 +2320,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 columns=columns,
             )
 
-    def predict_hazard(self, df, *, times=None):
+    def predict_hazard(self, df, *, conditional_after=None, times=None):
         """
         Predict the hazard for individuals, given their covariates.
 
@@ -2335,7 +2354,12 @@ class ParametricRegressionFitter(RegressionFitter):
 
         params_dict = {parameter_name: self.params_.loc[parameter_name].values for parameter_name in self._fitted_parameter_names}
 
-        return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
+        if conditional_after is None:
+            return pd.DataFrame(self._hazard(params_dict, np.tile(times, (n, 1)).T, Xs), index=times, columns=df.index)
+        else:
+            conditional_after = np.asarray(conditional_after)
+            times_to_evaluate_at = (conditional_after.reshape((n, 1)) + np.tile(times, (n, 1))).T
+            return pd.DataFrame(self._hazard(params_dict, times_to_evaluate_at, Xs), index=times, columns=df.index)
 
     def predict_expectation(self, X, conditional_after=None) -> pd.Series:
         r"""
@@ -2456,13 +2480,6 @@ class ParametricRegressionFitter(RegressionFitter):
         plt.xlabel("coef (%g%% CI)" % ((1 - self.alpha) * 100))
 
         return ax
-
-    def plot_covariate_groups(*args, **kwargs):
-        """
-        Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
-        """
-        warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
-        return plot_partial_effects_on_outcome(*args, **kwargs)
 
     def plot_partial_effects_on_outcome(
         self, covariates, values, plot_baseline=True, ax=None, times=None, y="survival_function", **kwargs
@@ -3111,7 +3128,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         # we may use this later in print_summary
         self._ll_null_ = uni_model.log_likelihood_
-        self._ll_null_dof = len(uni_model._fitted_parameter_names)
 
         initial_point = {}
         cols = Xs.columns
@@ -3192,13 +3208,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         plt.xlabel("log(accelerated failure rate) (%g%% CI)" % ((1 - self.alpha) * 100))
 
         return ax
-
-    def plot_covariate_groups(*args, **kwargs):
-        """
-        Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
-        """
-        warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
-        return plot_partial_effects_on_outcome(*args, **kwargs)
 
     def plot_partial_effects_on_outcome(
         self, covariates, values, plot_baseline=True, times=None, y="survival_function", ax=None, **kwargs

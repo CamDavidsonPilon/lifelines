@@ -18,7 +18,7 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
-from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError
+from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError, FormulaSyntaxError
 
 
 __all__ = [
@@ -1627,7 +1627,8 @@ def interpolate_at_times_and_return_pandas(df_or_series, new_times) -> Union[pd.
     return pd.DataFrame(interpolate_at_times(df_or_series, new_times), index=new_times, columns=cols).squeeze()
 
 
-string_justify = lambda width: lambda s: s.rjust(width, " ")
+string_rjustify = lambda width: lambda s: s.rjust(width, " ")
+string_ljustify = lambda width: lambda s: s.ljust(width, " ")
 
 
 def safe_zip(first, second):
@@ -1656,6 +1657,22 @@ class DataframeSlicer:
     def filter(self, ix) -> "DataframeSlicer":
         ix = _to_1d_array(ix)
         return DataframeSlicer(self.df[ix])
+
+    def groupby(self, *args, **kwargs):
+        yield from ((name, DataframeSlicer(df_)) for (name, df_) in self.df.groupby(*args, **kwargs))
+
+    @property
+    def size(self):
+        return self.df.shape[0]
+
+
+def make_simpliest_hashable(ele):
+    if type(ele) == list:
+        if len(ele) == 1:
+            return str(ele[0])
+        else:
+            return tuple(ele)
+    return ele
 
 
 def find_best_parametric_model(
@@ -1851,6 +1868,12 @@ class CovariateParameterMappings:
             else:
                 raise ValueError("Unexpected transform.")
 
+    @classmethod
+    def add_intercept_col(cls, df):
+        df = df.copy()
+        df[cls.INTERCEPT_COL] = 1
+        return df
+
     def transform_df(self, df: pd.DataFrame):
 
         import patsy
@@ -1861,7 +1884,7 @@ class CovariateParameterMappings:
                 (X,) = patsy.build_design_matrices([transform], df, return_type="dataframe")
             elif isinstance(transform, list):
                 if self.force_intercept:
-                    df[self.INTERCEPT_COL] = 1.0
+                    df = self.add_intercept_col(df)
                 X = df[transform]
             else:
                 raise ValueError("Unexpected transform.")
@@ -1909,7 +1932,7 @@ class CovariateParameterMappings:
             import traceback
 
             column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
-            raise exceptions.FormulaSyntaxError(
+            raise FormulaSyntaxError(
                 (
                     """
 It looks like the DataFrame has non-standard column names. See below for which column:

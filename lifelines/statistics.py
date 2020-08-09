@@ -10,7 +10,7 @@ import pandas as pd
 from lifelines import utils
 from lifelines.utils import (
     group_survival_table_from_events,
-    string_justify,
+    string_rjustify,
     format_p_value,
     format_floats,
     interpolate_at_times_and_return_pandas,
@@ -192,7 +192,7 @@ class StatisticalResult:
 
     def _stringify_meta_data(self, dictionary):
         longest_key = max([len(k) for k in dictionary])
-        justify = string_justify(longest_key)
+        justify = string_rjustify(longest_key)
         s = ""
         for k, v in dictionary.items():
             s += "{} = {}\n".format(justify(k), v)

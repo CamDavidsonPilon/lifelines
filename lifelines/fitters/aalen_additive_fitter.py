@@ -22,7 +22,7 @@ from lifelines.utils import (
     concordance_index,
     check_nans_or_infs,
     normalize,
-    string_justify,
+    string_rjustify,
     _to_list,
     format_floats,
     format_p_value,
@@ -542,7 +542,7 @@ It's important to know that the naive variance estimates of the coefficients are
             multiple outputs.
 
         """
-        justify = string_justify(25)
+        justify = string_rjustify(25)
 
         headers = []
         headers.append(("duration col", "'%s'" % self.duration_col))

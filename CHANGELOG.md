@@ -1,11 +1,26 @@
 ## Changelog
 
+#### 0.25.2 - 2020-08-08
+
+##### New features
+ - Spline `CoxPHFitter` can now use `strata`.
+
+##### API Changes
+ - a small parameterization change of the spline `CoxPHFitter`. The linear term in the spline part was moved to a new `Intercept` term in the `beta_`.
+ - `n_baseline_knots` in the spline `CoxPHFitter` now refers to _all_ knots, and not just interior knots (this was confusing to me, the author.). So add 2 to `n_baseline_knots` to recover the identical model as previously.
+
+##### Bug fixes
+ - fix splines `CoxPHFitter` with  when `predict_hazard` was called.
+ - fix some exception imports I missed.
+ - fix log-likelihood p-value in splines `CoxPHFitter`
+
+
 #### 0.25.1 - 2020-08-01
 
 ##### Bug fixes
  - ok _actually_ ship the out-of-sample calibration code
  - fix `labels=False` in `add_at_risk_counts`
- - all for specific rows to be shown in `add_at_risk_counts`
+ - allow for specific rows to be shown in `add_at_risk_counts`
  - put `patsy` as a proper dependency.
  - suppress some Pandas 1.1 warnings.
 

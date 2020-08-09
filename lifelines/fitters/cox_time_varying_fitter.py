@@ -18,7 +18,7 @@ from autograd import elementwise_grad
 from autograd import numpy as anp
 
 
-from lifelines.fitters import SemiParametricRegressionFittter
+from lifelines.fitters import SemiParametricRegressionFitter
 from lifelines.fitters.mixins import ProportionalHazardMixin
 from lifelines.utils.printer import Printer
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
@@ -39,7 +39,7 @@ from lifelines.utils import (
     normalize,
     StepSizer,
     check_nans_or_infs,
-    string_justify,
+    string_rjustify,
     coalesce,
 )
 from lifelines import utils
@@ -49,7 +49,7 @@ __all__ = ["CoxTimeVaryingFitter"]
 matrix_axis_0_sum_to_1d_array = lambda m: np.sum(m, 0)
 
 
-class CoxTimeVaryingFitter(SemiParametricRegressionFittter, ProportionalHazardMixin):
+class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMixin):
     r"""
     This class implements fitting Cox's time-varying proportional hazard model:
 
@@ -655,7 +655,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             multiple outputs.
 
         """
-        justify = string_justify(18)
+        justify = string_rjustify(18)
 
         headers = []
 

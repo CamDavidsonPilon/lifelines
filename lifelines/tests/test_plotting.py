@@ -498,9 +498,17 @@ class TestPlotting:
     def test_coxph_plot_partial_effects_on_outcome_with_strata(self, block):
         df = load_rossi()
         cp = CoxPHFitter()
-        cp.fit(df, "week", "arrest", strata=["paro", "fin"])
+        cp.fit(df, "week", "arrest", strata=["wexp"])
         cp.plot_partial_effects_on_outcome("age", [10, 50, 80])
         self.plt.title("test_coxph_plot_partial_effects_on_outcome_with_strata")
+        self.plt.show(block=block)
+
+    def test_spline_coxph_plot_partial_effects_on_outcome_with_strata(self, block):
+        df = load_rossi()
+        cp = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
+        cp.fit(df, "week", "arrest", strata=["wexp"])
+        cp.plot_partial_effects_on_outcome("age", [10, 50, 80])
+        self.plt.title("test_spline_coxph_plot_partial_effects_on_outcome_with_strata")
         self.plt.show(block=block)
 
     def test_coxph_plot_partial_effects_on_outcome_with_single_strata(self, block):
