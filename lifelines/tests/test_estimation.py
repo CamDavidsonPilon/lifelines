@@ -4716,6 +4716,8 @@ class TestAalenAdditiveFitter:
         aaf.fit(data_pred1, duration_col="t", event_col="E")
         x = data_pred1.iloc[:5].drop(["t", "E"], axis=1)
         y_df = aaf.predict_cumulative_hazard(x)
+        # need to provide a intercept col
+        x["int"] = 1.0
         y_np = aaf.predict_cumulative_hazard(x.values)
         assert_frame_equal(y_df, y_np)
 

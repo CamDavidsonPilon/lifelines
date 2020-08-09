@@ -41,6 +41,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
     # about 50% faster than BFGS
     _scipy_fit_method = "SLSQP"
     _scipy_fit_options = {"ftol": 1e-6, "maxiter": 200}
+    fit_intercept = True
 
     def __init__(self, breakpoints, alpha=0.05, penalizer=0.0):
         super(PiecewiseExponentialRegressionFitter, self).__init__(alpha=alpha)
