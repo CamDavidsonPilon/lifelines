@@ -128,7 +128,6 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
 
             # we may use these later in log_likelihood_test()
             self._ll_null_ = uni_model.log_likelihood_
-            self._ll_null_dof = len(uni_model._fitted_parameter_names)
             assert self._ll_null_dof == 3
 
             default_point = super(GeneralizedGammaRegressionFitter, self)._create_initial_point(Ts, E, entries, weights, Xs)

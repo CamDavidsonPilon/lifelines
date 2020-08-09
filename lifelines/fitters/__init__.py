@@ -3128,7 +3128,6 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         # we may use this later in print_summary
         self._ll_null_ = uni_model.log_likelihood_
-        self._ll_null_dof = len(uni_model._fitted_parameter_names)
 
         initial_point = {}
         cols = Xs.columns

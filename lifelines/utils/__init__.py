@@ -1870,6 +1870,7 @@ class CovariateParameterMappings:
 
     @classmethod
     def add_intercept_col(cls, df):
+        df = df.copy()
         df[cls.INTERCEPT_COL] = 1
         return df
 
