@@ -19,7 +19,7 @@ hazard rate :math:`h(t | x)` as a function of :math:`t` and some covariates :mat
 
 The dataset for regression
 ===========================
-The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame should be an observation. There should be a column denoting the durations of the observations. There may be a column denoting the event status of each observation (1 if event occurred, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial.
+The dataset required for survival regression must be in the format of a Pandas DataFrame. Each row of the DataFrame represents an observation. There should be a column denoting the durations of the observations. There may (or may not) be a column denoting the event status of each observation (1 if event occurred, 0 if censored). There are also the additional covariates you wish to regress against. Optionally, there could be columns in the DataFrame that are used for stratification, weights, and clusters which will be discussed later in this tutorial.
 
 
 An example dataset we will use is the Rossi recidivism dataset, available in *lifelines* as :meth:`~lifelines.datasets.load_rossi`.
@@ -38,7 +38,7 @@ An example dataset we will use is the Rossi recidivism dataset, available in *li
     3      52       0    1   23     1     1    1     1     1
     """
 
-The DataFrame ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column denotes if the event occurred, and the other columns represent variables we wish to regress against.
+The DataFrame ``rossi`` contains 432 observations. The ``week`` column is the duration, the ``arrest`` column denotes if the event (a re-arrest) occurred, and the other columns represent variables we wish to regress against.
 
 
 Cox's proportional hazard model
@@ -48,9 +48,9 @@ The idea behind Cox's proportional hazard model model is that the log-hazard of 
 
 .. math::  \underbrace{h(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
-Note a few behaviors about this model: the only *time* component is in the baseline hazard, :math:`b_0(t)`. In the above equation, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus changes in covariates will only inflate or deflate the baseline survival.
+Note a few behaviors about this model: the only *time* component is in the baseline hazard, :math:`b_0(t)`. In the above equation, the partial hazard is a time-invariant scalar factor that only increases or decreases the baseline hazard. Thus changes in covariates will only inflate or deflate the baseline hazard.
 
-.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the additive Cox model - the baseline hazard represents this. *lifelines* will will throw warnings and may experience convergence errors if a column of 1s is present in your dataset or formula.
+.. note:: In other regression models, a column of 1s might be added that represents that intercept or baseline. This is not necessary in the Cox model. In fact, there is no intercept in the Cox model - the baseline hazard represents this. *lifelines* will throw warnings and may experience convergence errors if a column of 1s is present in your dataset or formula.
 
 
 Fitting the regression
@@ -256,6 +256,11 @@ Instead of a float, an *array* can be provided that is the same size as the numb
 
 3. you want to implement a `very sparse solution <https://dataorigami.net/blogs/napkin-folding/an-l1-2-penalty-in-cox-regression>`_.
 
+See more about penalties and their implementation on our development blog.
+
+ - `L₁ Penalty in Cox Regression <https://dataorigami.net/blogs/napkin-folding/l1-penalty-in-cox-regression>`_
+ - `An L½ penalty in Cox Regression <https://dataorigami.net/blogs/napkin-folding/an-l1-2-penalty-in-cox-regression>`_
+
 Plotting the coefficients
 ------------------------------
 
@@ -360,7 +365,7 @@ To make proper inferences, we should ask if our Cox model is appropriate for our
 Stratification
 -----------------------------------------------
 
-Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *N* smaller datasets, defined by the unique values of the stratifying covariate(s). Each dataset has its own baseline hazard (the non-parametric part of the model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *N* baseline hazards under :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_cumulative_hazard_`.
+Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *m* smaller datasets, partitioned by the unique values of the stratifying covariate(s). Each dataset has its own baseline hazard (the non-parametric part of the model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *m* baseline hazards under :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_cumulative_hazard_`.
 
 To specify variables to be used in stratification, we define them in the call to :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.fit`:
 
@@ -371,45 +376,48 @@ To specify variables to be used in stratification, we define them in the call to
     rossi = load_rossi()
 
     cph = CoxPHFitter()
-    cph.fit(rossi, 'week', event_col='arrest', strata=['race'])
+    cph.fit(rossi, 'week', event_col='arrest', strata=['wexp'])
     cph.print_summary()
 
     """
     <lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations>
                  duration col = 'week'
                     event col = 'arrest'
-                       strata = ['race']
+                       strata = ['wexp']
           baseline estimation = breslow
        number of observations = 432
     number of events observed = 114
-       partial log-likelihood = -620.56
-             time fit was run = 2020-07-07 21:44:15 UTC
+       partial log-likelihood = -580.89
+             time fit was run = 2020-08-09 21:25:37 UTC
 
     ---
-           coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
-    fin   -0.38       0.68       0.19            -0.75            -0.00                 0.47                 1.00
-    age   -0.06       0.94       0.02            -0.10            -0.01                 0.90                 0.99
-    wexp  -0.14       0.87       0.21            -0.56             0.27                 0.57                 1.32
-    mar   -0.44       0.64       0.38            -1.19             0.31                 0.30                 1.36
-    paro  -0.09       0.92       0.20            -0.47             0.30                 0.63                 1.35
-    prio   0.09       1.10       0.03             0.04             0.15                 1.04                 1.16
-
-             z      p   -log2(p)
-    fin  -1.98   0.05       4.39
-    age  -2.62   0.01       6.83
-    wexp -0.67   0.50       0.99
-    mar  -1.15   0.25       2.00
-    paro -0.44   0.66       0.60
-    prio  3.21 <0.005       9.56
+                coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
+    covariate
+    fin        -0.38       0.68       0.19            -0.76            -0.01                 0.47                 0.99
+    age        -0.06       0.94       0.02            -0.10            -0.01                 0.90                 0.99
+    race        0.31       1.36       0.31            -0.30             0.91                 0.74                 2.49
+    mar        -0.45       0.64       0.38            -1.20             0.29                 0.30                 1.34
+    paro       -0.08       0.92       0.20            -0.47             0.30                 0.63                 1.35
+    prio        0.09       1.09       0.03             0.03             0.15                 1.04                 1.16
+                  z      p   -log2(p)
+    covariate
+    fin       -1.99   0.05       4.42
+    age       -2.64   0.01       6.91
+    race       1.00   0.32       1.65
+    mar       -1.19   0.23       2.09
+    paro      -0.42   0.67       0.57
+    prio       3.16 <0.005       9.33
     ---
-    Concordance = 0.63
-    Partial AIC = 1253.13
-    log-likelihood ratio test = 32.73 on 6 df
-    -log2(p) of ll-ratio test = 16.37
+    Concordance = 0.61
+    Partial AIC = 1173.77
+    log-likelihood ratio test = 23.77 on 6 df
+    -log2(p) of ll-ratio test = 10.77
+
     """
 
-    cph.baseline_cumulative_hazard_.shape
+    cph.baseline_survival_.shape
     # (49, 2)
+    cph.baseline_cumulative_hazard_.plot(drawstyle="steps")
 
 Weights & robust errors
 -----------------------------------------------
@@ -474,12 +482,12 @@ Residuals
 After fitting a Cox model, we can look back and compute important model residuals. These residuals can tell us about non-linearities not captured, violations of proportional hazards, and help us answer other useful modeling questions. See `Assessing Cox model fit using residuals`_.
 
 
-Modeling baseline hazard and survival with splines
------------------------------------------------------
+Modeling baseline hazard and survival with cubic splines
+---------------------------------------------------------------
 
 Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. A parametric baseline makes survival predictions more efficient, allows for better understanding of baseline behaviour, and allows interpolation/extrapolation.
 
-In *lifelines*, there is an option to fit to a parametric baseline with cubic splines:
+In *lifelines*, there is an option to fit to a parametric baseline with cubic splines. Cubic splines are highly flexible and can capture the underlying data almost as well as non-parametric methods, and with much more efficiency.
 
 .. code:: python
 
@@ -510,7 +518,7 @@ Below we compare the non-parametric and the fully parametric baseline survivals:
 
     Modeling the baseline survival with splines vs non-parametric.
 
-Spline models can also handle almost all the non-parametric options, including: `strata`, `penalizer`, `timeline`, `formula`, etc.
+*lifelines'* spline Cox model can also use almost all the non-parametric options, including: `strata`, `penalizer`, `timeline`, `formula`, etc.
 
 
 
@@ -802,11 +810,8 @@ There are also the :class:`~lifelines.fitters.log_normal_aft_fitter.LogNormalAFT
     llf = LogLogisticAFTFitter().fit(rossi, 'week', 'arrest')
     lnf = LogNormalAFTFitter().fit(rossi, 'week', 'arrest')
 
-
-The piecewise-exponential regression and generalized gamma models
--------------------------------------------------------------------------
-
-Another class of parametric models involves more flexible modeling of the hazard function. The :class:`~lifelines.fitters.piecewise_exponential_regression_fitter.PiecewiseExponentialRegressionFitter` can model jumps in the hazard (think: the differences in "survival-of-staying-in-school" between 1st year, 2nd year, 3rd year, and 4th year students), and constant values between jumps. The ability to specify *when* these jumps occur, called breakpoints, offers modelers great flexibility. An example application involving customer churn is available in this `notebook <https://github.com/CamDavidsonPilon/lifelines/blob/master/examples/SaaS%20churn%20and%20piecewise%20regression%20models.ipynb>`_.
+More AFT models: CRC model and generalized gamma model
+------------------------------------------------------------
 
 For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fitters.generalized_gamma_regression_fitter.GeneralizedGammaRegressionFitter`. This model is actually a generalization of all the AFT models above (that is, specific values of its parameters represent another model ) - see docs for specific parameter values. The API is slightly different however, and looks more like how custom regression models are built (see next section on *Custom Regression Models*).
 
@@ -833,6 +838,15 @@ For a flexible and *smooth* parametric model, there is the :class:`~lifelines.fi
     ggf = GeneralizedGammaRegressionFitter(penalizer=0.0001).fit(df, 'week', 'arrest', regressors=regressors)
     ggf.print_summary()
 
+Similarly, there is the CRC model that is uses splines to model the time. See a blog post about it `here <https://dataorigami.net/blogs/napkin-folding/an-accelerated-lifetime-spline-model>`_.
+
+
+The piecewise-exponential regression models
+-------------------------------------------------------------------------
+
+Another class of parametric models involves more flexible modeling of the hazard function. The :class:`~lifelines.fitters.piecewise_exponential_regression_fitter.PiecewiseExponentialRegressionFitter` can model jumps in the hazard (think: the differences in "survival-of-staying-in-school" between 1st year, 2nd year, 3rd year, and 4th year students), and constant values between jumps. The ability to specify *when* these jumps occur, called breakpoints, offers modelers great flexibility. An example application involving customer churn is available in this `notebook <https://github.com/CamDavidsonPilon/lifelines/blob/master/examples/SaaS%20churn%20and%20piecewise%20regression%20models.ipynb>`_.
+
+.. image:: images/piecewise_churn.png
 
 
 AIC and model selection for parametric models

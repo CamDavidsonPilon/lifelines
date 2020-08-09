@@ -44,10 +44,8 @@ Please report bugs, issues and feature extensions there. We also have `Gitter ch
 Citing *lifelines*
 ------------------------------
 
-The following link will bring you to a page where you can find the latest citation for *lifelines*:
+The following link will bring you to a page where you can find the latest citation for *lifelines*: `Citation for lifelines <https://doi.org/10.5281/zenodo.805993>`_
 
-`Citation for lifelines <https://doi.org/10.5281/zenodo.805993>`_
-s
 
 Documentation
 ------------------------------

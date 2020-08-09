@@ -29,11 +29,6 @@ class PiecewiseExponentialFitter(KnownModelParametricUnivariateFitter):
     alpha: float, optional (default=0.05)
         the level in the confidence intervals.
 
-    Important
-    ----------
-    The parameterization of this model changed in lifelines 0.19.1. Previously, the cumulative hazard looked like
-    :math:`\lambda_i t`. The parameterization is now the reciprocal of :math:`\lambda_i`.
-
     Attributes
     ----------
     cumulative_hazard_ : DataFrame

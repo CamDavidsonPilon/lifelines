@@ -1939,7 +1939,8 @@ It looks like the DataFrame has non-standard column names. See below for which c
 
 %s
 
-As of lifelines > v0.25.0, we use formulas internally. This means that all columns should either
+All columns should either
+
 i) have no non-traditional characters (this includes spaces and periods)
 ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
 
