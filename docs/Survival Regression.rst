@@ -213,7 +213,7 @@ Penalties and sparse regression
 
 It's possible to add a penalizer term to the Cox regression as well. One can use these to i) stabilize the coefficients, ii) shrink the estimates to 0, iii) encourages a Bayesian viewpoint, and iv) create sparse coefficients. All regression models, including the Cox model, include both an L1 and L2 penalty:
 
-.. math:: \frac{1}{2} \text{penalizer} \left((1-\text{l1\_ratio}) \cdot ||\beta||_2^2 + \text{l1\_ratio} \cdot ||\beta||_1\right)
+.. math:: \frac{1}{2} \text{penalizer} \left((1-\text{l1_ratio}) \cdot ||\beta||_2^2 + \text{l1_ratio} \cdot ||\beta||_1\right)
 
 
 .. note:: It's not clear from the above, but intercept (when applicable) are not penalized.
@@ -436,7 +436,7 @@ When using sampling weights, it's correct to also change the standard error calc
     cph.fit(df, 'T', 'E', weights_col='weights', robust=True)
     cph.print_summary()
 
-See more examples in _`Adding weights to observations in a Cox model`.
+See more examples in `Adding weights to observations in a Cox model <https://lifelines.readthedocs.io/en/latest/Examples.html#adding-weights-to-observations-in-a-cox-model>`_.
 
 Clusters & correlations
 -----------------------------------------------
@@ -466,7 +466,7 @@ We call these grouped subjects "clusters", and assume they are designated by som
     cph.print_summary()
 
 
-For more examples, see _`Correlations between subjects in a Cox model`.
+For more examples, see `Correlations between subjects in a Cox model <https://lifelines.readthedocs.io/en/latest/Examples.html#correlations-between-subjects-in-a-cox-model>`_.
 
 Residuals
 -----------------------------------------------
@@ -492,7 +492,7 @@ In *lifelines*, there is an option to fit to a parametric baseline with cubic sp
     cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=5)
     cph_spline.fit(rossi, 'week', event_col='arrest')
 
-To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_at_times` and :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_at_times`.
+To access the baseline hazard and baseline survival, one can use :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_hazard_` and :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_survival_` respectively. One nice thing about parametric models is we can interpolate baseline survival / hazards  too, see :meth:`~lifelines.fitters.coxph_fitter.ParametricSplinePHFitter.baseline_hazard_at_times` and :meth:`~lifelines.fitters.coxph_fitter.ParametricSplinePHFitter.baseline_survival_at_times`.
 
 Below we compare the non-parametric and the fully parametric baseline survivals:
 
@@ -709,21 +709,25 @@ We can observe the influence a variable in the model by plotting the *outcome* (
 .. image:: images/weibull_aft_two_models.png
 
 
-Comparing a few of these survival functions side by side:
+Comparing a few of these survival functions side by side, be can see that modeling ``rho_`` produces a more flexible (diverse) set of survival functions.
 
 .. code:: python
 
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 4))
 
+    # modeling rho == solid line
     wft_model_rho.plot_partial_effects_on_outcome('prio', range(0, 16, 5), cmap='coolwarm', ax=ax, lw=2, plot_baseline=False)
+
+    # not modeling rho == dashed line
     wft_not_model_rho.plot_partial_effects_on_outcome('prio', range(0, 16, 5), cmap='coolwarm', ax=ax, ls='--', lw=2, plot_baseline=False)
+
     ax.get_legend().remove()
 
 .. image:: images/weibull_aft_two_models_side_by_side.png
     :width: 500px
     :align: center
 
-You read more about and see other examples of the extensions to :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_partial_effects_on_outcome`
+You read more about and see other examples of the extensions to in the docs for :meth:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter.plot_partial_effects_on_outcome`
 
 
 Prediction
@@ -751,35 +755,36 @@ There are two hyper-parameters that can be used to to achieve a better test scor
     aft_with_elastic_penalty.fit(rossi, 'week', 'arrest')
     aft_with_elastic_penalty.predict_median(rossi)
 
-    aft_with_elastic_penalty.print_summary()
+    aft_with_elastic_penalty.print_summary(columns=['coef', 'exp(coef)'])
 
     """
-    <lifelines.WeibullAFTFitter: fitted with 432 observations, 318 censored>
-          duration col = 'week'
-             event col = 'arrest'
-             penalizer = 4.0
-              l1_ratio = 1.0
-    number of subjects = 432
-      number of events = 114
-        log-likelihood = -2710.95
-      time fit was run = 2019-02-20 19:53:29 UTC
+    <lifelines.WeibullAFTFitter: fitted with 432 total observations, 318 right-censored observations>
+                 duration col = 'week'
+                    event col = 'arrest'
+                    penalizer = 0.0001
+       number of observations = 432
+    number of events observed = 114
+               log-likelihood = -679.97
+             time fit was run = 2020-08-09 15:04:35 UTC
 
     ---
-                        coef  exp(coef)  se(coef)     z      p  -log2(p)  lower 0.95  upper 0.95
-    lambda_ fin         0.00       1.00      0.08  0.00   1.00      0.00       -0.15        0.15
-            age         0.13       1.14      0.01 12.27 <0.005    112.47        0.11        0.15
-            race        0.55       1.73      0.09  5.80 <0.005     27.16        0.36        0.73
-            wexp        0.00       1.00      0.09  0.00   1.00      0.00       -0.17        0.17
-            mar         0.00       1.00      0.14  0.01   0.99      0.01       -0.27        0.28
-            paro        0.00       1.00      0.08  0.01   0.99      0.01       -0.16        0.16
-            prio        0.00       1.00      0.01  0.00   1.00      0.00       -0.03        0.03
-            Intercept  0.00       1.00      0.19  0.00   1.00      0.00       -0.38        0.38
-    rho_    Intercept -0.00       1.00       nan   nan    nan       nan         nan         nan
+                        coef  exp(coef)
+    param   covariate
+    lambda_ age         0.04       1.04
+            fin         0.27       1.31
+            mar         0.31       1.36
+            paro        0.06       1.06
+            prio       -0.07       0.94
+            race       -0.22       0.80
+            wexp        0.11       1.11
+            Intercept   3.99      54.11
+    rho_    Intercept   0.34       1.40
     ---
     Concordance = 0.64
-    AIC = 1377.91
-    log-likelihood ratio test = 33.34 on 7 df
-    -log2(p) of ll-ratio test = 15.42
+    AIC = 1377.93
+    log-likelihood ratio test = 33.31 on 7 df
+    -log2(p) of ll-ratio test = 15.40
+
     """
 
 
@@ -888,20 +893,30 @@ The parametric models have APIs that handle left and interval censored data, too
     wf.print_summary()
 
     """
-    <lifelines.WeibullAFTFitter: fitted with 731 observations, 136 censored>
-             event col = 'E'
-    number of subjects = 731
-      number of events = 595
-        log-likelihood = -2027.20
-      time fit was run = 2019-04-11 19:39:42 UTC
+    <lifelines.WeibullAFTFitter: fitted with 731 total observations, 136 interval-censored observations>
+              lower bound col = 'left'
+              upper bound col = 'right'
+                    event col = 'E_lifelines_added'
+       number of observations = 731
+    number of events observed = 595
+               log-likelihood = -2027.20
+             time fit was run = 2020-08-09 15:05:09 UTC
 
     ---
-                        coef exp(coef)  se(coef)      z      p  -log2(p)  lower 0.95  upper 0.95
-    lambda_ gender      0.05      1.05      0.03   1.66   0.10      3.38       -0.01        0.10
-            Intercept  2.91     18.32      0.02 130.15 <0.005       inf        2.86        2.95
-    rho_    Intercept  1.04      2.83      0.03  36.91 <0.005    988.46        0.98        1.09
+                        coef  exp(coef)   se(coef)   coef lower 95%   coef upper 95%  exp(coef) lower 95%  exp(coef) upper 95%
+    param   covariate
+    lambda_ gender      0.05       1.05       0.03            -0.01             0.10                 0.99                 1.10
+            Intercept   2.91      18.32       0.02             2.86             2.95                17.53                19.14
+    rho_    Intercept   1.04       2.83       0.03             0.98             1.09                 2.67                 2.99
+                           z      p   -log2(p)
+    param   covariate
+    lambda_ gender      1.66   0.10       3.38
+            Intercept 130.15 <0.005        inf
+    rho_    Intercept  36.91 <0.005     988.46
     ---
-    Log-likelihood ratio test = 2.74 on 1 df, -log2(p)=3.35
+    AIC = 4060.39
+    log-likelihood ratio test = 2.74 on 1 df
+    -log2(p) of ll-ratio test = 3.35
     """
 
 

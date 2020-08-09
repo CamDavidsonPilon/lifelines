@@ -2370,7 +2370,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
     where
 
-    .. math:: h_0(t) = \exp{\left( \phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j\(\log{t})\right)}
+    .. math:: h_0(t) = \exp{\left( \phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j(\log{t})\right)}
 
     where :math:`v_j` are our cubic basis functions at predetermined knots. See references for exact definition.
 
