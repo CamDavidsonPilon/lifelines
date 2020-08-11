@@ -508,9 +508,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
             warnings.simplefilter("ignore")
 
             minimizing_results, previous_results, minimizing_ll = None, None, np.inf
-            for method, option in zip(
-                ["Nelder-Mead", self._scipy_fit_method],
-                [{"maxiter": 100}, {**{"disp": show_progress}, **self._scipy_fit_options}],
+            for fit_method, option in (
+                # ("Nelder-Mead", {"maxiter": 100}),
+                (self._scipy_fit_method, {**{"disp": show_progress}, **self._scipy_fit_options}),
             ):
 
                 initial_value = self._initial_values if previous_results is None else utils._to_1d_array(previous_results.x)
@@ -519,7 +519,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                     value_and_grad(negative_log_likelihood),  # pylint: disable=no-value-for-parameter
                     initial_value,
                     jac=True,
-                    method=method,
+                    method=fit_method,
                     args=(Ts, E, entry, weights),
                     bounds=self._bounds,
                     options=option,

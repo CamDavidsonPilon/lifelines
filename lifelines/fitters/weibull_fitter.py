@@ -87,10 +87,38 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
     rho_: float
     _fitted_parameter_names = ["lambda_", "rho_"]
     _compare_to_values = np.array([1.0, 1.0])
-    _scipy_fit_options = {"ftol": 1e-14}
+    _scipy_fit_options = {"ftol": 1e-12, "gtol": 1e-12}
 
     def _create_initial_point(self, Ts, E, entry, weights):
-        return np.array([utils.coalesce(*Ts).mean(), 1.0])
+
+        if utils.CensoringType.is_right_censoring(self):
+            # from weibull_inital_value_guess.py
+            T = utils.coalesce(*Ts)
+            lT = np.log(T)
+            E_mean = E.mean()
+            E = E.astype(bool)
+            v = np.array(
+                [
+                    np.exp(
+                        2.3026e00
+                        + -2.8387e-03 * (T.mean() - 1.2720e07) / 5.6666e08
+                        + -8.2661e-01 * (E_mean - 5.2535e-01) / 2.9891e-01
+                        + 1.1728e00 * (np.log(T.mean()) - 8.7859e-01) / 5.7649e00
+                        + -2.9015e-01 * (np.log(E_mean) * np.log(T.mean()) - 1.0424e00) / 9.4217e00
+                        + -3.1802e-01 * (np.log(E_mean) - -9.0691e-01) / 8.5132e-01
+                        + 1.2400e00 * (lT.std() - 2.4273e00) / 2.5855e00
+                        + 2.9566e00 * (E_mean * lT.mean() - 1.0892e-01) / 2.8501e00
+                    ),
+                    np.exp(
+                        2.4370e-15
+                        + -8.2428e-01 * (lT.std() - 2.4273e00) / 2.5855e00
+                        + 3.4083e-01 * (np.log(T[E]).mean() - -1.5165e00) / 7.0910e00
+                    ),
+                ]
+            )
+            return v
+        else:
+            return np.array([utils.coalesce(*Ts).mean(), 1.0])
 
     def _cumulative_hazard(self, params, times):
         lambda_, rho_ = params
