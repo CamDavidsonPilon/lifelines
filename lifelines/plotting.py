@@ -66,6 +66,12 @@ def create_scipy_stats_model_from_lifelines_model(model):
         scipy_dist = "expon"
         sparams = (0, model.lambda_)
 
+    elif dist == "generalizedgamma":
+        from lifelines.fitters.generalized_gamma_fitter import gengamma_reparamertization
+
+        scipy_dist = "gengamma"
+        sparams = tuple(gengamma_reparamertization(model.mu_, model.ln_sigma_, model.lambda_))
+
     else:
         raise NotImplementedError("Distribution not implemented in SciPy")
 

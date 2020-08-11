@@ -110,7 +110,7 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
                         + 2.9566e00 * (E_mean * lT.mean() - 1.0892e-01) / 2.8501e00
                     ),
                     np.exp(
-                        2.4370e-15
+                        0
                         + -8.2428e-01 * (lT.std() - 2.4273e00) / 2.5855e00
                         + 3.4083e-01 * (np.log(T[E]).mean() - -1.5165e00) / 7.0910e00
                     ),
@@ -118,7 +118,8 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
             )
             return v
         else:
-            return np.array([utils.coalesce(*Ts).mean(), 1.0])
+            T = utils.coalesce(*Ts)
+            return np.array([np.log(T).mean(), np.log(T[E]).mean()])
 
     def _cumulative_hazard(self, params, times):
         lambda_, rho_ = params

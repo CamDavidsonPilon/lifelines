@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
-import autograd.numpy as np
-from autograd.numpy import exp, log
 from scipy.special import gammainccinv, gammaincinv
+from scipy.optimize import root
+
 from autograd_gamma import gammaincc, gammainc, gammaln, gammainccln, gammaincln
-from lifelines.fitters import KnownModelParametricUnivariateFitter
-from lifelines.utils import CensoringType
-from lifelines.utils.safe_exp import safe_exp
 from autograd.scipy.stats import norm
+from autograd.numpy import exp, log
+import autograd.numpy as np
+
+from lifelines.fitters import KnownModelParametricUnivariateFitter
+from lifelines.utils.safe_exp import safe_exp
+from lifelines.utils import CensoringType
 
 
 class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
@@ -173,3 +176,41 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         if lambda_ > 0:
             return exp(sigma_ * log(gammainccinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * exp(self.mu_)
         return exp(sigma_ * log(gammaincinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * exp(self.mu_)
+
+
+def gengamma_reparamertization(mu_, log_sigma_, lambda_):
+    """
+    A function to transform from our parameterization to scipy's parameterization
+    """
+
+    def F(params):
+        k_, theta_, beta_ = params
+        return np.array(
+            [
+                np.log(theta_) + 1 / beta_ * np.log(1 / lambda_ ** 2) - mu_,
+                beta_ * np.sqrt(k_) * np.exp(log_sigma_) - 1,
+                np.sqrt(k_) * lambda_ - 1,
+            ]
+        )
+
+    sol = root(F, [1, 1, 1])
+    return sol.x
+
+
+def gengamma_reparamertization_inv(k_, theta_, beta_):
+    """
+    A function to transform from scipy's parameterization to our parameterization.
+    """
+
+    def F(params):
+        mu_, log_sigma_, lambda_ = params
+        return np.array(
+            [
+                np.log(theta_) + 1 / beta_ * np.log(1 / lambda_ ** 2) - mu_,
+                beta_ * np.sqrt(k_) * np.exp(log_sigma_) - 1,
+                np.sqrt(k_) * lambda_ - 1,
+            ]
+        )
+
+    sol = root(F, [0, 0, 1])
+    return sol.x
