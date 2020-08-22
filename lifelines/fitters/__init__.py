@@ -1198,12 +1198,12 @@ class RegressionFitter(BaseFitter):
         Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
         """
         warnings.warn("This method name is deprecated. Use `plot_partial_effects_on_outcome` instead.", DeprecationWarning)
-        return plot_partial_effects_on_outcome(*args, **kwargs)
+        return self.plot_partial_effects_on_outcome(*args, **kwargs)
 
     def _compute_central_values_of_raw_training_data(self, df, strata=None, name="baseline"):
         """
         Compute our "baseline" observation for function like plot_partial_effects_on_outcome.
-        - Categoricals are transformed to their mode value.
+        - Categorical are transformed to their mode value.
         - Numerics are transformed to their median value.
         """
         if df.size == 0:

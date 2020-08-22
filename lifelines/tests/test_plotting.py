@@ -503,6 +503,31 @@ class TestPlotting:
         self.plt.title("test_coxph_plot_partial_effects_on_outcome_with_strata")
         self.plt.show(block=block)
 
+    def test_coxph_plot_partial_effects_on_outcome_with_strata_and_complicated_dtypes(self, block):
+        # from https://github.com/CamDavidsonPilon/lifelines/blob/master/examples/Customer%20Churn.ipynb
+        churn_data = pd.read_csv(
+            "https://raw.githubusercontent.com/"
+            "treselle-systems/customer_churn_analysis/"
+            "master/WA_Fn-UseC_-Telco-Customer-Churn.csv"
+        )
+        churn_data = churn_data.set_index("customerID")
+        churn_data = churn_data.drop(["TotalCharges"], axis=1)
+
+        churn_data = churn_data.applymap(lambda x: "No" if str(x).startswith("No ") else x)
+        churn_data["Churn"] = churn_data["Churn"] == "Yes"
+        strata_cols = ["InternetService"]
+
+        cph = CoxPHFitter().fit(
+            churn_data,
+            "tenure",
+            "Churn",
+            formula="gender + SeniorCitizen + Partner + Dependents  + MultipleLines + OnlineSecurity + OnlineBackup + DeviceProtection + TechSupport + Contract + PaperlessBilling + PaymentMethod + MonthlyCharges",
+            strata=strata_cols,
+        )
+        cph.plot_partial_effects_on_outcome("Contract", values=["Month-to-month", "One year", "Two year"], plot_baseline=False)
+        self.plt.title("test_coxph_plot_partial_effects_on_outcome_with_strata_and_complicated_dtypes")
+        self.plt.show(block=block)
+
     def test_spline_coxph_plot_partial_effects_on_outcome_with_strata(self, block):
         df = load_rossi()
         cp = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)

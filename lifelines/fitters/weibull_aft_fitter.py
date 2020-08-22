@@ -152,7 +152,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
 
         See Also
         --------
-        predict_median
+        predict_median, predict_expectation
 
         """
 
@@ -185,14 +185,13 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
 
         Returns
         -------
-        percentiles: DataFrame
-            the median lifetimes for the individuals. If the survival curve of an
-            individual does not cross 0.5, then the result is infinity.
+        DataFrame
+            the expected lifetimes for the individuals.
 
 
         See Also
         --------
-        predict_median
+        predict_median, predict_percentile
         """
         lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
         return pd.Series((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(df))

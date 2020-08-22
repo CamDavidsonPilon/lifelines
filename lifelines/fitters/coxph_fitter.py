@@ -567,7 +567,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         if self.strata is None:
             axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
             x_bar = self._central_values
-            X = pd.concat([x_bar] * values.shape[0])
+            X = pd.concat([x_bar] * values.shape[0]).infer_objects()
 
             if np.array_equal(np.eye(n_covariates), values) or np.array_equal(
                 np.append(np.eye(n_covariates), np.zeros((n_covariates, 1)), axis=1), values
@@ -592,7 +592,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
                 for name, value in zip(utils._to_list(self.strata), utils._to_tuple(stratum)):
                     x_bar[name] = value
 
-                X = pd.concat([x_bar] * values.shape[0])
+                X = pd.concat([x_bar] * values.shape[0]).infer_objects()
 
                 if np.array_equal(np.eye(len(covariates)), values):
                     X.index = ["%s=1" % c for c in covariates]
