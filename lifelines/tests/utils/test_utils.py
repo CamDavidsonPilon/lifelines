@@ -997,8 +997,7 @@ def test_rmst_exactely_with_known_solution():
 
 @flaky
 def test_rmst_approximate_solution():
-
-    T = np.random.exponential(2, 2000)
+    T = np.random.exponential(2, 5000)
     exp = ExponentialFitter().fit(T)
     lambda_ = exp.lambda_
 

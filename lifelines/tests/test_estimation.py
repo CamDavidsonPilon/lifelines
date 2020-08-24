@@ -84,13 +84,13 @@ from lifelines.generate_datasets import generate_hazard_rates, generate_random_l
 
 @pytest.fixture
 def sample_lifetimes():
-    N = 30
+    N = 100
     return (np.random.randint(1, 20, size=N), np.random.randint(2, size=N))
 
 
 @pytest.fixture
 def positive_sample_lifetimes():
-    N = 30
+    N = 100
     return (np.random.randint(1, 20, size=N), np.random.randint(2, size=N))
 
 
