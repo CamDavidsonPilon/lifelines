@@ -219,7 +219,6 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         # estimation methods
         self._estimation_method = "survival_function_"
         self._estimate_name = "survival_function_"
-        self._update_docstrings()
         return self
 
     @CensoringType.left_censoring
@@ -357,7 +356,6 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         # estimation methods
         self._estimation_method = primary_estimate_name
         self._estimate_name = primary_estimate_name
-        self._update_docstrings()
 
         return self
 

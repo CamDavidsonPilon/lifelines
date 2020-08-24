@@ -83,7 +83,7 @@ class StatisticalResult:
         -----------
 
         style: str
-         one of {'ascii', 'html', 'latex'}
+          One of {'ascii', 'html', 'latex'}
 
         """
         if style == "html":
@@ -109,23 +109,14 @@ class StatisticalResult:
 
         """
         if style is not None:
-            self.print_specific_style(style, decimals, **kwargs)
+            self.print_specific_style(style)
         else:
             try:
-                from IPython.core.getipython import get_ipython
+                from IPython.display import display
 
-                ip = get_ipython()
-                if ip and ip.has_trait("kernel"):
-                    self.html_print_inside_jupyter(decimals, **kwargs)
-                else:
-                    self.ascii_print(decimals, **kwargs)
+                display(self)
             except ImportError:
-                self.ascii_print(decimals, **kwargs)
-
-    def html_print_inside_jupyter(self, decimals=2, **kwargs):
-        from IPython.display import HTML, display
-
-        display(HTML(self.to_html(decimals, **kwargs)))
+                self.ascii_print()
 
     def html_print(self, decimals=2, **kwargs):
         print(self.to_html(decimals, **kwargs))
@@ -172,16 +163,17 @@ class StatisticalResult:
         else:
             index = self.name
 
-        return pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
+        df = pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
+        df["-log2(p)"] = -utils.quiet_log2(df["p"])
+        return df
 
     def to_ascii(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
 
         df = self.summary
-        df["-log2(p)"] = -utils.quiet_log2(df["p"])
 
-        s = self.__repr__()
+        s = "<lifelines.StatisticalResult: {0}>".format(self.test_name)
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
@@ -207,8 +199,17 @@ class StatisticalResult:
         kwargs = dict(list(self._kwargs.items()) + list(other._kwargs.items()))
         return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
 
+    def ascii_print(self):
+        print(self.to_ascii())
+
+    def _repr_latex_(self,):
+        return self.to_latex()
+
+    def _repr_html_(self):
+        return self.to_html()
+
     def __repr__(self):
-        return "<lifelines.StatisticalResult: {0}>".format(self.test_name)
+        return self.to_ascii()
 
 
 def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
@@ -338,15 +339,12 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     )
 
 
-def survival_difference_at_fixed_point_in_time_test(
-    point_in_time, durations_A, durations_B, event_observed_A=None, event_observed_B=None, **kwargs
-) -> StatisticalResult:
+def survival_difference_at_fixed_point_in_time_test(point_in_time, fitterA, fitterB, **result_kwargs) -> StatisticalResult:
     """
-
     Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other.
     For example, analysts may be interested in 5-year survival. Statistically comparing the naive Kaplan-Meier points at a specific time
-    actually has reduced power (see [1]). By transforming the Kaplan-Meier curve, we can recover more power. This function uses
-    the log(-log) transformation.
+    actually has reduced power (see [1]). By transforming the survival function, we can recover more power. This function uses
+    the log(-log(·)) transformation.
 
 
     Parameters
@@ -354,23 +352,14 @@ def survival_difference_at_fixed_point_in_time_test(
     point_in_time: float,
         the point in time to analyze the survival curves at.
 
-    durations_A: iterable
-        a (n,) list-like of event durations (birth to death,...) for the first population.
+    fitterA:
+        A lifelines univariate model fitted to the data. This can be a ``KaplanMeierFitter``, ``WeibullFitter``, etc.
 
-    durations_B: iterable
-        a (n,) list-like of event durations (birth to death,...) for the second population.
+    fitterB:
+        the second lifelines model to compare against.
 
-    event_observed_A: iterable, optional
-        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the first population.
-        Default assumes all observed.
-
-    event_observed_B: iterable, optional
-        a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population.
-        Default assumes all observed.
-
-    kwargs:
+    result_kwargs:
         add keywords and meta-data to the experiment summary
-
 
     Returns
     -------
@@ -384,21 +373,26 @@ def survival_difference_at_fixed_point_in_time_test(
 
         T1 = [1, 4, 10, 12, 12, 3, 5.4]
         E1 = [1, 0, 1,  0,  1,  1, 1]
+        kmf1 = KaplanMeierFitter().fit(T1, E1)
 
         T2 = [4, 5, 7, 11, 14, 20, 8, 8]
         E2 = [1, 1, 1, 1,  1,  1,  1, 1]
+        kmf2 = KaplanMeierFitter().fit(T2, E2)
 
         from lifelines.statistics import survival_difference_at_fixed_point_in_time_test
-        results = survival_difference_at_fixed_point_in_time_test(12, T1, T2, event_observed_A=E1, event_observed_B=E2)
+        results = survival_difference_at_fixed_point_in_time_test(12.0, kmf1, kmf2)
 
         results.print_summary()
-        print(results.p_value)        # 0.893
-        print(results.test_statistic) # 0.017
+        print(results.p_value)        # 0.77
+        print(results.test_statistic) # 0.09
 
     Notes
     -----
-    Other transformations are possible, but Klein et al. [1] showed that the log(-log(c)) transform has the most desirable
+    1. Other transformations are possible, but Klein et al. [1] showed that the log(-log(·)) transform has the most desirable
     statistical properties.
+
+    2. The API of this function changed in v0.25.3. This new API allows for right, left and interval censoring models to be tested.
+
 
     References
     -----------
@@ -406,19 +400,29 @@ def survival_difference_at_fixed_point_in_time_test(
     [1] Klein, J. P., Logan, B. , Harhoff, M. and Andersen, P. K. (2007), Analyzing survival curves at a fixed point in time. Statist. Med., 26: 4505-4519. doi:10.1002/sim.2864
 
     """
-
-    kmfA = KaplanMeierFitter().fit(durations_A, event_observed=event_observed_A)
-    kmfB = KaplanMeierFitter().fit(durations_B, event_observed=event_observed_B)
-
-    sA_t = kmfA.predict(point_in_time)
-    sB_t = kmfB.predict(point_in_time)
-
-    # this is doing a prediction/interpolation between the kmf's index.
-    sigma_sqA = interpolate_at_times_and_return_pandas(kmfA._cumulative_sq_, point_in_time)
-    sigma_sqB = interpolate_at_times_and_return_pandas(kmfB._cumulative_sq_, point_in_time)
+    if type(fitterB) != type(fitterA):
+        warnings.warn(
+            "This test compares survival functions, but your fitters are estimating the survival functions differently. This means that this test is also testing the different ways to estimate the survival function and will be unreliable.",
+            UserWarning,
+        )
 
     log = np.log
     clog = lambda s: log(-log(s))
+
+    sA_t = fitterA.predict(point_in_time)
+    sB_t = fitterB.predict(point_in_time)
+
+    from lifelines.fitters import NonParametricUnivariateFitter, ParametricUnivariateFitter
+
+    if isinstance(fitterA, NonParametricUnivariateFitter):
+        sigma_sqA = interpolate_at_times_and_return_pandas(fitterA._cumulative_sq_, point_in_time)
+    elif isinstance(fitterA, ParametricUnivariateFitter):
+        sigma_sqA = fitterA._compute_variance_of_transform(fitterA._survival_function, [point_in_time]).squeeze()
+
+    if isinstance(fitterB, NonParametricUnivariateFitter):
+        sigma_sqB = interpolate_at_times_and_return_pandas(fitterB._cumulative_sq_, point_in_time)
+    elif isinstance(fitterB, ParametricUnivariateFitter):
+        sigma_sqB = fitterB._compute_variance_of_transform(fitterB._survival_function, [point_in_time]).squeeze()
 
     X = (clog(sA_t) - clog(sB_t)) ** 2 / (sigma_sqA / log(sA_t) ** 2 + sigma_sqB / log(sB_t) ** 2)
     p_value = _chisq_test_p_value(X, 1)
@@ -430,7 +434,9 @@ def survival_difference_at_fixed_point_in_time_test(
         degrees_of_freedom=1,
         point_in_time=point_in_time,
         test_name="survival_difference_at_fixed_point_in_time_test",
-        **kwargs
+        fitterA=fitterA,
+        fitterB=fitterB,
+        **result_kwargs
     )
 
 
@@ -453,6 +459,7 @@ def logrank_test(
 
     Note
     -----
+    - *lifelines* logrank implementation only handles right-censored data.
 
     - The logrank test has maximum power when the assumption of proportional hazards is true. As a consequence, if the survival curves cross, the logrank test will give an inaccurate assessment of differences.
 

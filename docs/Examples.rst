@@ -162,8 +162,11 @@ the log(-log) transformation implicitly and compares the survival-ness of popula
     T_exp, E_exp = df.loc[ix, 'T'], df.loc[ix, 'E']
     T_con, E_con = df.loc[~ix, 'T'], df.loc[~ix, 'E']
 
+    kmf_exp = KaplanMeierFitter(label="exp").fit(T_exp, E_exp)
+    kmf_con = KaplanMeierFitter(label="con").fit(T_con, E_con)
+
     point_in_time = 10.
-    results = survival_difference_at_fixed_point_in_time_test(point_in_time, T_exp, T_con, event_observed_A=E_exp, event_observed_B=E_con)
+    results = survival_difference_at_fixed_point_in_time_test(point_in_time, kmf_exp, kmf_con)
     results.print_summary()
 
 

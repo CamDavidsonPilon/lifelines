@@ -150,7 +150,6 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
         self._estimation_method = "cumulative_density_"
         self._estimate_name = "cumulative_density_"
         self.timeline = km.timeline
-        self._update_docstrings()
 
         self._label = coalesce(label, self._label, "AJ_estimate")
         self.cumulative_density_ = pd.DataFrame(aj[cmprisk_label])
