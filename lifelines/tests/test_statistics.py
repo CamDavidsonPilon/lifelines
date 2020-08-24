@@ -5,7 +5,7 @@ import numpy.testing as npt
 import pytest
 
 from lifelines import statistics as stats
-from lifelines import CoxPHFitter
+from lifelines import CoxPHFitter, KaplanMeierFitter, WeibullFitter
 from lifelines.exceptions import StatisticalWarning
 from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset, load_leukemia
 
@@ -492,10 +492,41 @@ def test_proportional_hazard_test_with_list():
     assert results.summary.shape[0] == 2 * 2
 
 
-def test_survival_difference_at_fixed_point_in_time_test():
+def test_survival_difference_at_fixed_point_in_time_test_nonparametric():
     df = load_waltons()
     ix = df["group"] == "miR-137"
-    waltonT1 = df.loc[ix]["T"]
-    waltonT2 = df.loc[~ix]["T"]
-    result = stats.survival_difference_at_fixed_point_in_time_test(10, waltonT1, waltonT2)
+    kmf1 = KaplanMeierFitter().fit(df.loc[ix]["T"], df.loc[ix]["E"])
+    kmf2 = KaplanMeierFitter().fit(df.loc[~ix]["T"], df.loc[~ix]["E"])
+    result = stats.survival_difference_at_fixed_point_in_time_test(10, kmf1, kmf2)
+    assert result.p_value < 0.05
+
+
+def test_survival_difference_at_fixed_point_in_time_test_parametric():
+    df = load_waltons()
+    ix = df["group"] == "miR-137"
+    wf1 = WeibullFitter().fit(df.loc[ix]["T"], df.loc[ix]["E"])
+    wf2 = WeibullFitter().fit(df.loc[~ix]["T"], df.loc[~ix]["E"])
+    result = stats.survival_difference_at_fixed_point_in_time_test(10, wf1, wf2)
+    assert result.p_value < 0.05
+
+
+def test_survival_difference_at_fixed_point_in_time_test_left_censoring():
+    T1 = np.random.exponential(1e-6, size=1000)
+    T2 = np.random.exponential(1e-6, size=1000)
+    E = T1 > T2
+    T = np.maximum(T1, T2)
+    kmf1 = KaplanMeierFitter().fit_left_censoring(T)
+    kmf2 = KaplanMeierFitter().fit_left_censoring(2 * T)
+    result = stats.survival_difference_at_fixed_point_in_time_test(T.mean(), kmf1, kmf2)
+    assert result.p_value < 0.05
+
+
+def test_survival_difference_at_fixed_point_in_time_test_interval_censoring():
+    T1 = np.random.exponential(1e-6, size=1000)
+    T2 = np.random.exponential(1e-6, size=1000)
+    E = T1 > T2
+    T = np.maximum(T1, T2)
+    wf1 = WeibullFitter().fit_interval_censoring(T, T)
+    wf2 = WeibullFitter().fit_interval_censoring(2 * T, 2 * T)
+    result = stats.survival_difference_at_fixed_point_in_time_test(T.mean(), wf1, wf2)
     assert result.p_value < 0.05

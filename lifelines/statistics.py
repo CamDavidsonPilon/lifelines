@@ -87,11 +87,11 @@ class StatisticalResult:
 
         """
         if style == "html":
-            return self.html_print(decimals, **kwargs)
+            return self.html_print(decimals=decimals, **kwargs)
         elif style == "ascii":
-            return self.ascii_print(decimals, **kwargs)
+            return self.ascii_print(decimals=decimals, **kwargs)
         elif style == "latex":
-            return self.latex_print(decimals, **kwargs)
+            return self.latex_print(decimals=decimals, **kwargs)
         else:
             raise ValueError("style not available.")
 
@@ -120,9 +120,6 @@ class StatisticalResult:
 
     def html_print(self, decimals=2, **kwargs):
         print(self.to_html(decimals, **kwargs))
-
-    def ascii_print(self, decimals=2, **kwargs):
-        print(self.to_ascii(decimals, **kwargs))
 
     def to_html(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
@@ -199,8 +196,8 @@ class StatisticalResult:
         kwargs = dict(list(self._kwargs.items()) + list(other._kwargs.items()))
         return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
 
-    def ascii_print(self):
-        print(self.to_ascii())
+    def ascii_print(self, decimals=2, **kwargs):
+        print(self.to_ascii(decimals, **kwargs))
 
     def _repr_latex_(self,):
         return self.to_latex()

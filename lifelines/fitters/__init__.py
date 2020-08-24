@@ -470,7 +470,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             [gradient_of_transform_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_), dtype=float)]
         )
 
-        return pd.DataFrame(
+        return pd.Series(
             np.einsum("nj,jk,nk->n", gradient_at_times.T, self.variance_matrix_, gradient_at_times.T), index=timeline
         )
 

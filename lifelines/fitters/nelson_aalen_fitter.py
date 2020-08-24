@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 import warnings
 import numpy as np
 import pandas as pd
@@ -242,7 +240,7 @@ class NelsonAalenFitter(UnivariateFitter):
 
     @property
     def conditional_time_to_event_(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def percentile(self, p):
         raise NotImplementedError()
