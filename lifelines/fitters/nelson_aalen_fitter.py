@@ -140,7 +140,6 @@ class NelsonAalenFitter(UnivariateFitter):
         # estimation methods
         self._estimation_method = "cumulative_hazard_"
         self._estimate_name = "cumulative_hazard_"
-        self._update_docstrings()
 
         # plotting
         self.plot_cumulative_hazard = self.plot

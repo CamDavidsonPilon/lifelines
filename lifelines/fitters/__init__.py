@@ -91,14 +91,6 @@ class UnivariateFitter(BaseFitter):
     _estimate_name: str
     _estimation_method: str
 
-    def _update_docstrings(self):
-        # Update their docstrings
-        self.__class__.subtract.__doc__ = self.subtract.__doc__.format(self._estimate_name, self._class_name)
-        self.__class__.divide.__doc__ = self.divide.__doc__.format(self._estimate_name, self._class_name)
-        self.__class__.predict.__doc__ = self.predict.__doc__.format(self._class_name)
-        self.__class__.plot.__doc__ = _plot_estimate.__doc__.format(self._class_name, self._estimate_name)
-        return
-
     def plot(self, **kwargs):
         """
         Plots a pretty figure of the model
@@ -143,7 +135,7 @@ class UnivariateFitter(BaseFitter):
 
     def subtract(self, other) -> pd.DataFrame:
         """
-        Subtract the {0} of two {1} objects.
+        Subtract self's survival function from another model's survival function.
 
         Parameters
         ----------
@@ -162,7 +154,7 @@ class UnivariateFitter(BaseFitter):
 
     def divide(self, other) -> pd.DataFrame:
         """
-        Divide the {0} of two {1} objects.
+        Divide self's survival function from another model's survival function.
 
         Parameters
         ----------
@@ -182,7 +174,7 @@ class UnivariateFitter(BaseFitter):
 
     def predict(self, times: Union[Iterable[float], float], interpolate=False) -> pd.Series:
         """
-        Predict the {0} at certain point in time. Uses a linear interpolation if
+        Predict the fitter at certain point in time. Uses a linear interpolation if
         points in time are not in the index.
 
         Parameters
@@ -451,6 +443,37 @@ class ParametricUnivariateFitter(UnivariateFitter):
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels) -> pd.DataFrame:
         return self._compute_confidence_bounds_of_transform(self._cumulative_hazard, alpha, ci_labels)
 
+    def _compute_variance_of_transform(self, transform, timeline=None):
+        """
+        This computes the variance of a transform of the parameters. Ex: take
+        the fitted parameters, a function/transform and the variance matrix and give me
+        back variance of the transform.
+
+        Parameters
+        -----------
+        transform: function
+            must a function of two parameters:
+                ``params``, an iterable that stores the parameters
+                ``times``, a numpy vector representing some timeline
+            the function must use autograd imports (scipy and numpy)
+
+        """
+        if timeline is None:
+            timeline = self.timeline
+        else:
+            timeline = utils._to_1d_array(timeline)
+
+        # pylint: disable=no-value-for-parameter
+        gradient_of_transform_at_mle = make_jvp_reversemode(transform)(self._fitted_parameters_, timeline.astype(float))
+
+        gradient_at_times = np.vstack(
+            [gradient_of_transform_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_), dtype=float)]
+        )
+
+        return pd.DataFrame(
+            np.einsum("nj,jk,nk->n", gradient_at_times.T, self.variance_matrix_, gradient_at_times.T), index=timeline
+        )
+
     def _compute_confidence_bounds_of_transform(self, transform, alpha, ci_labels) -> pd.DataFrame:
         """
         This computes the confidence intervals of a transform of the parameters. Ex: take
@@ -473,21 +496,14 @@ class ParametricUnivariateFitter(UnivariateFitter):
         z = utils.inv_normal_cdf(alpha2)
         df = pd.DataFrame(index=self.timeline)
 
-        # pylint: disable=no-value-for-parameter
-        gradient_of_transform_at_mle = make_jvp_reversemode(transform)(self._fitted_parameters_, self.timeline.astype(float))
-
-        gradient_at_times = np.vstack(
-            [gradient_of_transform_at_mle(basis) for basis in np.eye(len(self._fitted_parameters_), dtype=float)]
-        )
-
-        std_cumulative_hazard = np.sqrt(np.einsum("nj,jk,nk->n", gradient_at_times.T, self.variance_matrix_, gradient_at_times.T))
+        std_of_transform = np.sqrt(self._compute_variance_of_transform(transform))
 
         if ci_labels is None:
             ci_labels = ["%s_lower_%g" % (self._label, 1 - alpha), "%s_upper_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = transform(self._fitted_parameters_, self.timeline) - z * std_cumulative_hazard
-        df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) + z * std_cumulative_hazard
+        df[ci_labels[0]] = transform(self._fitted_parameters_, self.timeline) - z * std_of_transform
+        df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) + z * std_of_transform
         return df
 
     def _create_initial_point(self, *args) -> np.ndarray:
@@ -970,14 +986,12 @@ class ParametricUnivariateFitter(UnivariateFitter):
         self.variance_matrix_ = pd.DataFrame(
             variance_matrix_, index=self._fitted_parameter_names, columns=self._fitted_parameter_names
         )
-        self._update_docstrings()
 
         self.survival_function_ = self.survival_function_at_times(self.timeline).to_frame()
         self.hazard_ = self.hazard_at_times(self.timeline).to_frame()
         self.cumulative_hazard_ = self.cumulative_hazard_at_times(self.timeline).to_frame()
         self.cumulative_density_ = self.cumulative_density_at_times(self.timeline).to_frame()
         self.density_ = self.density_at_times(self.timeline).to_frame()
-
         return self
 
     def _check_bounds_initial_point_names_shape(self):
