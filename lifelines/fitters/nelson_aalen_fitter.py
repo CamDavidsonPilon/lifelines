@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 import warnings
 import numpy as np
 import pandas as pd
@@ -140,7 +138,6 @@ class NelsonAalenFitter(UnivariateFitter):
         # estimation methods
         self._estimation_method = "cumulative_hazard_"
         self._estimate_name = "cumulative_hazard_"
-        self._update_docstrings()
 
         # plotting
         self.plot_cumulative_hazard = self.plot
@@ -243,7 +240,7 @@ class NelsonAalenFitter(UnivariateFitter):
 
     @property
     def conditional_time_to_event_(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def percentile(self, p):
         raise NotImplementedError()

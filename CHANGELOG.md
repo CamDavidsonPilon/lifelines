@@ -1,5 +1,19 @@
 ## Changelog
 
+#### 0.25.3 - 2020-08-24
+
+##### New features
+ - `survival_difference_at_fixed_point_in_time_test` now accepts fitters instead of raw data, meaning that you can use this function on left, right or interval censored data.
+
+##### API Changes
+ - See note on `survival_difference_at_fixed_point_in_time_test` above.
+
+##### Bug fixes
+ - fix `StatisticalResult` printing in notebooks
+ - fix Python error when calling `plot_covariate_groups`
+ - fix dtype mismatches in `plot_partial_effects_on_outcome`.
+
+
 #### 0.25.2 - 2020-08-08
 
 ##### New features

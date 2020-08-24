@@ -8,7 +8,8 @@ from lifelines.utils.safe_exp import safe_exp
 
 class CRCSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
     """
-    Below is an implementation of Crowther, Royston, Clements AFT cubic spline models.
+    Below is an implementation of Crowther, Royston, Clements AFT cubic spline models. Internally, lifelines
+    uses this for survival model probability calibration, but it can also be useful for a highly flexible AFT model.
 
 
 
@@ -19,12 +20,29 @@ class CRCSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
     n_baseline_knots: int
         the number of knots in the cubic spline. If equal to 2, then the model is equal to the WeibullAFT model.
 
-
     Reference
     ----------
     Crowther MJ, Royston P, Clements M. A flexible parametric accelerated failure time model.
+
+
+    Examples
+    ---------
+    .. code:: python
+
+        from lifelines import datasets, CRCSplineFitter
+        rossi = datasets.load_rossi()
+
+        regressors = {"beta_": "age + C(fin)", "gamma0_": "1", "gamma1_": "1", "gamma2_": "1"}
+        crc = CRCSplineFitter(n_baseline_knots=3).fit(rossi, "week", "arrest", regressors=regressors)
+        crc.print_summary()
+
+
     """
 
+    _KNOWN_MODEL = True
+    _FAST_MEDIAN_PREDICT = False
+
+    fit_intercept = True
     _scipy_fit_method = "SLSQP"
 
     def __init__(self, n_baseline_knots: int, *args, **kwargs):
