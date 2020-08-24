@@ -83,7 +83,7 @@ class StatisticalResult:
         -----------
 
         style: str
-         one of {'ascii', 'html', 'latex'}
+          One of {'ascii', 'html', 'latex'}
 
         """
         if style == "html":
@@ -109,23 +109,14 @@ class StatisticalResult:
 
         """
         if style is not None:
-            self.print_specific_style(style, decimals, **kwargs)
+            self.print_specific_style(style)
         else:
             try:
-                from IPython.core.getipython import get_ipython
+                from IPython.display import display
 
-                ip = get_ipython()
-                if ip and ip.has_trait("kernel"):
-                    self.html_print_inside_jupyter(decimals, **kwargs)
-                else:
-                    self.ascii_print(decimals, **kwargs)
+                display(self)
             except ImportError:
-                self.ascii_print(decimals, **kwargs)
-
-    def html_print_inside_jupyter(self, decimals=2, **kwargs):
-        from IPython.display import HTML, display
-
-        display(HTML(self.to_html(decimals, **kwargs)))
+                self.ascii_print()
 
     def html_print(self, decimals=2, **kwargs):
         print(self.to_html(decimals, **kwargs))
@@ -172,16 +163,17 @@ class StatisticalResult:
         else:
             index = self.name
 
-        return pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
+        df = pd.DataFrame(list(zip(self._test_statistic, self._p_value)), columns=cols, index=index).sort_index()
+        df["-log2(p)"] = -utils.quiet_log2(df["p"])
+        return df
 
     def to_ascii(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
 
         df = self.summary
-        df["-log2(p)"] = -utils.quiet_log2(df["p"])
 
-        s = self.__repr__()
+        s = "<lifelines.StatisticalResult: {0}>".format(self.test_name)
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
@@ -207,8 +199,17 @@ class StatisticalResult:
         kwargs = dict(list(self._kwargs.items()) + list(other._kwargs.items()))
         return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
 
+    def ascii_print(self):
+        print(self.to_ascii())
+
+    def _repr_latex_(self,):
+        return self.to_latex()
+
+    def _repr_html_(self):
+        return self.to_html()
+
     def __repr__(self):
-        return "<lifelines.StatisticalResult: {0}>".format(self.test_name)
+        return self.to_ascii()
 
 
 def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, postulated_hazard_ratio, alpha=0.05):
@@ -382,8 +383,8 @@ def survival_difference_at_fixed_point_in_time_test(point_in_time, fitterA, fitt
         results = survival_difference_at_fixed_point_in_time_test(12.0, kmf1, kmf2)
 
         results.print_summary()
-        print(results.p_value)        # 0.893
-        print(results.test_statistic) # 0.017
+        print(results.p_value)        # 0.77
+        print(results.test_statistic) # 0.09
 
     Notes
     -----
