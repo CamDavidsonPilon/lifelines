@@ -1731,6 +1731,11 @@ def find_best_parametric_model(
     weights: an array, or pd.Series, of length n
         integer weights per observation
 
+
+    Note
+    ----------
+    Due to instability, the GeneralizedGammaFitter is not tested here.
+
     Returns
     ----------
     tuple of fitted best_model and best_score
@@ -1792,7 +1797,6 @@ def find_best_parametric_model(
         PiecewiseExponentialFitter(knots1[1:-1], label="PiecewiseExponentialFitter: 1 breakpoint"),
         PiecewiseExponentialFitter(knots2[1:-1], label="PiecewiseExponentialFitter: 2 breakpoint"),
         PiecewiseExponentialFitter(knots3[1:-1], label="PiecewiseExponentialFitter: 3 breakpoint"),
-        GeneralizedGammaFitter(),
         SplineFitter(knots1, label="SplineFitter: 1 internal knot"),
         SplineFitter(knots2, label="SplineFitter: 2 internal knot"),
         SplineFitter(knots3, label="SplineFitter: 3 internal knot"),
@@ -1939,28 +1943,6 @@ class CovariateParameterMappings:
         if self.force_intercept:
             formula += "+ 1"
 
-        try:
-            _X = patsy.dmatrix(formula, df, 1, NA_action="raise")
+        _X = patsy.dmatrix(formula, df, 1, NA_action="raise")
 
-        except SyntaxError as e:
-            import traceback
-
-            column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
-            raise FormulaSyntaxError(
-                (
-                    """
-It looks like the DataFrame has non-standard column names. See below for which column:
-
-%s
-
-All columns should either
-
-i) have no non-traditional characters (this includes spaces and periods)
-ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
-
-See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fixing-a-formulasyntaxerror
-            """
-                    % column_error
-                )
-            )
         return _X.design_info

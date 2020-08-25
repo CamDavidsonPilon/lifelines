@@ -1998,8 +1998,8 @@ class ParametricRegressionFitter(RegressionFitter):
                 Some ways to possible ways fix this:
 
                 0. Are there any lifelines warnings outputted during the `fit`?
-                1. Inspect your DataFrame: does everything look as expected? Do you need to add/drop a constant (intercept) column?
-                2. Does a particularly large variable need to be centered to 0?
+                1. Does a particularly large variable need to be centered to 0?
+                2. Inspect your DataFrame: does everything look as expected? Do you need to add/drop a constant (intercept) column?
                 3. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
                 4. Trying adding a small penalizer (or changing it, if already present). Example: `%s(penalizer=0.01).fit(...)`.
                 5. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.

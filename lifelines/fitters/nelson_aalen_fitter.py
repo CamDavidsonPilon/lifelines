@@ -57,8 +57,6 @@ class NelsonAalenFitter(UnivariateFitter):
 
     def __init__(self, alpha=0.05, nelson_aalen_smoothing=True, **kwargs):
         super(NelsonAalenFitter, self).__init__(alpha=alpha, **kwargs)
-        if not (0 < alpha <= 1.0):
-            raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
         self.nelson_aalen_smoothing = nelson_aalen_smoothing
 

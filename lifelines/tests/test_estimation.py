@@ -1786,6 +1786,7 @@ class TestRegressionFitters:
     def regression_models_sans_strata_model(self):
         return [
             CoxPHFitter(penalizer=1e-6, baseline_estimation_method="breslow"),
+            CoxPHFitter(penalizer=1e-6, baseline_estimation_method="piecewise", breakpoints=[15]),
             CoxPHFitter(penalizer=1e-6, baseline_estimation_method="spline", n_baseline_knots=2),
             CoxPHFitter(penalizer=1e-6, baseline_estimation_method="spline", n_baseline_knots=3),
             AalenAdditiveFitter(coef_penalizer=1.0, smoothing_penalizer=1.0),
@@ -1803,6 +1804,9 @@ class TestRegressionFitters:
         regression_models_sans_strata_model.append(CoxPHFitter(strata=["wexp"]))
         regression_models_sans_strata_model.append(
             CoxPHFitter(strata=["wexp"], baseline_estimation_method="spline", n_baseline_knots=2)
+        )
+        regression_models_sans_strata_model.append(
+            CoxPHFitter(strata=["wexp"], baseline_estimation_method="piecewise", breakpoints=[15])
         )
         return regression_models_sans_strata_model
 
@@ -3177,6 +3181,10 @@ class TestCoxPHFitter:
         cph.check_assumptions(rossi, columns=["age"])
         cph.check_assumptions(rossi, columns=[])
         cph.check_assumptions(rossi, columns=["age", "fin"])
+
+    def test_check_assumptions_with_formuals(self, cph, rossi):
+        cph.fit(rossi, "week", "arrest", formula="bs(age, df=3) + fin * wexp")
+        cph.check_assumptions(rossi)
 
     def test_cph_doesnt_modify_original_dataframe(self, cph):
         df = pd.DataFrame(
