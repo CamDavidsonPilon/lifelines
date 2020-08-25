@@ -959,6 +959,18 @@ def pass_for_numeric_dtypes_or_raise_array(x):
         raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
 
 
+def check_scaling(df):
+    for col in df.columns:
+        if df[col].mean() > 1e4:
+            warning_text = dedent(
+                """Column {0} has a large mean, try centering this to a value closer to 0.
+            """.format(
+                    col
+                )
+            )
+            warnings.warn(warning_text, ConvergenceWarning)
+
+
 def check_dimensions(df):
     n, d = df.shape
     if d >= n:
@@ -1506,7 +1518,7 @@ class StepSizer:
     """
 
     def __init__(self, initial_step_size: Optional[float]) -> None:
-        initial_step_size = initial_step_size or 0.95
+        initial_step_size = initial_step_size or 0.90
 
         self.initial_step_size = initial_step_size
         self.step_size = initial_step_size
@@ -1514,7 +1526,7 @@ class StepSizer:
         self.norm_of_deltas: List[float] = []
 
     def update(self, norm_of_delta: float) -> "StepSizer":
-        SCALE = 1.2
+        SCALE = 1.3
         LOOKBACK = 3
 
         self.norm_of_deltas.append(norm_of_delta)
@@ -1525,10 +1537,10 @@ class StepSizer:
 
         # Only allow small steps
         if norm_of_delta >= 15.0:
-            self.step_size *= 0.25
+            self.step_size *= 0.1
             self.temper_back_up = True
         elif 15.0 > norm_of_delta > 5.0:
-            self.step_size *= 0.75
+            self.step_size *= 0.25
             self.temper_back_up = True
 
         # recent non-monotonically decreasing is a concern

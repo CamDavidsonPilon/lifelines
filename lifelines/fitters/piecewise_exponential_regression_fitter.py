@@ -37,8 +37,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
 
     """
 
-    # mmm not really...
-    _FAST_MEDIAN_PREDICT = True
+    _FAST_MEDIAN_PREDICT = True  # mmm not really...
 
     # about 50% faster than BFGS
     _scipy_fit_method = "SLSQP"
@@ -116,7 +115,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         if conditional_after is not None:
             raise NotImplementedError()
 
-        times = np.atleast_1d(coalesce(times, self.timeline, np.unique(self.durations))).astype(float)
+        times = np.atleast_1d(coalesce(times, self.timeline)).astype(float)
         n = times.shape[0]
         times = times.reshape((n, 1))
 

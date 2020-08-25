@@ -1267,7 +1267,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         elif not success:
             self._check_values_post_fitting(X, T, E, weights)
             warnings.warn(
-                "Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, exceptions.ConvergenceWarning
+                "Newton-Rhaphson failed to converge sufficiently. {0}".format(CONVERGENCE_DOCS), exceptions.ConvergenceWarning
             )
 
         return beta, ll_, hessian
@@ -2418,7 +2418,189 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         )
 
 
-class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, ProportionalHazardMixin):
+class ParametricCoxModelFitter(ParametricRegressionFitter, ProportionalHazardMixin):
+
+    _KNOWN_MODEL = True
+    cluster_col = None
+
+    def _cumulative_hazard(self, params, T, Xs):
+        if self.strata is not None:
+            return self._cumulative_hazard_with_strata(params, T, Xs)
+        else:
+            return self._cumulative_hazard_sans_strata(params, T, Xs)
+
+    @property
+    def baseline_hazard_(self):
+        return self.baseline_hazard_at_times(self.timeline)
+
+    @property
+    def baseline_survival_(self):
+        return self.baseline_survival_at_times(self.timeline)
+
+    @property
+    def baseline_cumulative_hazard_(self):
+        return self.baseline_cumulative_hazard_at_times(self.timeline)
+
+    def baseline_hazard_at_times(self, times=None):
+        """
+        Predict the baseline hazard at times (Defaults to observed durations)
+        """
+        times = utils.coalesce(times, self.timeline)
+        if self.strata is not None:
+            v = self.predict_hazard(self._central_values.reset_index(), times=times)
+            v.columns = self._central_values.index.values
+        else:
+            v = self.predict_hazard(self._central_values, times=times)
+            v.columns = ["baseline hazard"]
+        return v
+
+    def baseline_survival_at_times(self, times=None):
+        """
+        Predict the baseline survival at times (Defaults to observed durations)
+        """
+        times = utils.coalesce(times, self.timeline)
+        if self.strata is not None:
+            v = self.predict_survival_function(self._central_values.reset_index(), times=times)
+            v.columns = self._central_values.index.values
+        else:
+            v = self.predict_survival_function(self._central_values, times=times)
+            v.columns = ["baseline survival"]
+        return v
+
+    def baseline_cumulative_hazard_at_times(self, times=None):
+        """
+        Predict the baseline cumulative hazard at times (Defaults to observed durations)
+        """
+        times = utils.coalesce(times, self.timeline)
+        if self.strata is not None:
+            v = self.predict_cumulative_hazard(self._central_values.reset_index(), times=times)
+            v.columns = self._central_values.index.values
+        else:
+            v = self.predict_cumulative_hazard(self._central_values, times=times)
+            v.columns = ["baseline cumulative hazard"]
+        return v
+
+    def predict_cumulative_hazard(self, df, *, times=None, conditional_after=None):
+        """
+        Predict the cumulative hazard for individuals, given their covariates.
+
+        Parameters
+        ----------
+
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
+            can be in any order.
+        times: iterable, optional
+            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations in the training dataset (observed and unobserved).
+        conditional_after: iterable, optional
+            Must be equal is size to (df.shape[0],) (`n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
+
+        Returns
+        -------
+        DataFrame
+            the cumulative hazards of individuals over the timeline
+
+        """
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T.infer_objects()
+
+        df = df.copy()
+
+        if self.strata is not None:
+            df = df.reset_index().set_index(self.strata)
+
+            cumulative_hazard = pd.DataFrame()
+            if conditional_after is not None:
+                # need to pass this into the groupby
+                df["conditional_after_"] = conditional_after
+
+            for stratum, stratified_X in df.groupby(self.strata):
+
+                if conditional_after is not None:
+                    conditional_after_ = stratified_X.pop("conditional_after_")
+                else:
+                    conditional_after_ = None
+
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=UserWarning)
+                    cumulative_hazard_ = super(ParametricCoxModelFitter, self).predict_cumulative_hazard(
+                        stratified_X, times=times, conditional_after=conditional_after_
+                    )
+                cumulative_hazard_.columns = stratified_X["index"]
+                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
+
+            return cumulative_hazard
+
+        else:
+            return super(ParametricCoxModelFitter, self).predict_cumulative_hazard(
+                df, times=times, conditional_after=conditional_after
+            )
+
+    def predict_hazard(self, df, *, conditional_after=None, times=None):
+        """
+        Predict the hazard for individuals, given their covariates.
+
+        Parameters
+        ----------
+
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
+            can be in any order.
+        times: iterable, optional
+            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations in the training dataset (observed and unobserved).
+        conditional_after:
+            Not implemented yet.
+
+        Returns
+        -------
+        DataFrame
+            the hazards of individuals over the timeline
+
+        """
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T.infer_objects()
+
+        df = df.copy()
+
+        if self.strata is not None:
+            df = df.reset_index().set_index(self.strata)
+
+            cumulative_hazard = pd.DataFrame()
+            if conditional_after is not None:
+                # need to pass this into the groupby
+                df["conditional_after_"] = conditional_after
+
+            for stratum, stratified_X in df.groupby(self.strata):
+
+                if conditional_after is not None:
+                    conditional_after_ = stratified_X.pop("conditional_after_")
+                else:
+                    conditional_after_ = None
+
+                cumulative_hazard_ = super(ParametricCoxModelFitter, self).predict_hazard(
+                    stratified_X, times=times, conditional_after=conditional_after_
+                )
+                cumulative_hazard_.columns = stratified_X["index"]
+                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
+
+            return cumulative_hazard
+
+        else:
+            return super(ParametricCoxModelFitter, self).predict_hazard(df, times=times, conditional_after=conditional_after)
+
+    @property
+    def AIC_partial_(self):
+        raise exceptions.StatError(
+            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead"
+        )
+
+
+class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
     r"""
     Proportional hazard model with cubic splines model for the baseline hazard.
 
@@ -2442,10 +2624,8 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
     _scipy_fit_method = "SLSQP"
     _scipy_fit_options = {"maxiter": 1000, "iprint": 100}
 
-    _KNOWN_MODEL = True
     _FAST_MEDIAN_PREDICT = False
 
-    cluster_col = None
     fit_intercept = True
 
     def __init__(self, strata, strata_values, n_baseline_knots=1, *args, **kwargs):
@@ -2538,184 +2718,8 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             )
         return H
 
-    def _cumulative_hazard(self, params, T, Xs):
-        if self.strata is not None:
-            return self._cumulative_hazard_with_strata(params, T, Xs)
-        else:
-            return self._cumulative_hazard_sans_strata(params, T, Xs)
 
-    @property
-    def baseline_hazard_(self):
-        return self.baseline_hazard_at_times(self.timeline)
-
-    @property
-    def baseline_survival_(self):
-        return self.baseline_survival_at_times(self.timeline)
-
-    @property
-    def baseline_cumulative_hazard_(self):
-        return self.baseline_cumulative_hazard_at_times(self.timeline)
-
-    def baseline_hazard_at_times(self, times=None):
-        """
-        Predict the baseline hazard at times (Defaults to observed durations)
-        """
-        times = utils.coalesce(times, self.timeline)
-        if self.strata is not None:
-            v = self.predict_hazard(self._central_values.reset_index(), times=times)
-            v.columns = self._central_values.index.values
-        else:
-            v = self.predict_hazard(self._central_values, times=times)
-            v.columns = ["baseline hazard"]
-        return v
-
-    def baseline_survival_at_times(self, times=None):
-        """
-        Predict the baseline survival at times (Defaults to observed durations)
-        """
-        times = utils.coalesce(times, self.timeline)
-        if self.strata is not None:
-            v = self.predict_survival_function(self._central_values.reset_index(), times=times)
-            v.columns = self._central_values.index.values
-        else:
-            v = self.predict_survival_function(self._central_values, times=times)
-            v.columns = ["baseline survival"]
-        return v
-
-    def baseline_cumulative_hazard_at_times(self, times=None):
-        """
-        Predict the baseline cumulative hazard at times (Defaults to observed durations)
-        """
-        times = utils.coalesce(times, self.timeline)
-        if self.strata is not None:
-            v = self.predict_cumulative_hazard(self._central_values.reset_index(), times=times)
-            v.columns = self._central_values.index.values
-        else:
-            v = self.predict_cumulative_hazard(self._central_values, times=times)
-            v.columns = ["baseline cumulative hazard"]
-        return v
-
-    def predict_cumulative_hazard(self, df, *, times=None, conditional_after=None):
-        """
-        Predict the cumulative hazard for individuals, given their covariates.
-
-        Parameters
-        ----------
-
-        df: DataFrame
-            a (n,d) DataFrame. If a DataFrame, columns
-            can be in any order.
-        times: iterable, optional
-            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations in the training dataset (observed and unobserved).
-        conditional_after: iterable, optional
-            Must be equal is size to (df.shape[0],) (`n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
-            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
-            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
-
-        Returns
-        -------
-        DataFrame
-            the cumulative hazards of individuals over the timeline
-
-        """
-        if isinstance(df, pd.Series):
-            df = df.to_frame().T.infer_objects()
-
-        df = df.copy()
-
-        if self.strata is not None:
-            df = df.reset_index().set_index(self.strata)
-
-            cumulative_hazard = pd.DataFrame()
-            if conditional_after is not None:
-                # need to pass this into the groupby
-                df["conditional_after_"] = conditional_after
-
-            for stratum, stratified_X in df.groupby(self.strata):
-
-                if conditional_after is not None:
-                    conditional_after_ = stratified_X.pop("conditional_after_")
-                else:
-                    conditional_after_ = None
-
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", category=UserWarning)
-                    cumulative_hazard_ = super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
-                        stratified_X, times=times, conditional_after=conditional_after_
-                    )
-                cumulative_hazard_.columns = stratified_X["index"]
-                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
-
-            return cumulative_hazard
-
-        else:
-            return super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
-                df, times=times, conditional_after=conditional_after
-            )
-
-    def predict_hazard(self, df, *, conditional_after=None, times=None):
-        """
-        Predict the hazard for individuals, given their covariates.
-
-        Parameters
-        ----------
-
-        df: DataFrame
-            a (n,d) DataFrame. If a DataFrame, columns
-            can be in any order.
-        times: iterable, optional
-            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations in the training dataset (observed and unobserved).
-        conditional_after:
-            Not implemented yet.
-
-        Returns
-        -------
-        DataFrame
-            the hazards of individuals over the timeline
-
-        """
-        if isinstance(df, pd.Series):
-            df = df.to_frame().T.infer_objects()
-
-        df = df.copy()
-
-        if self.strata is not None:
-            df = df.reset_index().set_index(self.strata)
-
-            cumulative_hazard = pd.DataFrame()
-            if conditional_after is not None:
-                # need to pass this into the groupby
-                df["conditional_after_"] = conditional_after
-
-            for stratum, stratified_X in df.groupby(self.strata):
-
-                if conditional_after is not None:
-                    conditional_after_ = stratified_X.pop("conditional_after_")
-                else:
-                    conditional_after_ = None
-
-                cumulative_hazard_ = super(ParametricSplinePHFitter, self).predict_hazard(
-                    stratified_X, times=times, conditional_after=conditional_after_
-                )
-                cumulative_hazard_.columns = stratified_X["index"]
-                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
-
-            return cumulative_hazard
-
-        else:
-            return super(ParametricSplinePHFitter, self).predict_hazard(df, times=times, conditional_after=conditional_after)
-
-    @property
-    def AIC_partial_(self):
-        raise exceptions.StatError(
-            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead"
-        )
-
-
-class ParametricPiecewiseBaselinePHFitter(ParametricRegressionFitter, ProportionalHazardMixin):
+class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, ProportionalHazardMixin):
     r"""
     Proportional hazard model with piecewise constant model for the baseline hazard.
 
@@ -2747,8 +2751,8 @@ class ParametricPiecewiseBaselinePHFitter(ParametricRegressionFitter, Proportion
         self.strata_values = strata_values
 
         assert (
-            breakpoints is not None and len(breakpoints) > 1
-        ), "breakpoints should be greater than 1. Set in class instantiation"
+            breakpoints is not None and len(breakpoints) > 0
+        ), "breakpoints should be greater than 0. Set in class instantiation"
 
         self.breakpoints = breakpoints
         self.n_breakpoints = len(breakpoints)
@@ -2791,8 +2795,33 @@ class ParametricPiecewiseBaselinePHFitter(ParametricRegressionFitter, Proportion
             }
 
     def _cumulative_hazard_with_strata(self, params, T, Xs):
-        # TODO
-        pass
+        output = []
+
+        # hack for iterating over stratified T
+        start, stop = 0, 0
+
+        # I can assume Xs is sorted by strata values
+        for stratum, Xs_ in Xs.groupby(self.strata):
+            stop = stop + Xs_.size
+
+            if T.ndim > 1:
+                T_ = T[:, start:stop]
+            else:
+                T_ = T[start:stop]
+
+            partial_hazard = safe_exp(anp.dot(Xs_["beta_"], params["beta_"]))
+            n = T_.shape[0]
+            T_ = T_.reshape((n, 1))
+            bps = anp.append(self.breakpoints, [anp.inf])
+            M = anp.minimum(anp.tile(bps, (n, 1)), T_)
+            M = anp.hstack([M[:, tuple([0])], anp.diff(M, axis=1)])
+            log_lambdas_ = anp.array([params[self._strata_labeler(stratum, i)] for i in range(1, self.n_breakpoints + 2)])
+            H_ = partial_hazard * (M * anp.exp(log_lambdas_).T).sum(1)
+
+            output.append(H_)
+            start = stop
+
+        return anp.hstack(output) if output else anp.array([])
 
     def _cumulative_hazard_sans_strata(self, params, T, Xs):
         partial_hazard = safe_exp(anp.dot(Xs["beta_"], params["beta_"]))
@@ -2804,183 +2833,69 @@ class ParametricPiecewiseBaselinePHFitter(ParametricRegressionFitter, Proportion
         log_lambdas_ = anp.array([params[param] for param in self._fitted_parameter_names if param != "beta_"])
         return partial_hazard * (M * anp.exp(log_lambdas_).T).sum(1)
 
-    def _cumulative_hazard(self, params, T, Xs):
-        if self.strata is not None:
-            return self._cumulative_hazard_with_strata(params, T, Xs)
-        else:
-            return self._cumulative_hazard_sans_strata(params, T, Xs)
-
-    @property
-    def baseline_hazard_(self):
-        return self.baseline_hazard_at_times(self.timeline)
-
-    @property
-    def baseline_survival_(self):
-        return self.baseline_survival_at_times(self.timeline)
-
-    @property
-    def baseline_cumulative_hazard_(self):
-        return self.baseline_cumulative_hazard_at_times(self.timeline)
-
-    def baseline_hazard_at_times(self, times=None):
+    def predict_cumulative_hazard(self, df, times=None, conditional_after=None) -> pd.DataFrame:
         """
-        Predict the baseline hazard at times (Defaults to observed durations)
-        """
-        times = utils.coalesce(times, self.timeline)
-        if self.strata is not None:
-            v = self.predict_hazard(self._central_values.reset_index(), times=times)
-            v.columns = self._central_values.index.values
-        else:
-            v = self.predict_hazard(self._central_values, times=times)
-            v.columns = ["baseline hazard"]
-        return v
-
-    def baseline_survival_at_times(self, times=None):
-        """
-        Predict the baseline survival at times (Defaults to observed durations)
-        """
-        times = utils.coalesce(times, self.timeline)
-        if self.strata is not None:
-            v = self.predict_survival_function(self._central_values.reset_index(), times=times)
-            v.columns = self._central_values.index.values
-        else:
-            v = self.predict_survival_function(self._central_values, times=times)
-            v.columns = ["baseline survival"]
-        return v
-
-    def baseline_cumulative_hazard_at_times(self, times=None):
-        """
-        Predict the baseline cumulative hazard at times (Defaults to observed durations)
-        """
-        times = utils.coalesce(times, self.timeline)
-        if self.strata is not None:
-            v = self.predict_cumulative_hazard(self._central_values.reset_index(), times=times)
-            v.columns = self._central_values.index.values
-        else:
-            v = self.predict_cumulative_hazard(self._central_values, times=times)
-            v.columns = ["baseline cumulative hazard"]
-        return v
-
-    def predict_cumulative_hazard(self, df, *, times=None, conditional_after=None):
-        """
-        Predict the cumulative hazard for individuals, given their covariates.
+        Return the cumulative hazard rate of subjects in X at time points.
 
         Parameters
         ----------
-
-        df: DataFrame
-            a (n,d) DataFrame. If a DataFrame, columns
-            can be in any order.
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
         times: iterable, optional
-            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations in the training dataset (observed and unobserved).
-        conditional_after: iterable, optional
-            Must be equal is size to (df.shape[0],) (`n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
-            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
-            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
+            an iterable of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations (observed and unobserved). Uses a linear interpolation if
+            points in time are not in the index.
 
         Returns
         -------
-        DataFrame
-            the cumulative hazards of individuals over the timeline
-
+        cumulative_hazard_ : DataFrame
+            the cumulative hazard of individuals over the timeline
         """
-        if isinstance(df, pd.Series):
-            df = df.to_frame().T.infer_objects()
-
         df = df.copy()
+        if isinstance(df, pd.Series):
+            return self.predict_cumulative_hazard(df.to_frame().T)
+
+        if conditional_after is not None:
+            raise NotImplementedError()
+
+        times = np.atleast_1d(utils.coalesce(times, self.timeline)).astype(float)
+        n = times.shape[0]
+        times = times.reshape((n, 1))
+
+        bp = np.append(self.breakpoints, [np.inf])
+
+        M = np.minimum(np.tile(bp, (n, 1)), times)
+        M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
 
         if self.strata is not None:
             df = df.reset_index().set_index(self.strata)
 
             cumulative_hazard = pd.DataFrame()
-            if conditional_after is not None:
-                # need to pass this into the groupby
-                df["conditional_after_"] = conditional_after
 
             for stratum, stratified_X in df.groupby(self.strata):
-
-                if conditional_after is not None:
-                    conditional_after_ = stratified_X.pop("conditional_after_")
-                else:
-                    conditional_after_ = None
-
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", category=UserWarning)
-                    cumulative_hazard_ = super(ParametricPiecewiseBaselinePHFitter, self).predict_cumulative_hazard(
-                        stratified_X, times=times, conditional_after=conditional_after_
-                    )
-                cumulative_hazard_.columns = stratified_X["index"]
-                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
-
-            return cumulative_hazard
-
-        else:
-            return super(ParametricPiecewiseBaselinePHFitter, self).predict_cumulative_hazard(
-                df, times=times, conditional_after=conditional_after
-            )
-
-    def predict_hazard(self, df, *, conditional_after=None, times=None):
-        """
-        Predict the hazard for individuals, given their covariates.
-
-        Parameters
-        ----------
-
-        df: DataFrame
-            a (n,d) DataFrame. If a DataFrame, columns
-            can be in any order.
-        times: iterable, optional
-            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
-            is the set of all durations in the training dataset (observed and unobserved).
-        conditional_after:
-            Not implemented yet.
-
-        Returns
-        -------
-        DataFrame
-            the hazards of individuals over the timeline
-
-        """
-        if isinstance(df, pd.Series):
-            df = df.to_frame().T.infer_objects()
-
-        df = df.copy()
-
-        if self.strata is not None:
-            df = df.reset_index().set_index(self.strata)
-
-            cumulative_hazard = pd.DataFrame()
-            if conditional_after is not None:
-                # need to pass this into the groupby
-                df["conditional_after_"] = conditional_after
-
-            for stratum, stratified_X in df.groupby(self.strata):
-
-                if conditional_after is not None:
-                    conditional_after_ = stratified_X.pop("conditional_after_")
-                else:
-                    conditional_after_ = None
-
-                cumulative_hazard_ = super(ParametricPiecewiseBaselinePHFitter, self).predict_hazard(
-                    stratified_X, times=times, conditional_after=conditional_after_
+                log_lambdas_ = anp.array(
+                    [self.params_[self._strata_labeler(stratum, i)] for i in range(1, self.n_breakpoints + 2)]
                 )
+                lambdas_ = np.exp(log_lambdas_)
+
+                Xs_ = self.regressors.transform_df(stratified_X)
+                partial_hazard = np.exp(np.dot(Xs_["beta_"], self.params_["beta_"]))
+
+                cumulative_hazard_ = pd.DataFrame(partial_hazard * np.dot(M, lambdas_), index=times[:, 0])
                 cumulative_hazard_.columns = stratified_X["index"]
                 cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
 
             return cumulative_hazard
 
         else:
-            return super(ParametricPiecewiseBaselinePHFitter, self).predict_hazard(
-                df, times=times, conditional_after=conditional_after
-            )
+            log_lambdas_ = np.array([self.params_[param] for param in self._fitted_parameter_names if param != "beta_"])
+            lambdas_ = np.exp(log_lambdas_)
 
-    @property
-    def AIC_partial_(self):
-        raise exceptions.StatError(
-            "Since the piecewise model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead"
-        )
+            Xs = self.regressors.transform_df(df)
+            partial_hazard = np.exp(np.dot(Xs["beta_"], self.params_["beta_"]))
+            return pd.DataFrame(partial_hazard * np.dot(M, lambdas_), columns=utils._get_index(df), index=times[:, 0])
 
 
 class _BatchVsSingle:

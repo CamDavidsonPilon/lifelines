@@ -852,7 +852,7 @@ def proportional_hazard_test(
         the fitted Cox model, fitted with `training_df`, you wish to test. Currently only the CoxPHFitter is supported,
         but later CoxTimeVaryingFitter, too.
     training_df: DataFrame
-        the DataFrame used in the call to the Cox model's ``fit``.
+        the DataFrame used in the call to the Cox model's ``fit``. Optional if providing ``precomputed_residuals``
     time_transform: vectorized function, list, or string, optional (default='rank')
         {'all', 'km', 'rank', 'identity', 'log'}
         One of the strings above, a list of strings, or a function to transform the time (must accept (time, durations, weights) however). 'all' will present all the transforms.
@@ -883,10 +883,6 @@ def proportional_hazard_test(
         scaled_resids = fitted_cox_model.compute_residuals(training_df, kind="scaled_schoenfeld")
     else:
         scaled_resids = precomputed_residuals
-
-    scaled_resids = (
-        fitted_cox_model.compute_residuals(training_df, kind="schoenfeld").dot(fitted_cox_model.variance_matrix_) * n_deaths
-    )
 
     def compute_statistic(times, resids, n_deaths):
         demeaned_times = times - times.mean()
