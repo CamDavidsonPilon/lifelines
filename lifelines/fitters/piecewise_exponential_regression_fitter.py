@@ -36,6 +36,8 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
     paper replication `here <https://github.com/CamDavidsonPilon/lifelines-replications/blob/master/replications/Friedman_1982.ipynb>`_
 
     """
+
+    # mmm not really...
     _FAST_MEDIAN_PREDICT = True
 
     # about 50% faster than BFGS
@@ -78,11 +80,6 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
         lambdas_ = np.array([safe_exp(-np.dot(Xs[param], params[param])) for param in self._fitted_parameter_names])
         return (M * lambdas_.T).sum(1)
-
-    def _log_hazard(self, params, T, X):
-        hz = self._hazard(params, T, X)
-        hz = np.clip(hz, 1e-20, np.inf)
-        return np.log(hz)
 
     def _prep_inputs_for_prediction_and_return_parameters(self, X):
         X = X.copy()

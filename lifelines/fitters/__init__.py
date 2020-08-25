@@ -1293,6 +1293,7 @@ class ParametricRegressionFitter(RegressionFitter):
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = dict()
     fit_intercept = False
+    force_no_intercept = False
     regressors = None
     strata = None
 
@@ -1743,7 +1744,9 @@ class ParametricRegressionFitter(RegressionFitter):
         self._central_values = self._compute_central_values_of_raw_training_data(df, self.strata)
 
         regressors = utils.coalesce(regressors, self.regressors, {p: None for p in self._fitted_parameter_names})
-        self.regressors = utils.CovariateParameterMappings(regressors, df, force_intercept=self.fit_intercept)
+        self.regressors = utils.CovariateParameterMappings(
+            regressors, df, force_intercept=self.fit_intercept, force_no_intercept=self.force_no_intercept
+        )
         Xs = self.regressors.transform_df(df)
 
         self._check_values_pre_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)

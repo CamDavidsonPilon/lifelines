@@ -1889,7 +1889,9 @@ class CovariateParameterMappings:
             else:
                 raise ValueError("Unexpected transform.")
 
-            if self.force_no_intercept:
+            # some parameters are constants (like in piecewise and splines) and so should
+            # not be dropped.
+            if self.force_no_intercept and X.shape[1] > 1:
                 try:
                     X = X.drop(self.INTERCEPT_COL, axis=1)
                 except:
