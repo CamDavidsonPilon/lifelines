@@ -2740,6 +2740,7 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
 
     _KNOWN_MODEL = True
     _FAST_MEDIAN_PREDICT = False
+    fit_intercept = True
 
     cluster_col = None
 
@@ -2764,10 +2765,9 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
         if self.strata is not None:
             names = ["beta_"]
             for stratum in self.strata_values:
-                names += [self._strata_labeler(stratum, i) for i in range(1, self.n_breakpoints + 2)]
+                names += [self._strata_labeler(stratum, i) for i in range(2, self.n_breakpoints + 2)]
             return names
         else:
-            # return ["beta_"] + ["log_lambda%d_" % i for i in range(1, self.n_breakpoints + 2)]
             return ["beta_"] + ["log_lambda%d_" % i for i in range(2, self.n_breakpoints + 2)]
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
@@ -2775,9 +2775,7 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
         if self.strata is not None:
             params = {"beta_": np.zeros(len(Xs["beta_"].columns))}
             for stratum in self.strata_values:
-                params.update(
-                    {self._strata_labeler(stratum, 1): np.array([0.05]), self._strata_labeler(stratum, 2): np.array([-0.05])}
-                )
+                params.update({self._strata_labeler(stratum, 2): np.array([-0.05])})
                 params.update({self._strata_labeler(stratum, i): np.array([0.0]) for i in range(3, self.n_breakpoints + 2)})
 
             return params
@@ -2872,14 +2870,14 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
 
             for stratum, stratified_X in df.groupby(self.strata):
                 log_lambdas_ = anp.array(
-                    [0] + [self.params_[self._strata_labeler(stratum, i)][0] for i in range(1, self.n_breakpoints + 2)]
+                    [0] + [self.params_[self._strata_labeler(stratum, i)][0] for i in range(2, self.n_breakpoints + 2)]
                 )
                 lambdas_ = np.exp(log_lambdas_)
 
                 Xs_ = self.regressors.transform_df(stratified_X)
                 partial_hazard = np.exp(np.dot(Xs_["beta_"], self.params_["beta_"]))
 
-                cumulative_hazard_ = pd.DataFrame(partial_hazard * np.dot(M, lambdas_), index=times[:, 0])
+                cumulative_hazard_ = pd.DataFrame(np.outer(np.dot(M, lambdas_), partial_hazard), index=times[:, 0])
                 cumulative_hazard_.columns = stratified_X["index"]
                 cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
 
@@ -2891,7 +2889,7 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
 
             Xs = self.regressors.transform_df(df)
             partial_hazard = np.exp(np.dot(Xs["beta_"], self.params_["beta_"]))
-            return pd.DataFrame(partial_hazard * np.dot(M, lambdas_), columns=utils._get_index(df), index=times[:, 0])
+            return pd.DataFrame(np.outer(np.dot(M, lambdas_), partial_hazard), columns=utils._get_index(df), index=times[:, 0])
 
 
 class _BatchVsSingle:

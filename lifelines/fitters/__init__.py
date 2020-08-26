@@ -2065,6 +2065,10 @@ class ParametricRegressionFitter(RegressionFitter):
         )
 
     @property
+    def _ll_null_dof(self):
+        return len(self._fitted_parameter_names)
+
+    @property
     def _ll_null(self):
         if hasattr(self, "_ll_null_"):
             return self._ll_null_
@@ -2104,7 +2108,6 @@ class ParametricRegressionFitter(RegressionFitter):
                 model.fit_left_censoring(
                     df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors, initial_point=initial_point
                 )
-        self._ll_null_dof = model.params_.shape[0]
         self._ll_null_ = model.log_likelihood_
         return self._ll_null_
 

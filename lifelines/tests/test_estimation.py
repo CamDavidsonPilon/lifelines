@@ -630,7 +630,6 @@ class TestUnivariateFitters:
             with pytest.raises(TypeError):
                 fitter().fit(T, E)
 
-    @pytest.mark.xfail
     def test_pickle_serialization(self, positive_sample_lifetimes, univariate_fitters):
         T = positive_sample_lifetimes[0]
         for f in univariate_fitters:
@@ -641,7 +640,6 @@ class TestUnivariateFitters:
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
-    @pytest.mark.xfail
     def test_dill_serialization(self, positive_sample_lifetimes, univariate_fitters):
         from dill import dumps, loads
 
@@ -654,7 +652,6 @@ class TestUnivariateFitters:
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
-    @pytest.mark.xfail
     def test_joblib_serialization(self, positive_sample_lifetimes, univariate_fitters):
         from joblib import dump, load
 
@@ -2863,6 +2860,10 @@ class TestCoxPHFitterPeices:
             * np.exp(cph.summary.loc[("log_lambda2_", "Intercept"), "coef"]),
         )
 
+    def test_trivial_model_doesnt_fail(self, cph, rossi):
+        cph.fit(rossi[["week", "arrest"]], "week", "arrest")
+        cph.baseline_hazard_
+
 
 class TestCoxPHFitter:
     @pytest.fixture
@@ -2873,13 +2874,23 @@ class TestCoxPHFitter:
     def cph_spline(self):
         return CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2)
 
-    def test_spline_strata_null_dof(self, cph_spline, rossi):
+    @pytest.fixture
+    def cph_pieces(self):
+        return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
+
+    def test_parametric_strata_null_dof(self, cph_spline, cph_pieces, rossi):
         cph_spline.fit(rossi, "week", "arrest", strata="paro", formula="age")
         assert cph_spline._ll_null_dof < cph_spline.params_.shape[0]
 
-    def test_spline_strata_score(self, cph_spline, rossi):
+        cph_pieces.fit(rossi, "week", "arrest", strata="paro", formula="age")
+        assert cph_pieces._ll_null_dof < cph_pieces.params_.shape[0]
+
+    def test_parametric_strata_score(self, cph_spline, cph_pieces, rossi):
         cph_spline.fit(rossi, "week", "arrest", strata="paro", formula="age")
         cph_spline.score(rossi)
+
+        cph_pieces.fit(rossi, "week", "arrest", strata="paro", formula="age")
+        cph_pieces.score(rossi)
 
     def test_categorical_variables_are_still_encoded_correctly(self, cph):
         """
@@ -2928,7 +2939,7 @@ class TestCoxPHFitter:
         npt.assert_allclose(cph.summary.loc["AIDSY", "se(coef)"], 0.24630, rtol=3)
         npt.assert_allclose(cph.log_likelihood_, -95.15478, rtol=2)
 
-    def test_formulas_can_be_used_for_inference(self, rossi, cph, cph_spline):
+    def test_formulas_can_be_used_for_inference(self, rossi, cph, cph_spline, cph_pieces):
         cph.fit(rossi, "week", "arrest", formula="age + race")
         assert cph.summary.index.tolist() == ["age", "race"]
 
@@ -2941,12 +2952,23 @@ class TestCoxPHFitter:
         cph_spline.fit(rossi, "week", "arrest", formula="age * race")
         assert cph_spline.summary.loc["beta_"].index.tolist() == ["Intercept", "age", "race", "age:race"]
 
-    def test_formulas_can_be_used_with_prediction(self, rossi, cph, cph_spline):
+        cph_pieces.fit(rossi, "week", "arrest", formula="age + race")
+        assert cph_pieces.summary.loc["beta_"].index.tolist() == ["Intercept", "age", "race"]
+
+        cph_pieces.fit(rossi, "week", "arrest", formula="age * race")
+        assert cph_pieces.summary.loc["beta_"].index.tolist() == ["Intercept", "age", "race", "age:race"]
+
+    @pytest.mark.parametrize(
+        "cph",
+        [
+            CoxPHFitter(),
+            CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3),
+            CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25]),
+        ],
+    )
+    def test_formulas_can_be_used_with_prediction(self, rossi, cph):
         cph.fit(rossi, "week", "arrest", formula="age * race")
         cph.predict_survival_function(rossi)
-
-        cph_spline.fit(rossi, "week", "arrest", formula="age * race")
-        cph_spline.predict_survival_function(rossi)
 
     def test_timeline_argument_can_be_set(self, rossi, cph_spline, cph):
         timeline = np.linspace(0, 100)
@@ -2990,7 +3012,14 @@ class TestCoxPHFitter:
         cph.fit(rossi[["week", "arrest"]], "week", "arrest")
         assert True
 
-    def test_spline_model_can_handle_specific_outliers(self, cph_spline):
+    @pytest.mark.parametrize(
+        "cph",
+        [
+            CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3),
+            CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25]),
+        ],
+    )
+    def test_parameterized_model_can_handle_specific_outliers(self, cph):
         # https://github.com/CamDavidsonPilon/lifelines/issues/965
 
         # Generating random correlated data
@@ -3004,11 +3033,10 @@ class TestCoxPHFitter:
         test_data = pd.DataFrame({"Days": days, "Cov1": cov1, "Cov2": cov2})
         test_data = test_data[test_data["Days"] > 0]
 
-        cph_sp = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
-        cph_sp.fit(test_data, duration_col="Days")
+        cph.fit(test_data, duration_col="Days")
 
         # check survival is always decreasing
-        assert np.all(cph_sp.baseline_survival_.diff().dropna() < 0)
+        assert np.all(cph.baseline_survival_.diff().dropna() < 0)
 
     def test_spline_and_breslow_models_offer_very_comparible_baseline_survivals(self, rossi):
         cph_breslow = CoxPHFitter().fit(rossi, "week", "arrest")
@@ -3037,20 +3065,27 @@ class TestCoxPHFitter:
             .log_likelihood_
         )
 
-    def test_strata_estimation_for_spline(self, rossi, cph_spline):
-        cph_spline.fit(rossi, "week", "arrest", strata="wexp")
+    @pytest.mark.parametrize(
+        "cph",
+        [
+            CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3),
+            CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25]),
+        ],
+    )
+    def test_strata_estimation_for_parameterized(self, rossi, cph):
+        cph.fit(rossi, "week", "arrest", strata="wexp")
 
-        assert cph_spline.baseline_cumulative_hazard_.shape[1] == 2
-        assert cph_spline.baseline_hazard_.shape[1] == 2
-        assert cph_spline.baseline_survival_.shape[1] == 2
+        assert cph.baseline_cumulative_hazard_.shape[1] == 2
+        assert cph.baseline_hazard_.shape[1] == 2
+        assert cph.baseline_survival_.shape[1] == 2
 
-        cph_spline.fit(rossi, "week", "arrest", strata=["wexp", "paro"])
+        cph.fit(rossi, "week", "arrest", strata=["wexp", "paro"])
 
-        assert cph_spline.baseline_cumulative_hazard_.shape[1] == 4
-        assert cph_spline.baseline_hazard_.shape[1] == 4
-        assert cph_spline.baseline_survival_.shape[1] == 4
+        assert cph.baseline_cumulative_hazard_.shape[1] == 4
+        assert cph.baseline_hazard_.shape[1] == 4
+        assert cph.baseline_survival_.shape[1] == 4
 
-    def test_strata_estimation_is_same_if_using_trivial_strata(self, rossi, cph_spline):
+    def test_strata_estimation_is_same_if_using_trivial_strata(self, rossi):
         rossi["strata"] = "a"
         trivial_strata_cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
         trivial_strata_cph.fit(rossi, "week", "arrest", strata="strata")
@@ -3068,16 +3103,23 @@ class TestCoxPHFitter:
             trivial_strata_cph.summary.loc[[("beta_", "Intercept"), ("sa_phi1_", "Intercept")]].reset_index(drop=True),
         )
 
-    def test_baseline_estimation_for_spline(self, rossi, cph_spline):
-        cph_spline.fit(rossi, "week", "arrest")
+    @pytest.mark.parametrize(
+        "cph",
+        [
+            CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3),
+            CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25]),
+        ],
+    )
+    def test_baseline_estimation_for_parameteric(self, rossi, cph):
+        cph.fit(rossi, "week", "arrest")
 
-        assert isinstance(cph_spline.baseline_survival_, pd.DataFrame)
-        assert list(cph_spline.baseline_survival_.columns) == ["baseline survival"]
-        assert list(cph_spline.baseline_cumulative_hazard_.columns) == ["baseline cumulative hazard"]
+        assert isinstance(cph.baseline_survival_, pd.DataFrame)
+        assert list(cph.baseline_survival_.columns) == ["baseline survival"]
+        assert list(cph.baseline_cumulative_hazard_.columns) == ["baseline cumulative hazard"]
 
-        assert cph_spline.baseline_survival_at_times([1, 2, 3]).shape[0] == 3
-        assert cph_spline.baseline_cumulative_hazard_at_times([1, 2, 3]).shape[0] == 3
-        assert cph_spline.baseline_hazard_at_times([1, 2, 3]).shape[0] == 3
+        assert cph.baseline_survival_at_times([1, 2, 3]).shape[0] == 3
+        assert cph.baseline_cumulative_hazard_at_times([1, 2, 3]).shape[0] == 3
+        assert cph.baseline_hazard_at_times([1, 2, 3]).shape[0] == 3
 
     def test_conditional_after_in_prediction(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "week"] = 0
