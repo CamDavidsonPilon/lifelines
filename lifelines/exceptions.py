@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-class FormulaSyntaxError(SyntaxError):
-    def __init__(self, message):
-        self.message = message
-        super().__init__(self.message)
 
 
 class StatError(Exception):

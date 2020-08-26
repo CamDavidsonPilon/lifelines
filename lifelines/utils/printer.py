@@ -156,7 +156,7 @@ class Printer:
         )
 
         if second_row_set:
-            repr_string += "\n"
+            repr_string += "\n\n"
             repr_string += df[columns].to_string(
                 float_format=utils.format_floats(decimals),
                 formatters={

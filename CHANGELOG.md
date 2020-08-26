@@ -1,5 +1,17 @@
 ## Changelog
 
+#### 0.25.4 - 2020-08-26
+
+##### New features
+ - New baseline estimator for Cox models: ``piecewise``
+ - Performance improvements for parametric models `log_likelihood_ratio_test()` and `print_summary()`
+ - Better step-size defaults for Cox model -> more robust convergence.
+
+
+##### Bug fixes
+ - fix `check_assumptions` when using formulas.
+
+
 #### 0.25.3 - 2020-08-24
 
 ##### New features

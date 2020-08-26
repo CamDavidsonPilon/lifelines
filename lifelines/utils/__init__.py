@@ -18,7 +18,7 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
-from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError, FormulaSyntaxError
+from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError
 
 
 __all__ = [
@@ -959,6 +959,18 @@ def pass_for_numeric_dtypes_or_raise_array(x):
         raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
 
 
+def check_scaling(df):
+    for col in df.columns:
+        if df[col].mean() > 1e4:
+            warning_text = dedent(
+                """Column {0} has a large mean, try centering this to a value closer to 0.
+            """.format(
+                    col
+                )
+            )
+            warnings.warn(warning_text, ConvergenceWarning)
+
+
 def check_dimensions(df):
     n, d = df.shape
     if d >= n:
@@ -1506,7 +1518,7 @@ class StepSizer:
     """
 
     def __init__(self, initial_step_size: Optional[float]) -> None:
-        initial_step_size = initial_step_size or 0.95
+        initial_step_size = initial_step_size or 0.90
 
         self.initial_step_size = initial_step_size
         self.step_size = initial_step_size
@@ -1514,7 +1526,7 @@ class StepSizer:
         self.norm_of_deltas: List[float] = []
 
     def update(self, norm_of_delta: float) -> "StepSizer":
-        SCALE = 1.2
+        SCALE = 1.3
         LOOKBACK = 3
 
         self.norm_of_deltas.append(norm_of_delta)
@@ -1525,10 +1537,10 @@ class StepSizer:
 
         # Only allow small steps
         if norm_of_delta >= 15.0:
-            self.step_size *= 0.25
+            self.step_size *= 0.1
             self.temper_back_up = True
         elif 15.0 > norm_of_delta > 5.0:
-            self.step_size *= 0.75
+            self.step_size *= 0.25
             self.temper_back_up = True
 
         # recent non-monotonically decreasing is a concern
@@ -1719,6 +1731,11 @@ def find_best_parametric_model(
     weights: an array, or pd.Series, of length n
         integer weights per observation
 
+
+    Note
+    ----------
+    Due to instability, the GeneralizedGammaFitter is not tested here.
+
     Returns
     ----------
     tuple of fitted best_model and best_score
@@ -1780,7 +1797,6 @@ def find_best_parametric_model(
         PiecewiseExponentialFitter(knots1[1:-1], label="PiecewiseExponentialFitter: 1 breakpoint"),
         PiecewiseExponentialFitter(knots2[1:-1], label="PiecewiseExponentialFitter: 2 breakpoint"),
         PiecewiseExponentialFitter(knots3[1:-1], label="PiecewiseExponentialFitter: 3 breakpoint"),
-        GeneralizedGammaFitter(),
         SplineFitter(knots1, label="SplineFitter: 1 internal knot"),
         SplineFitter(knots2, label="SplineFitter: 2 internal knot"),
         SplineFitter(knots3, label="SplineFitter: 3 internal knot"),
@@ -1889,7 +1905,9 @@ class CovariateParameterMappings:
             else:
                 raise ValueError("Unexpected transform.")
 
-            if self.force_no_intercept:
+            # some parameters are constants (like in piecewise and splines) and so should
+            # not be dropped.
+            if self.force_no_intercept and X.shape[1] > 1:
                 try:
                     X = X.drop(self.INTERCEPT_COL, axis=1)
                 except:
@@ -1904,6 +1922,7 @@ class CovariateParameterMappings:
 
         # we can't concat empty dataframes and return a column MultiIndex,
         # so we create a "fake" dataframe (acts like a dataframe) to return.
+        # This should be removed because it's gross.
         if Xs_df.size == 0:
             return {p: pd.DataFrame(index=df.index) for p in self.mappings.keys()}
         else:
@@ -1925,28 +1944,6 @@ class CovariateParameterMappings:
         if self.force_intercept:
             formula += "+ 1"
 
-        try:
-            _X = patsy.dmatrix(formula, df, 1, NA_action="raise")
+        _X = patsy.dmatrix(formula, df, 1, NA_action="raise")
 
-        except SyntaxError as e:
-            import traceback
-
-            column_error = "\n".join(traceback.format_exc().split("\n")[-4:])
-            raise FormulaSyntaxError(
-                (
-                    """
-It looks like the DataFrame has non-standard column names. See below for which column:
-
-%s
-
-All columns should either
-
-i) have no non-traditional characters (this includes spaces and periods)
-ii) use `formula=` kwarg in the call to `fit`, and use `Q()` to wrap the column name.
-
-See more docs here: https://lifelines.readthedocs.io/en/latest/Examples.html#fixing-a-formulasyntaxerror
-            """
-                    % column_error
-                )
-            )
         return _X.design_info
