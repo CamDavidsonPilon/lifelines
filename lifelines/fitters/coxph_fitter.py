@@ -50,7 +50,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         the level in the confidence intervals.
 
       baseline_estimation_method: string, optional
-        specify how the fitter should estimate the baseline. ``"breslow"`` or ``"spline"``
+        specify how the fitter should estimate the baseline. ``"breslow"``, ``"spline"``, or ``"piecewise"``
 
       penalizer: float or array, optional (default=0.0)
         Attach a penalty to the size of the coefficients during regression. This improves
@@ -72,7 +72,10 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
       n_baseline_knots: int
         Used when ``baseline_estimation_method="spline"`. Set the number of knots (interior & exterior) in the baseline hazard. Should be atleast 2. Royston et. al, the authors
-        of this model, suggest 4 to start, but any values between 2 and 6 are reasonable.
+        of this model, suggest 4 to start, but any values between 2 and 8 are reasonable.
+
+      breakpoints: int
+        Used when ``baseline_estimation_method="piecewise"`. Set the positions of the baseline hazard breakpoints.
 
     Examples
     --------
@@ -130,6 +133,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         strata: Optional[Union[List[str], str]] = None,
         l1_ratio: float = 0.0,
         n_baseline_knots: Optional[int] = None,
+        breakpoints: Optional[List] = None,
         **kwargs,
     ) -> None:
 
@@ -143,6 +147,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         self.l1_ratio = l1_ratio
         self.baseline_estimation_method = baseline_estimation_method
         self.n_baseline_knots = n_baseline_knots
+        self.breakpoints = breakpoints
 
     @utils.CensoringType.right_censoring
     def fit(
@@ -304,6 +309,8 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             return self._fit_model_breslow(*args, **kwargs)
         elif self.baseline_estimation_method == "spline":
             return self._fit_model_spline(*args, **kwargs)
+        elif self.baseline_estimation_method == "piecewise":
+            return self._fit_model_piecewise(*args, **kwargs)
         else:
             raise ValueError("Invalid model estimation.")
 
@@ -312,6 +319,53 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             penalizer=self.penalizer, l1_ratio=self.l1_ratio, strata=self.strata, alpha=self.alpha, label=self._label
         )
         model.fit(*args, **kwargs)
+        return model
+
+    def _fit_model_piecewise(self, *args, **kwargs):
+        df = args[0].copy()
+        # handle if they provided a formula or not
+        formula = kwargs.pop("formula")
+
+        # handle cluster_col
+        if kwargs["cluster_col"] is not None:
+            raise ValueError("cluster_col is not available for this baseline estimation method")
+        assert self.breakpoints is not None, "breakpoints must be set in initialization."
+
+        # these are not needed, should be popped off.
+        kwargs.pop("cluster_col")
+        kwargs.pop("step_size")
+        kwargs.pop("batch_mode")
+
+        # handle strata
+        strata = kwargs.pop("strata")
+
+        if strata is None:
+            regressors = {**{"beta_": formula}, **{"log_lambda%d_" % i: "1" for i in range(2, len(self.breakpoints) + 2)}}
+            strata_values = None
+        elif isinstance(strata, (list, str)):
+            strata_namer = ParametricPiecewiseBaselinePHFitter._strata_labeler
+            strata = utils._to_list(strata)
+
+            df = df.set_index(strata).sort_index()
+
+            # how many unique strata values are there?
+            strata_values = df.groupby(strata).size().index.tolist()
+            regressors = {"beta_": formula}
+            for stratum in strata_values:
+                regressors.update({strata_namer(stratum, i): "1" for i in range(2, len(self.breakpoints) + 2)})
+        else:
+            raise ValueError("Wrong type for strata. String, None, or list of strings")
+
+        model = ParametricPiecewiseBaselinePHFitter(
+            strata=strata,
+            strata_values=strata_values,
+            penalizer=self.penalizer,
+            l1_ratio=self.l1_ratio,
+            breakpoints=self.breakpoints,
+            alpha=self.alpha,
+            label=self._label,
+        )
+        model.fit(df, *args[1:], regressors=regressors, **kwargs)
         return model
 
     def _fit_model_spline(self, *args, **kwargs):
@@ -338,7 +392,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             regressors = {**{"beta_": formula}, **{"phi%d_" % i: "1" for i in range(1, self.n_baseline_knots + 1)}}
             strata_values = None
         elif isinstance(strata, (list, str)):
-            spline_namer = ParametricSplinePHFitter._strata_spline_labeler
+            strata_namer = ParametricSplinePHFitter._strata_labeler
             strata = utils._to_list(strata)
 
             df = df.set_index(strata).sort_index()
@@ -347,7 +401,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             strata_values = df.groupby(strata).size().index.tolist()
             regressors = {"beta_": formula}
             for stratum in strata_values:
-                regressors.update({spline_namer(stratum, i): "1" for i in range(1, self.n_baseline_knots + 1)})
+                regressors.update({strata_namer(stratum, i): "1" for i in range(1, self.n_baseline_knots + 1)})
         else:
             raise ValueError("Wrong type for strata. String, None, or list of strings")
 
@@ -404,6 +458,8 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             headers.append(("strata", self.strata))
         if self.baseline_estimation_method == "spline":
             headers.append(("number of baseline knots", self.n_baseline_knots))
+        if self.baseline_estimation_method == "piecewise":
+            headers.append(("location of breaks", self.breakpoints))
 
         headers.extend(
             [
@@ -428,7 +484,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
                     ("Partial AIC", "{:.{prec}f}".format(self.AIC_partial_, prec=decimals)),
                 ]
             )
-        elif self.baseline_estimation_method == "spline":
+        elif self.baseline_estimation_method in ["spline", "piecewise"]:
             footers.append(("AIC", "{:.{prec}f}".format(self.AIC_, prec=decimals)))
 
         footers.extend(
@@ -1211,7 +1267,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         elif not success:
             self._check_values_post_fitting(X, T, E, weights)
             warnings.warn(
-                "Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, exceptions.ConvergenceWarning
+                "Newton-Rhaphson failed to converge sufficiently. {0}".format(CONVERGENCE_DOCS), exceptions.ConvergenceWarning
             )
 
         return beta, ll_, hessian
@@ -2358,134 +2414,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
     @property
     def AIC_(self):
         raise exceptions.StatError(
-            "Since the model is semi-parametric (and not fully-parametric), the AIC does not exist. You probably want the `.AIC_partial_` property instead"
+            "Since the model is semi-parametric (and not fully-parametric), the AIC does not exist. You probably want the `.AIC_partial_` property instead."
         )
 
 
-class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, ProportionalHazardMixin):
-    r"""
-    Proportional hazard model with cubic splines model for the baseline hazard.
-
-    .. math::  h(t|x) = h_0(t) \exp((x - \overline{x})' \beta)
-
-    where
-
-    .. math:: h_0(t) = \exp{\left( \phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j(\log{t})\right)}
-
-    where :math:`v_j` are our cubic basis functions at predetermined knots. See references for exact definition.
-
-    References
-    ------------
-    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
-
-    Note
-    -------
-    This is a "hidden" class that is invoked when using ``baseline_estimation_method="spline"``. You probably want to use ``CoxPHFitter``, not this.
-    """
-
-    _scipy_fit_method = "SLSQP"
-    _scipy_fit_options = {"maxiter": 1000, "iprint": 100}
+class ParametricCoxModelFitter(ParametricRegressionFitter, ProportionalHazardMixin):
 
     _KNOWN_MODEL = True
-    _FAST_MEDIAN_PREDICT = False
-
     cluster_col = None
-    fit_intercept = True
-
-    def __init__(self, strata, strata_values, n_baseline_knots=1, *args, **kwargs):
-        self.strata = strata
-        self.strata_values = strata_values
-
-        assert (
-            n_baseline_knots is not None and n_baseline_knots > 1
-        ), "n_baseline_knots should be greater than 1. Set in class instantiation"
-
-        self.n_baseline_knots = n_baseline_knots
-        super(ParametricSplinePHFitter, self).__init__(*args, **kwargs)
-
-    @staticmethod
-    def _strata_spline_labeler(stratum, i):
-        return "s%s_phi%d_" % (stratum, i)
-
-    @property
-    def _fitted_parameter_names(self):
-        if self.strata is not None:
-            names = ["beta_"]
-            for stratum in self.strata_values:
-                names += [self._strata_spline_labeler(stratum, i) for i in range(1, self.n_baseline_knots + 1)]
-            return names
-        else:
-            return ["beta_"] + ["phi%d_" % i for i in range(1, self.n_baseline_knots + 1)]
-
-    def _set_knots(self, T, E):
-        self.knots = np.percentile(T[E.astype(bool).values], np.linspace(5, 95, self.n_baseline_knots + 1))
-        return
-
-    def _pre_fit_model(self, Ts, E, df):
-        self._set_knots(Ts[0], E)
-
-    def _create_initial_point(self, Ts, E, entries, weights, Xs):
-        #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
-        if self.strata is not None:
-            params = {"beta_": np.zeros(len(Xs["beta_"].columns))}
-            for stratum in self.strata_values:
-                params.update(
-                    {
-                        self._strata_spline_labeler(stratum, 1): np.array([0.05]),
-                        self._strata_spline_labeler(stratum, 2): np.array([-0.05]),
-                    }
-                )
-                params.update(
-                    {self._strata_spline_labeler(stratum, i): np.array([0.0]) for i in range(3, self.n_baseline_knots + 1)}
-                )
-
-            return params
-
-        else:
-            return {
-                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
-                **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 1)},
-            }
-
-    def _cumulative_hazard_with_strata(self, params, T, Xs):
-        lT = anp.log(T)
-        output = []
-
-        # hack for iterating over stratified T
-        start, stop = 0, 0
-
-        # I can assume Xs is sorted by strata values
-        for stratum, Xs_ in Xs.groupby(self.strata):
-            stop = stop + Xs_.size
-
-            if T.ndim > 1:
-                lT_ = lT[:, start:stop]
-            else:
-                lT_ = lT[start:stop]
-
-            H_ = safe_exp(anp.dot(Xs_["beta_"], params["beta_"]) + params[self._strata_spline_labeler(stratum, 1)] * lT_)
-
-            for i in range(2, self.n_baseline_knots + 1):
-                H_ = H_ * safe_exp(
-                    params[self._strata_spline_labeler(stratum, i)]
-                    * self.basis(lT_, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
-                )
-
-            output.append(H_)
-            start = stop
-
-        return anp.hstack(output) if output else anp.array([])
-
-    def _cumulative_hazard_sans_strata(self, params, T, Xs):
-        lT = anp.log(T)
-
-        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi1_"] * lT)
-
-        for i in range(2, self.n_baseline_knots + 1):
-            H = H * safe_exp(
-                params["phi%d_" % i] * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
-            )
-        return H
 
     def _cumulative_hazard(self, params, T, Xs):
         if self.strata is not None:
@@ -2591,7 +2527,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
 
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", category=UserWarning)
-                    cumulative_hazard_ = super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
+                    cumulative_hazard_ = super(ParametricCoxModelFitter, self).predict_cumulative_hazard(
                         stratified_X, times=times, conditional_after=conditional_after_
                     )
                 cumulative_hazard_.columns = stratified_X["index"]
@@ -2600,7 +2536,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             return cumulative_hazard
 
         else:
-            return super(ParametricSplinePHFitter, self).predict_cumulative_hazard(
+            return super(ParametricCoxModelFitter, self).predict_cumulative_hazard(
                 df, times=times, conditional_after=conditional_after
             )
 
@@ -2646,7 +2582,7 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
                 else:
                     conditional_after_ = None
 
-                cumulative_hazard_ = super(ParametricSplinePHFitter, self).predict_hazard(
+                cumulative_hazard_ = super(ParametricCoxModelFitter, self).predict_hazard(
                     stratified_X, times=times, conditional_after=conditional_after_
                 )
                 cumulative_hazard_.columns = stratified_X["index"]
@@ -2655,13 +2591,305 @@ class ParametricSplinePHFitter(ParametricRegressionFitter, SplineFitterMixin, Pr
             return cumulative_hazard
 
         else:
-            return super(ParametricSplinePHFitter, self).predict_hazard(df, times=times, conditional_after=conditional_after)
+            return super(ParametricCoxModelFitter, self).predict_hazard(df, times=times, conditional_after=conditional_after)
 
     @property
     def AIC_partial_(self):
         raise exceptions.StatError(
-            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead"
+            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead."
         )
+
+
+class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
+    r"""
+    Proportional hazard model with cubic splines model for the baseline hazard.
+
+    .. math::  h(t|x) = h_0(t) \exp(x' \beta)
+
+    where
+
+    .. math:: h_0(t) = \exp{\left( \phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j(\log{t})\right)}
+
+    where :math:`v_j` are our cubic basis functions at predetermined knots. See references for exact definition.
+
+    References
+    ------------
+    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
+
+    Note
+    -------
+    This is a "hidden" class that is invoked when using ``baseline_estimation_method="spline"``. You probably want to use ``CoxPHFitter``, not this.
+    """
+
+    _scipy_fit_method = "SLSQP"
+    _scipy_fit_options = {"maxiter": 1000, "iprint": 100}
+
+    _FAST_MEDIAN_PREDICT = False
+    fit_intercept = True
+
+    def __init__(self, strata, strata_values, n_baseline_knots=1, *args, **kwargs):
+        self.strata = strata
+        self.strata_values = strata_values
+
+        assert (
+            n_baseline_knots is not None and n_baseline_knots > 1
+        ), "n_baseline_knots should be greater than 1. Set in class instantiation"
+
+        self.n_baseline_knots = n_baseline_knots
+        super(ParametricSplinePHFitter, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def _strata_labeler(stratum, i):
+        return "s%s_phi%d_" % (stratum, i)
+
+    @property
+    def _fitted_parameter_names(self):
+        if self.strata is not None:
+            names = ["beta_"]
+            for stratum in self.strata_values:
+                names += [self._strata_labeler(stratum, i) for i in range(1, self.n_baseline_knots + 1)]
+            return names
+        else:
+            return ["beta_"] + ["phi%d_" % i for i in range(1, self.n_baseline_knots + 1)]
+
+    def _set_knots(self, T, E):
+        self.knots = np.percentile(T[E.astype(bool).values], np.linspace(5, 95, self.n_baseline_knots + 1))
+        return
+
+    def _pre_fit_model(self, Ts, E, df):
+        self._set_knots(Ts[0], E)
+
+    def _create_initial_point(self, Ts, E, entries, weights, Xs):
+        #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
+        if self.strata is not None:
+            params = {"beta_": np.zeros(len(Xs["beta_"].columns))}
+            for stratum in self.strata_values:
+                params.update(
+                    {self._strata_labeler(stratum, 1): np.array([0.05]), self._strata_labeler(stratum, 2): np.array([-0.05])}
+                )
+                params.update({self._strata_labeler(stratum, i): np.array([0.01]) for i in range(3, self.n_baseline_knots + 1)})
+
+            return params
+
+        else:
+            return {
+                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
+                **{"phi%d_" % i: np.array([0.01]) for i in range(3, self.n_baseline_knots + 1)},
+            }
+
+    def _cumulative_hazard_with_strata(self, params, T, Xs):
+        lT = anp.log(T)
+        output = []
+
+        # hack for iterating over stratified T
+        start, stop = 0, 0
+
+        # I can assume Xs is sorted by strata values
+        for stratum, Xs_ in Xs.groupby(self.strata):
+            stop = stop + Xs_.size
+
+            if T.ndim > 1:
+                lT_ = lT[:, start:stop]
+            else:
+                lT_ = lT[start:stop]
+
+            H_ = safe_exp(anp.dot(Xs_["beta_"], params["beta_"]) + params[self._strata_labeler(stratum, 1)] * lT_)
+
+            for i in range(2, self.n_baseline_knots + 1):
+                H_ = H_ * safe_exp(
+                    params[self._strata_labeler(stratum, i)]
+                    * self.basis(lT_, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
+                )
+
+            output.append(H_)
+            start = stop
+
+        return anp.hstack(output) if output else anp.array([])
+
+    def _cumulative_hazard_sans_strata(self, params, T, Xs):
+        lT = anp.log(T)
+
+        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi1_"] * lT)
+
+        for i in range(2, self.n_baseline_knots + 1):
+            H = H * safe_exp(
+                params["phi%d_" % i] * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
+            )
+        return H
+
+
+class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, ProportionalHazardMixin):
+    r"""
+    Proportional hazard model with piecewise constant model for the baseline hazard.
+
+    .. math::  h(t|x) = h_0(t) \exp(x' \beta)
+
+    where
+
+    .. math::  h_0(t) = \begin{cases}
+                        exp{\beta \cdot \text{center}(x)}  & \text{if $t \le \tau_0$} \\
+                        exp{\beta \cdot \text{center}(x)} \cdot lambda_1 & \text{if $\tau_0 < t \le \tau_1$} \\
+                        exp{\beta \cdot \text{center}(x)} \cdot lambda_2 & \text{if $\tau_1 < t \le \tau_2$} \\
+                        ...
+                      \end{cases}
+
+    Note
+    -------
+    This is a "hidden" class that is invoked when using ``baseline_estimation_method="piecewise"``. You probably want to use ``CoxPHFitter``, not this.
+    """
+
+    _KNOWN_MODEL = True
+    _FAST_MEDIAN_PREDICT = False
+    fit_intercept = True
+
+    cluster_col = None
+
+    def __init__(self, strata, strata_values, breakpoints, *args, **kwargs):
+        self.strata = strata
+        self.strata_values = strata_values
+
+        assert (
+            breakpoints is not None and len(breakpoints) > 0
+        ), "breakpoints should be greater than 0. Set in class instantiation"
+
+        self.breakpoints = breakpoints
+        self.n_breakpoints = len(breakpoints)
+        super(ParametricPiecewiseBaselinePHFitter, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def _strata_labeler(stratum, i):
+        return "s%s_lambda%d_" % (stratum, i)
+
+    @property
+    def _fitted_parameter_names(self):
+        if self.strata is not None:
+            names = ["beta_"]
+            for stratum in self.strata_values:
+                names += [self._strata_labeler(stratum, i) for i in range(2, self.n_breakpoints + 2)]
+            return names
+        else:
+            return ["beta_"] + ["log_lambda%d_" % i for i in range(2, self.n_breakpoints + 2)]
+
+    def _create_initial_point(self, Ts, E, entries, weights, Xs):
+        #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
+        if self.strata is not None:
+            params = {"beta_": np.zeros(len(Xs["beta_"].columns))}
+            for stratum in self.strata_values:
+                params.update({self._strata_labeler(stratum, 2): np.array([-0.05])})
+                params.update({self._strata_labeler(stratum, i): np.array([0.0]) for i in range(3, self.n_breakpoints + 2)})
+
+            return params
+
+        else:
+            return {
+                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "log_lambda2_": np.array([-0.05])},
+                **{"log_lambda%d_" % i: np.array([0.0]) for i in range(3, self.n_breakpoints + 2)},
+            }
+
+    def _cumulative_hazard_with_strata(self, params, T, Xs):
+        output = []
+
+        # hack for iterating over stratified T
+        start, stop = 0, 0
+
+        # I can assume Xs is sorted by strata values
+        for stratum, Xs_ in Xs.groupby(self.strata):
+            stop = stop + Xs_.size
+
+            if T.ndim > 1:
+                T_ = T[:, start:stop]
+            else:
+                T_ = T[start:stop]
+
+            partial_hazard = safe_exp(anp.dot(Xs_["beta_"], params["beta_"]))
+            n = T_.shape[0]
+            T_ = T_.reshape((n, 1))
+            bps = anp.append(self.breakpoints, [anp.inf])
+            M = anp.minimum(anp.tile(bps, (n, 1)), T_)
+            M = anp.hstack([M[:, tuple([0])], anp.diff(M, axis=1)])
+            log_lambdas_ = anp.array(
+                [0] + [params[self._strata_labeler(stratum, i)][0] for i in range(2, self.n_breakpoints + 2)]
+            )
+            H_ = partial_hazard * (M * anp.exp(log_lambdas_).T).sum(1)
+
+            output.append(H_)
+            start = stop
+
+        return anp.hstack(output) if output else anp.array([])
+
+    def _cumulative_hazard_sans_strata(self, params, T, Xs):
+        partial_hazard = safe_exp(anp.dot(Xs["beta_"], params["beta_"]))
+        n = T.shape[0]
+        T = T.reshape((n, 1))
+        bps = anp.append(self.breakpoints, [anp.inf])
+        M = anp.minimum(anp.tile(bps, (n, 1)), T)
+        M = anp.hstack([M[:, tuple([0])], anp.diff(M, axis=1)])
+        log_lambdas_ = anp.array([0.0] + [params[param][0] for param in self._fitted_parameter_names if param != "beta_"])
+        return partial_hazard * (M * anp.exp(log_lambdas_).T).sum(1)
+
+    def predict_cumulative_hazard(self, df, times=None, conditional_after=None) -> pd.DataFrame:
+        """
+        Return the cumulative hazard rate of subjects in X at time points.
+
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        times: iterable, optional
+            an iterable of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations (observed and unobserved). Uses a linear interpolation if
+            points in time are not in the index.
+
+        Returns
+        -------
+        cumulative_hazard_ : DataFrame
+            the cumulative hazard of individuals over the timeline
+        """
+        df = df.copy()
+        if isinstance(df, pd.Series):
+            return self.predict_cumulative_hazard(df.to_frame().T)
+
+        if conditional_after is not None:
+            raise NotImplementedError()
+
+        times = np.atleast_1d(utils.coalesce(times, self.timeline)).astype(float)
+        n = times.shape[0]
+        times = times.reshape((n, 1))
+
+        bp = np.append(self.breakpoints, [np.inf])
+
+        M = np.minimum(np.tile(bp, (n, 1)), times)
+        M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
+
+        if self.strata is not None:
+            df = df.reset_index().set_index(self.strata)
+
+            cumulative_hazard = pd.DataFrame()
+
+            for stratum, stratified_X in df.groupby(self.strata):
+                log_lambdas_ = anp.array(
+                    [0] + [self.params_[self._strata_labeler(stratum, i)][0] for i in range(2, self.n_breakpoints + 2)]
+                )
+                lambdas_ = np.exp(log_lambdas_)
+
+                Xs_ = self.regressors.transform_df(stratified_X)
+                partial_hazard = np.exp(np.dot(Xs_["beta_"], self.params_["beta_"]))
+
+                cumulative_hazard_ = pd.DataFrame(np.outer(np.dot(M, lambdas_), partial_hazard), index=times[:, 0])
+                cumulative_hazard_.columns = stratified_X["index"]
+                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
+
+            return cumulative_hazard
+
+        else:
+            log_lambdas_ = np.array([0] + [self.params_[param][0] for param in self._fitted_parameter_names if param != "beta_"])
+            lambdas_ = np.exp(log_lambdas_)
+
+            Xs = self.regressors.transform_df(df)
+            partial_hazard = np.exp(np.dot(Xs["beta_"], self.params_["beta_"]))
+            return pd.DataFrame(np.outer(np.dot(M, lambdas_), partial_hazard), columns=utils._get_index(df), index=times[:, 0])
 
 
 class _BatchVsSingle:

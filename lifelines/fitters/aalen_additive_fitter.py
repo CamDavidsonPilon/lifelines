@@ -87,8 +87,6 @@ class AalenAdditiveFitter(RegressionFitter):
         self.coef_penalizer = coef_penalizer
         self.smoothing_penalizer = smoothing_penalizer
 
-        if not (0 < alpha <= 1.0):
-            raise ValueError("alpha parameter must be between 0 and 1.")
         if coef_penalizer < 0 or smoothing_penalizer < 0:
             raise ValueError("penalizer parameters must be >= 0.")
 
