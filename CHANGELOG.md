@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.25.4 - unreleased
+#### 0.25.4 - 2020-08-26
 
 ##### New features
  - New baseline estimator for Cox models: ``piecewise``
