@@ -482,12 +482,12 @@ Residuals
 After fitting a Cox model, we can look back and compute important model residuals. These residuals can tell us about non-linearities not captured, violations of proportional hazards, and help us answer other useful modeling questions. See `Assessing Cox model fit using residuals`_.
 
 
-Modeling baseline hazard and survival with cubic splines
+Modeling baseline hazard and survival with parametric models
 ---------------------------------------------------------------
 
 Normally, the Cox model is *semi-parametric*, which means that its baseline hazard, :math:`h_0(t)`, has no parametric form. This is the default for *lifelines*. However, it is sometimes valuable to produce a parametric baseline instead. A parametric baseline makes survival predictions more efficient, allows for better understanding of baseline behaviour, and allows interpolation/extrapolation.
 
-In *lifelines*, there is an option to fit to a parametric baseline with cubic splines. Cubic splines are highly flexible and can capture the underlying data almost as well as non-parametric methods, and with much more efficiency.
+In *lifelines*, there is an option to fit to a parametric baseline with 1) cubic splines, or 2) piecewise constant hazards. Cubic splines are highly flexible and can capture the underlying data almost as well as non-parametric methods, and with much more efficiency.
 
 .. code:: python
 
@@ -507,9 +507,11 @@ Below we compare the non-parametric and the fully parametric baseline survivals:
 .. code:: python
 
     cph_semi = CoxPHFitter().fit(rossi, 'week', event_col='arrest')
+    cph_piecewise = CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[20, 35]).fit(rossi, 'week', event_col='arrest')
 
-    ax = cph_spline.baseline_survival_.plot()
-    cph_semi.baseline_survival_.plot(ax=ax, drawstyle="steps-post")
+    ax = cph_spline.baseline_cumulative_hazard_.plot()
+    cph_semi.baseline_cumulative_hazard_.plot(ax=ax, drawstyle="steps-post")
+    cph_piecewise.baseline_cumulative_hazard_.plot(ax=ax)
 
 
 .. figure:: images/spline_and_semi.png
@@ -741,7 +743,7 @@ You read more about and see other examples of the extensions to in the docs for 
 Prediction
 -----------------------------------------------
 
-Given a new subject, we ask questions about their future survival? When are they likely to experience the event? What does their survival function look like? The :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter` is able to answer these. If we have modeled the ancillary covariates, we are required to include those as well:
+Given a new subject, we'd like to ask questions about their future survival. When are they likely to experience the event? What does their survival function look like? The :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter` is able to answer these. If we have modeled the ancillary covariates, we are required to include those as well:
 
 .. code:: python
 
@@ -754,7 +756,7 @@ Given a new subject, we ask questions about their future survival? When are they
     aft.predict_expectation(X, ancillary=X)
 
 
-There are two hyper-parameters that can be used to to achieve a better test score. These are ``penalizer`` and ``l1_ratio`` in the call to :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter`. The penalizer is similar to scikit-learn's ``ElasticNet`` model, see their `docs <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html>`_. (However, *lifelines* will also accept an array for custom penalizer per variable, see `Cox docs above <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#penalties-and-sparse-regression>`_)
+There are two hyper-parameters that can be used to to achieve a better test score. These are ``penalizer`` and ``l1_ratio`` in the call to :class:`~lifelines.fitters.weibull_aft_fitter.WeibullAFTFitter`. The penalizer is similar to scikit-learn's ``ElasticNet`` model, see their `docs <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.ElasticNet.html>`_. (However, *lifelines* will also accept an array for custom penalty value per variable, see `Cox docs above <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#penalties-and-sparse-regression>`_)
 
 .. code:: python
 

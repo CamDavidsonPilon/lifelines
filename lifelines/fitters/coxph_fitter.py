@@ -72,7 +72,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
       n_baseline_knots: int
         Used when ``baseline_estimation_method="spline"`. Set the number of knots (interior & exterior) in the baseline hazard. Should be atleast 2. Royston et. al, the authors
-        of this model, suggest 4 to start, but any values between 2 and 6 are reasonable.
+        of this model, suggest 4 to start, but any values between 2 and 8 are reasonable.
 
       breakpoints: int
         Used when ``baseline_estimation_method="piecewise"`. Set the positions of the baseline hazard breakpoints.
@@ -340,7 +340,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         strata = kwargs.pop("strata")
 
         if strata is None:
-            regressors = {**{"beta_": formula}, **{"log_lambda%d_" % i: "1" for i in range(1, len(self.breakpoints) + 2)}}
+            regressors = {**{"beta_": formula}, **{"log_lambda%d_" % i: "1" for i in range(2, len(self.breakpoints) + 2)}}
             strata_values = None
         elif isinstance(strata, (list, str)):
             strata_namer = ParametricPiecewiseBaselinePHFitter._strata_labeler
@@ -352,7 +352,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             strata_values = df.groupby(strata).size().index.tolist()
             regressors = {"beta_": formula}
             for stratum in strata_values:
-                regressors.update({strata_namer(stratum, i): "1" for i in range(1, len(self.breakpoints) + 2)})
+                regressors.update({strata_namer(stratum, i): "1" for i in range(2, len(self.breakpoints) + 2)})
         else:
             raise ValueError("Wrong type for strata. String, None, or list of strings")
 
@@ -2414,7 +2414,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
     @property
     def AIC_(self):
         raise exceptions.StatError(
-            "Since the model is semi-parametric (and not fully-parametric), the AIC does not exist. You probably want the `.AIC_partial_` property instead"
+            "Since the model is semi-parametric (and not fully-parametric), the AIC does not exist. You probably want the `.AIC_partial_` property instead."
         )
 
 
@@ -2596,7 +2596,7 @@ class ParametricCoxModelFitter(ParametricRegressionFitter, ProportionalHazardMix
     @property
     def AIC_partial_(self):
         raise exceptions.StatError(
-            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead"
+            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead."
         )
 
 
@@ -2604,7 +2604,7 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
     r"""
     Proportional hazard model with cubic splines model for the baseline hazard.
 
-    .. math::  h(t|x) = h_0(t) \exp((x - \overline{x})' \beta)
+    .. math::  h(t|x) = h_0(t) \exp(x' \beta)
 
     where
 
@@ -2625,7 +2625,6 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
     _scipy_fit_options = {"maxiter": 1000, "iprint": 100}
 
     _FAST_MEDIAN_PREDICT = False
-
     fit_intercept = True
 
     def __init__(self, strata, strata_values, n_baseline_knots=1, *args, **kwargs):
@@ -2668,14 +2667,14 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
                 params.update(
                     {self._strata_labeler(stratum, 1): np.array([0.05]), self._strata_labeler(stratum, 2): np.array([-0.05])}
                 )
-                params.update({self._strata_labeler(stratum, i): np.array([0.0]) for i in range(3, self.n_baseline_knots + 1)})
+                params.update({self._strata_labeler(stratum, i): np.array([0.01]) for i in range(3, self.n_baseline_knots + 1)})
 
             return params
 
         else:
             return {
                 **{"beta_": np.zeros(len(Xs["beta_"].columns)), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
-                **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 1)},
+                **{"phi%d_" % i: np.array([0.01]) for i in range(3, self.n_baseline_knots + 1)},
             }
 
     def _cumulative_hazard_with_strata(self, params, T, Xs):
@@ -2728,12 +2727,11 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
     where
 
     .. math::  h_0(t) = \begin{cases}
-                        1/\lambda_0  & \text{if $t \le \tau_0$} \\
-                        1/\lambda_1 & \text{if $\tau_0 < t \le \tau_1$} \\
-                        1/\lambda_2 & \text{if $\tau_1 < t \le \tau_2$} \\
+                        exp{\beta \cdot \text{center}(x)}  & \text{if $t \le \tau_0$} \\
+                        exp{\beta \cdot \text{center}(x)} \cdot lambda_1 & \text{if $\tau_0 < t \le \tau_1$} \\
+                        exp{\beta \cdot \text{center}(x)} \cdot lambda_2 & \text{if $\tau_1 < t \le \tau_2$} \\
                         ...
                       \end{cases}
-
 
     Note
     -------
@@ -2744,7 +2742,6 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
     _FAST_MEDIAN_PREDICT = False
 
     cluster_col = None
-    force_no_intercept = True
 
     def __init__(self, strata, strata_values, breakpoints, *args, **kwargs):
         self.strata = strata
@@ -2770,7 +2767,8 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
                 names += [self._strata_labeler(stratum, i) for i in range(1, self.n_breakpoints + 2)]
             return names
         else:
-            return ["beta_"] + ["log_lambda%d_" % i for i in range(1, self.n_breakpoints + 2)]
+            # return ["beta_"] + ["log_lambda%d_" % i for i in range(1, self.n_breakpoints + 2)]
+            return ["beta_"] + ["log_lambda%d_" % i for i in range(2, self.n_breakpoints + 2)]
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
@@ -2786,11 +2784,7 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
 
         else:
             return {
-                **{
-                    "beta_": np.zeros(len(Xs["beta_"].columns)),
-                    "log_lambda1_": np.array([0.05]),
-                    "log_lambda2_": np.array([-0.05]),
-                },
+                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "log_lambda2_": np.array([-0.05])},
                 **{"log_lambda%d_" % i: np.array([0.0]) for i in range(3, self.n_breakpoints + 2)},
             }
 
@@ -2815,7 +2809,9 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
             bps = anp.append(self.breakpoints, [anp.inf])
             M = anp.minimum(anp.tile(bps, (n, 1)), T_)
             M = anp.hstack([M[:, tuple([0])], anp.diff(M, axis=1)])
-            log_lambdas_ = anp.array([params[self._strata_labeler(stratum, i)] for i in range(1, self.n_breakpoints + 2)])
+            log_lambdas_ = anp.array(
+                [0] + [params[self._strata_labeler(stratum, i)][0] for i in range(2, self.n_breakpoints + 2)]
+            )
             H_ = partial_hazard * (M * anp.exp(log_lambdas_).T).sum(1)
 
             output.append(H_)
@@ -2830,7 +2826,7 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
         bps = anp.append(self.breakpoints, [anp.inf])
         M = anp.minimum(anp.tile(bps, (n, 1)), T)
         M = anp.hstack([M[:, tuple([0])], anp.diff(M, axis=1)])
-        log_lambdas_ = anp.array([params[param] for param in self._fitted_parameter_names if param != "beta_"])
+        log_lambdas_ = anp.array([0.0] + [params[param][0] for param in self._fitted_parameter_names if param != "beta_"])
         return partial_hazard * (M * anp.exp(log_lambdas_).T).sum(1)
 
     def predict_cumulative_hazard(self, df, times=None, conditional_after=None) -> pd.DataFrame:
@@ -2876,7 +2872,7 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
 
             for stratum, stratified_X in df.groupby(self.strata):
                 log_lambdas_ = anp.array(
-                    [self.params_[self._strata_labeler(stratum, i)] for i in range(1, self.n_breakpoints + 2)]
+                    [0] + [self.params_[self._strata_labeler(stratum, i)][0] for i in range(1, self.n_breakpoints + 2)]
                 )
                 lambdas_ = np.exp(log_lambdas_)
 
@@ -2890,7 +2886,7 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
             return cumulative_hazard
 
         else:
-            log_lambdas_ = np.array([self.params_[param] for param in self._fitted_parameter_names if param != "beta_"])
+            log_lambdas_ = np.array([0] + [self.params_[param][0] for param in self._fitted_parameter_names if param != "beta_"])
             lambdas_ = np.exp(log_lambdas_)
 
             Xs = self.regressors.transform_df(df)

@@ -18,7 +18,7 @@ from scipy import stats
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
-from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError, FormulaSyntaxError
+from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError
 
 
 __all__ = [
@@ -1922,6 +1922,7 @@ class CovariateParameterMappings:
 
         # we can't concat empty dataframes and return a column MultiIndex,
         # so we create a "fake" dataframe (acts like a dataframe) to return.
+        # This should be removed because it's gross.
         if Xs_df.size == 0:
             return {p: pd.DataFrame(index=df.index) for p in self.mappings.keys()}
         else:

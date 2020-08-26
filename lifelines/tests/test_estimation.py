@@ -1815,7 +1815,7 @@ class TestRegressionFitters:
         central_values = RegressionFitter()._compute_central_values_of_raw_training_data
 
         empty_df = pd.DataFrame([])
-        assert central_values(empty_df) is None
+        assert_frame_equal(central_values(empty_df), pd.DataFrame(index=["baseline"]))
 
         all_categorical = pd.DataFrame([{"var1": "A", "var2": "C"}, {"var1": "B", "var2": "C"}, {"var1": "B", "var2": "C"}])
         assert_frame_equal(central_values(all_categorical), pd.DataFrame([{"var1": "B", "var2": "C"}], index=["baseline"]))
@@ -2834,6 +2834,34 @@ class TestCoxPHFitter_SemiParametric:
         entries = None
 
         assert np.abs(newton(X, T, E, W, entries)[0] - -0.0335) < 0.0001
+
+
+class TestCoxPHFitterPeices:
+    @pytest.fixture
+    def cph(self):
+        return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
+
+    def test_baseline_hazard_has_correct_functional_form(self, cph, rossi):
+        cph.fit(rossi, "week", "arrest", formula="fin")
+        bhz = cph.baseline_hazard_.loc[1, "baseline hazard"]
+
+        npt.assert_allclose(
+            bhz,
+            np.exp(
+                cph.summary.loc[("beta_", "Intercept"), "coef"]
+                + cph.summary.loc[("beta_", "fin"), "coef"] * cph._central_values.loc["baseline", "fin"]
+            ),
+        )
+
+        bhz = cph.baseline_hazard_.loc[rossi["week"].max(), "baseline hazard"]
+        npt.assert_allclose(
+            bhz,
+            np.exp(
+                cph.summary.loc[("beta_", "Intercept"), "coef"]
+                + cph.summary.loc[("beta_", "fin"), "coef"] * cph._central_values.loc["baseline", "fin"]
+            )
+            * np.exp(cph.summary.loc[("log_lambda2_", "Intercept"), "coef"]),
+        )
 
 
 class TestCoxPHFitter:

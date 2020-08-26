@@ -1221,7 +1221,7 @@ class RegressionFitter(BaseFitter):
         - Numerics are transformed to their median value.
         """
         if df.size == 0:
-            return None
+            return pd.DataFrame(index=["baseline"])
 
         if strata is not None:
             # apply this function within each stratified dataframe
@@ -2065,23 +2065,19 @@ class ParametricRegressionFitter(RegressionFitter):
         )
 
     @property
-    def _ll_null_dof(self):
-        return len(self._fitted_parameter_names)
-
-    @property
     def _ll_null(self):
         if hasattr(self, "_ll_null_"):
             return self._ll_null_
 
         regressors = {name: "1" for name in self._fitted_parameter_names}
 
-        # we can reuse the final values from the full fit for this smaller fit.
+        # we can reuse the final values from the full fit for this partial fit.
         initial_point = {}
         for name in self._fitted_parameter_names:
             try:
                 initial_point[name] = self.params_[name]["Intercept"]
             except:
-                initial_point[name] = 0.0
+                initial_point[name] = 0.0001
 
         df = pd.DataFrame({"entry": self.entry, "w": self.weights})
 
@@ -2108,6 +2104,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 model.fit_left_censoring(
                     df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors, initial_point=initial_point
                 )
+        self._ll_null_dof = model.params_.shape[0]
         self._ll_null_ = model.log_likelihood_
         return self._ll_null_
 

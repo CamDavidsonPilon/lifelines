@@ -95,7 +95,7 @@ class ProportionalHazardMixin:
         test_results = proportional_hazard_test(self, training_df, time_transform=["rank", "km"], precomputed_residuals=residuals)
 
         residuals_and_duration = residuals.join(training_df[self.duration_col])
-        Xs = self.regressors.transform_df(df)
+        Xs = self.regressors.transform_df(training_df)
 
         counter = 0
         n = residuals_and_duration.shape[0]
@@ -178,7 +178,7 @@ class ProportionalHazardMixin:
                     )
 
             if show_plots:
-                print("Bootstrapping lowess lines...")
+                print("Bootstrapping lowess lines. May take a moment...")
                 from matplotlib import pyplot as plt
 
                 fig = plt.figure()
