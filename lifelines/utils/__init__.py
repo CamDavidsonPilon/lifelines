@@ -1097,7 +1097,7 @@ def check_complete_separation_low_variance(df: pd.DataFrame, events: np.ndarray,
     deaths_only = df.columns[_low_var(df.loc[events])]
     censors_only = df.columns[_low_var(df.loc[~events])]
     total = df.columns[_low_var(df)]
-    problem_columns = censors_only.union(deaths_only).difference(total).tolist()
+    problem_columns = (censors_only | deaths_only).difference(total).tolist()
     if problem_columns:
         warning_text = """Column {cols} have very low variance when conditioned on death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
 

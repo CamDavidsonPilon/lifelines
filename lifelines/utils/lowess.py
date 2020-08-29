@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 This module implements the Lowess function for nonparametric regression.
 Functions:
@@ -19,6 +20,7 @@ Statistical Association, September 1988, volume 83, number 403, pp. 596-610.
 # Slight updates in lifelines 0.16.0, 2018
 
 from math import ceil
+import warnings
 import numpy as np
 from scipy import linalg
 
@@ -36,7 +38,7 @@ def lowess(x, y, f=2.0 / 3.0, iterations=3):
     """
     n = len(x)
     r = int(ceil(f * n))
-    h = [np.sort(np.abs(x - x[i]))[r] for i in range(n)]
+    h = np.clip([np.sort(np.abs(x - x[i]))[r] for i in range(n)], 1e-8, np.inf)
     w = np.clip(np.abs((x[:, None] - x[None, :]) / h), 0.0, 1.0)
     w = (1 - w ** 3) ** 3
     yest = np.zeros(n)
@@ -48,7 +50,10 @@ def lowess(x, y, f=2.0 / 3.0, iterations=3):
             A = np.array([[np.sum(weights), np.sum(weights * x)], [np.sum(weights * x), np.sum(weights * x * x)]])
             # I think it is safe to assume this.
             # pylint: disable=unexpected-keyword-arg
-            beta = linalg.solve(A, b, assume_a="pos", check_finite=False)
+            try:
+                beta = linalg.solve(A, b, assume_a="pos", check_finite=False)
+            except np.linalg.LinAlgError:
+                beta = [0, 0]
             yest[i] = beta[0] + beta[1] * x[i]
 
         residuals = y - yest

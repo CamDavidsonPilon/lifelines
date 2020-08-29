@@ -2664,17 +2664,14 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
         if self.strata is not None:
             params = {"beta_": np.zeros(len(Xs["beta_"].columns))}
             for stratum in self.strata_values:
-                params.update(
-                    {self._strata_labeler(stratum, 1): np.array([0.05]), self._strata_labeler(stratum, 2): np.array([-0.05])}
-                )
-                params.update({self._strata_labeler(stratum, i): np.array([0.01]) for i in range(3, self.n_baseline_knots + 1)})
+                params.update({self._strata_labeler(stratum, i): np.array([0.001]) for i in range(1, self.n_baseline_knots + 1)})
 
             return params
 
         else:
             return {
-                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
-                **{"phi%d_" % i: np.array([0.01]) for i in range(3, self.n_baseline_knots + 1)},
+                **{"beta_": np.zeros(len(Xs["beta_"].columns))},
+                **{"phi%d_" % i: np.array([0.001]) for i in range(1, self.n_baseline_knots + 1)},
             }
 
     def _cumulative_hazard_with_strata(self, params, T, Xs):
@@ -2775,15 +2772,14 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
         if self.strata is not None:
             params = {"beta_": np.zeros(len(Xs["beta_"].columns))}
             for stratum in self.strata_values:
-                params.update({self._strata_labeler(stratum, 2): np.array([-0.05])})
-                params.update({self._strata_labeler(stratum, i): np.array([0.0]) for i in range(3, self.n_breakpoints + 2)})
+                params.update({self._strata_labeler(stratum, i): np.array([0.001]) for i in range(2, self.n_breakpoints + 2)})
 
             return params
 
         else:
             return {
-                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "log_lambda2_": np.array([-0.05])},
-                **{"log_lambda%d_" % i: np.array([0.0]) for i in range(3, self.n_breakpoints + 2)},
+                **{"beta_": np.zeros(len(Xs["beta_"].columns))},
+                **{"log_lambda%d_" % i: np.array([0.001]) for i in range(2, self.n_breakpoints + 2)},
             }
 
     def _cumulative_hazard_with_strata(self, params, T, Xs):

@@ -58,7 +58,7 @@ class Printer:
         if self.columns is None:
             columns = summary_df.columns
         else:
-            columns = summary_df.columns.intersection(self.columns)
+            columns = summary_df.columns & self.columns
         return summary_df[columns].to_latex(float_format="%." + str(self.decimals) + "f")
 
     def html_print(self):
@@ -71,7 +71,7 @@ class Printer:
         if self.columns is None:
             columns = summary_df.columns
         else:
-            columns = summary_df.columns.intersection(self.columns)
+            columns = summary_df.columns & self.columns
 
         headers = self.headers.copy()
         headers.insert(0, ("model", "lifelines." + self.model._class_name))
@@ -114,7 +114,7 @@ class Printer:
         df.columns = utils.map_leading_space(df.columns)
 
         if self.columns is not None:
-            columns = df.columns.intersection(utils.map_leading_space(self.columns))
+            columns = df.columns & utils.map_leading_space(self.columns)
         else:
             columns = df.columns
 
