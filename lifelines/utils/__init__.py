@@ -1897,7 +1897,9 @@ class CovariateParameterMappings:
         Xs = {}
         for param_name, transform in self.mappings.items():
             if isinstance(transform, formulaic.formula.Formula):
+                index = df.index
                 X = transform.get_model_matrix(df)
+                X.index = index
             elif isinstance(transform, list):
                 if self.force_intercept:
                     df = self.add_intercept_col(df)
