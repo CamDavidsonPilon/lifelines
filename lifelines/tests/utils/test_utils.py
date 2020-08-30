@@ -906,7 +906,6 @@ class TestSklearnAdapter:
         wf.fit(X, Y)
         assert wf.predict(X).shape[0] == X.shape[0]
 
-    @pytest.mark.xfail
     def test_dill(self, X, Y):
         import dill
 
@@ -918,7 +917,6 @@ class TestSklearnAdapter:
         s = dill.loads(s)
         assert cph.predict(X).shape[0] == X.shape[0]
 
-    @pytest.mark.xfail
     def test_pickle(self, X, Y):
         import pickle
 
@@ -953,7 +951,6 @@ class TestSklearnAdapter:
         assert clf.best_params_ == {"l1_ratio": 0.5, "model_ancillary": False, "penalizer": 0.01}
         assert clf.predict(X).shape[0] == X.shape[0]
 
-    @pytest.mark.xfail
     def test_joblib(self, X, Y):
         from joblib import dump, load
 
