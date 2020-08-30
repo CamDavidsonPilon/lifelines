@@ -1779,8 +1779,8 @@ class ParametricRegressionFitter(RegressionFitter):
         # https://github.com/CamDavidsonPilon/lifelines/issues/931
         assert list(self.regressors.keys()) == list(self._norm_std.index.get_level_values(0).unique())
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
-        self.params_ = _params / self._norm_std
 
+        self.params_ = _params / self._norm_std
         self.variance_matrix_ = pd.DataFrame(self._compute_variance_matrix(), index=_index, columns=_index)
         self.standard_errors_ = self._compute_standard_errors(Ts, E.values, weights.values, entries.values, Xs)
         self.confidence_intervals_ = self._compute_confidence_intervals()
@@ -2676,7 +2676,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             diagnostics. Useful if convergence is failing.
 
         formula: string
-            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
+            Use an R-style formula for modeling the dataset. See formula syntax: https://matthewwardrop.github.io/formulaic/basic/grammar/
 
         ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
@@ -2831,7 +2831,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             observation. If left as None, will be inferred from the start and stop columns (lower_bound==upper_bound means uncensored)
 
         formula: string
-            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
+            Use an R-style formula for modeling the dataset. See formula syntax: https://matthewwardrop.github.io/formulaic/basic/grammar/
 
         ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
@@ -3008,7 +3008,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             observation. If left as None, assume all individuals are uncensored.
 
         formula: string
-            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
+            Use an R-style formula for modeling the dataset. See formula syntax: https://matthewwardrop.github.io/formulaic/basic/grammar/
 
         ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
