@@ -44,7 +44,7 @@ The DataFrame ``rossi`` contains 432 observations. The ``week`` column is the du
 Cox's proportional hazard model
 =================================
 
-The idea behind Cox's proportional hazard model model is that the log-hazard of an individual is a linear function of their covariates *and* a population-level baseline hazard that changes over time. Mathematically:
+The idea behind Cox's proportional hazard model is that the log-hazard of an individual is a linear function of their covariates *and* a population-level baseline hazard that changes over time. Mathematically:
 
 .. math::  \underbrace{h(t | x)}_{\text{hazard}} = \overbrace{b_0(t)}^{\text{baseline hazard}} \underbrace{\exp \overbrace{\left(\sum_{i=1}^n b_i (x_i - \overline{x_i})\right)}^{\text{log-partial hazard}}}_ {\text{partial hazard}}
 
