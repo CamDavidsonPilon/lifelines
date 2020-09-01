@@ -17,7 +17,7 @@ Statistical Association, September 1988, volume 83, number 403, pp. 596-610.
 # License: BSD (3-clause)
 
 
-# Slight updates in lifelines 0.16.0, 2018
+# Slight updates in lifelines 0.16.0+, 2018
 
 from math import ceil
 import warnings
@@ -25,7 +25,7 @@ import numpy as np
 from scipy import linalg
 
 
-def lowess(x, y, f=2.0 / 3.0, iterations=3):
+def lowess(x, y, f=2.0 / 3.0, iterations=1):
     """lowess(x, y, f=2./3., iter=3) -> yest
     Lowess smoother: Robust locally weighted regression.
     The lowess function fits a nonparametric regression curve to a scatterplot.

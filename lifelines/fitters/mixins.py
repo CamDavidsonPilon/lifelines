@@ -26,7 +26,7 @@ class ProportionalHazardMixin:
         advice: bool = True,
         show_plots: bool = False,
         p_value_threshold: float = 0.01,
-        plot_n_bootstraps: int = 10,
+        plot_n_bootstraps: int = 15,
         columns: Optional[List[str]] = None,
     ) -> None:
         """
