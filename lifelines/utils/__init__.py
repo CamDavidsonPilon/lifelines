@@ -622,7 +622,9 @@ def survival_events_from_table(survival_table, observed_deaths_col="observed", c
     return np.asarray(T_), np.asarray(E_), np.asarray(W_)
 
 
-def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None):
+def datetimes_to_durations(
+    start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None, format=None
+):
     """
     This is a very flexible function for transforming arrays of start_times and end_times
     to the proper format for lifelines: duration and event observation arrays.
@@ -633,15 +635,17 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
         iterable representing start times. These can be strings, or datetime objects.
     end_times: an array, Series or DataFrame
         iterable representing end times. These can be strings, or datetimes. These values can be None, or an empty string, which corresponds to censorship.
-    fill_date: datetime, optional (default=datetime.Today())
-        the date to use if end_times is a None or empty string. This corresponds to last date
+    fill_date: a datetime, array, Series or DataFrame, optional (default=datetime.Today())
+        the date to use if end_times is a missing or empty. This corresponds to last date
         of observation. Anything after this date is also censored.
     freq: string, optional (default='D')
         the units of time to use.  See Pandas 'freq'. Default 'D' for days.
     dayfirst: bool, optional (default=False)
-         convert assuming European-style dates, i.e. day/month/year.
+        see Pandas `to_datetime`
     na_values : list, optional
         list of values to recognize as NA/NaN. Ex: ['', 'NaT']
+    format:
+        see Pandas `to_datetime`
 
     Returns
     -------
@@ -664,17 +668,16 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
         E # array([ True, False,  True])
 
     """
-    fill_date = pd.to_datetime(fill_date)
+    fill_date_ = pd.Series(fill_date)
     freq_string = "timedelta64[%s]" % freq
     start_times = pd.Series(start_times).copy()
     end_times = pd.Series(end_times).copy()
 
     C = ~(pd.isnull(end_times).values | end_times.isin(na_values or [""]))
-    end_times[~C] = fill_date
-    start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst)
-    end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce")
-
-    deaths_after_cutoff = end_times_ > fill_date
+    end_times[~C] = fill_date_
+    start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst, format=format)
+    end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce", format=format)
+    deaths_after_cutoff = end_times_ > pd.to_datetime(fill_date_)
     C[deaths_after_cutoff] = False
 
     T = (end_times_ - start_times_).values.astype(freq_string).astype(float)
