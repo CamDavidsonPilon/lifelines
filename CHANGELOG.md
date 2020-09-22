@@ -7,7 +7,9 @@
 ##### API Changes
  - `check_assumptions` now returns a list of list of axes that can be manipulated
 
-
+##### Bug fixes
+ - fixed error when using `plot_partial_effects` with categorical data in AFT models
+ - improved warning when Hessian matrix contains NaNs.
 
 #### 0.25.4 - 2020-08-26
 
