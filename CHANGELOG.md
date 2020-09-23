@@ -1,8 +1,6 @@
 ## Changelog
 
-#### 0.25.5 - unreleased
-
-##### New features
+#### 0.25.5 - 2020-09-23
 
 ##### API Changes
  - `check_assumptions` now returns a list of list of axes that can be manipulated
