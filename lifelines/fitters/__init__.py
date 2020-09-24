@@ -430,7 +430,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         # this diff can be 0 - we can't take the log of that.
         ll = (
             ll
-            + np.clip(
+            + anp.clip(
                 censored_weights
                 * anp.log(self._survival_function(params, censored_starts) - self._survival_function(params, censored_stops)),
                 -1e50,
