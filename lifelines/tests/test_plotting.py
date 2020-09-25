@@ -503,6 +503,15 @@ class TestPlotting:
         self.plt.title("test_coxph_plot_partial_effects_on_outcome_with_strata")
         self.plt.show(block=block)
 
+    def test_aft_plot_partial_effects_on_outcome_with_categorical(self, block):
+        df = load_rossi()
+        df["cat"] = np.random.choice(["a", "b", "c"], size=df.shape[0])
+        aft = WeibullAFTFitter()
+        aft.fit(df, "week", "arrest", formula="cat + age + fin")
+        aft.plot_partial_effects_on_outcome("cat", values=["a", "b", "c"])
+        self.plt.title("test_aft_plot_partial_effects_on_outcome_with_categorical")
+        self.plt.show(block=block)
+
     def test_coxph_plot_partial_effects_on_outcome_with_strata_and_complicated_dtypes(self, block):
         # from https://github.com/CamDavidsonPilon/lifelines/blob/master/examples/Customer%20Churn.ipynb
         churn_data = pd.read_csv(
@@ -530,7 +539,7 @@ class TestPlotting:
 
     def test_spline_coxph_plot_partial_effects_on_outcome_with_strata(self, block):
         df = load_rossi()
-        cp = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=1)
+        cp = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2)
         cp.fit(df, "week", "arrest", strata=["wexp"])
         cp.plot_partial_effects_on_outcome("age", [10, 50, 80])
         self.plt.title("test_spline_coxph_plot_partial_effects_on_outcome_with_strata")

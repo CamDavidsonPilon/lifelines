@@ -207,6 +207,24 @@ def test_datetimes_to_durations_will_handle_dates_above_fill_date():
     npt.assert_almost_equal(C, np.array([1, 1, 0], dtype=bool))
 
 
+def test_datetimes_to_durations_will_handle_dates_above_multi_fill_date():
+    start_date = ["2013-10-08", "2013-10-09", "2013-10-10"]
+    end_date = ["2013-10-10", None, None]
+    last_observation = ["2013-10-10", "2013-10-12", "2013-10-14"]
+    T, E = utils.datetimes_to_durations(start_date, end_date, freq="D", fill_date=last_observation)
+    npt.assert_almost_equal(E, np.array([1, 0, 0], dtype=bool))
+    npt.assert_almost_equal(T, np.array([2, 3, 4]))
+
+
+def test_datetimes_to_durations_will_handle_dates_above_multi_fill_date():
+    start_date = ["2013-10-08", "2013-10-09", "2013-10-10"]
+    end_date = ["2013-10-10", None, None]
+    last_observation = ["2013-10-10", "2013-10-12", "2013-10-14"]
+    T, E = utils.datetimes_to_durations(start_date, end_date, freq="D", fill_date=last_observation)
+    npt.assert_almost_equal(E, np.array([1, 0, 0], dtype=bool))
+    npt.assert_almost_equal(T, np.array([2, 3, 4]))
+
+
 def test_datetimes_to_durations_censor():
     start_date = ["2013-10-10", "2013-10-09", "2012-10-10"]
     end_date = ["2013-10-13", None, ""]
@@ -997,8 +1015,8 @@ def test_rmst_exactely_with_known_solution():
 
 @flaky
 def test_rmst_approximate_solution():
-    T = np.random.exponential(2, 5000)
-    exp = ExponentialFitter().fit(T)
+    T = np.random.exponential(2, 4000)
+    exp = ExponentialFitter().fit(T, timeline=np.linspace(0, T.max(), 10000))
     lambda_ = exp.lambda_
 
     with pytest.warns(exceptions.ApproximationWarning) as w:

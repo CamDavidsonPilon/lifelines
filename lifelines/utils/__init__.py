@@ -276,7 +276,7 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
             sf = sf.reset_index()
             return (sf["index"].diff().shift(-1) * sf[model._label]).sum()
         else:
-            return quad(model.predict, 0, t)[0]
+            return quad(model.predict, 0, t, epsabs=1.49e-10, epsrel=1e-10)[0]
     else:
         raise ValueError("Can't compute RMST of object %s" % model_or_survival_function)
 
@@ -622,7 +622,9 @@ def survival_events_from_table(survival_table, observed_deaths_col="observed", c
     return np.asarray(T_), np.asarray(E_), np.asarray(W_)
 
 
-def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None):
+def datetimes_to_durations(
+    start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None, format=None
+):
     """
     This is a very flexible function for transforming arrays of start_times and end_times
     to the proper format for lifelines: duration and event observation arrays.
@@ -633,15 +635,17 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
         iterable representing start times. These can be strings, or datetime objects.
     end_times: an array, Series or DataFrame
         iterable representing end times. These can be strings, or datetimes. These values can be None, or an empty string, which corresponds to censorship.
-    fill_date: datetime, optional (default=datetime.Today())
-        the date to use if end_times is a None or empty string. This corresponds to last date
+    fill_date: a datetime, array, Series or DataFrame, optional (default=datetime.Today())
+        the date to use if end_times is a missing or empty. This corresponds to last date
         of observation. Anything after this date is also censored.
     freq: string, optional (default='D')
         the units of time to use.  See Pandas 'freq'. Default 'D' for days.
     dayfirst: bool, optional (default=False)
-         convert assuming European-style dates, i.e. day/month/year.
+        see Pandas `to_datetime`
     na_values : list, optional
         list of values to recognize as NA/NaN. Ex: ['', 'NaT']
+    format:
+        see Pandas `to_datetime`
 
     Returns
     -------
@@ -664,17 +668,16 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
         E # array([ True, False,  True])
 
     """
-    fill_date = pd.to_datetime(fill_date)
+    fill_date_ = pd.Series(fill_date).squeeze()
     freq_string = "timedelta64[%s]" % freq
     start_times = pd.Series(start_times).copy()
     end_times = pd.Series(end_times).copy()
 
     C = ~(pd.isnull(end_times).values | end_times.isin(na_values or [""]))
-    end_times[~C] = fill_date
-    start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst)
-    end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce")
-
-    deaths_after_cutoff = end_times_ > fill_date
+    end_times[~C] = fill_date_
+    start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst, format=format)
+    end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce", format=format)
+    deaths_after_cutoff = end_times_ > pd.to_datetime(fill_date_)
     C[deaths_after_cutoff] = False
 
     T = (end_times_ - start_times_).values.astype(freq_string).astype(float)
@@ -1097,7 +1100,7 @@ def check_complete_separation_low_variance(df: pd.DataFrame, events: np.ndarray,
     deaths_only = df.columns[_low_var(df.loc[events])]
     censors_only = df.columns[_low_var(df.loc[~events])]
     total = df.columns[_low_var(df)]
-    problem_columns = censors_only.union(deaths_only).difference(total).tolist()
+    problem_columns = (censors_only | deaths_only).difference(total).tolist()
     if problem_columns:
         warning_text = """Column {cols} have very low variance when conditioned on death event present or not. This may harm convergence. This could be a form of 'complete separation'. For example, try the following code:
 

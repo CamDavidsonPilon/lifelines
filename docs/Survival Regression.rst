@@ -334,7 +334,7 @@ However, if you used the ``formula`` kwarg in fit, all the necessary transformat
 
 .. code:: python
 
-    cph.fit(rossi, 'week', 'arrest', formula="bs(prio, df=3)")
+    cph.fit(rossi, 'week', 'arrest', formula="prio + I(prio**2)")
 
     cph.plot_partial_effects_on_outcome(
         covariates=['prio'],

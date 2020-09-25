@@ -26,7 +26,7 @@ class ProportionalHazardMixin:
         advice: bool = True,
         show_plots: bool = False,
         p_value_threshold: float = 0.01,
-        plot_n_bootstraps: int = 10,
+        plot_n_bootstraps: int = 15,
         columns: Optional[List[str]] = None,
     ) -> None:
         """
@@ -42,7 +42,7 @@ class ProportionalHazardMixin:
         advice: bool, optional
             display advice as output to the user's screen
         show_plots: bool, optional
-            display plots of the scaled schoenfeld residuals and loess curves. This is an eyeball test for violations.
+            display plots of the scaled Schoenfeld residuals and loess curves. This is an eyeball test for violations.
             This will slow down the function significantly.
         p_value_threshold: float, optional
             the threshold to use to alert the user of violations. See note below.
@@ -51,6 +51,10 @@ class ProportionalHazardMixin:
             the function significantly.
         columns: list, optional
             specify a subset of columns to test.
+
+        Returns
+        --------
+            A list of list of axes objects.
 
 
         Examples
@@ -64,7 +68,7 @@ class ProportionalHazardMixin:
             rossi = load_rossi()
             cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
 
-            cph.check_assumptions(rossi)
+            axes = cph.check_assumptions(rossi, show_plots=True)
 
 
         Notes
@@ -99,8 +103,9 @@ class ProportionalHazardMixin:
 
         counter = 0
         n = residuals_and_duration.shape[0]
+        axes = []
 
-        for variable in self.params_.index.intersection(columns or self.params_.index):
+        for variable in self.params_.index & (columns or self.params_.index):
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
             if np.round(minumum_observed_p_value, 2) > p_value_threshold:
                 continue
@@ -139,9 +144,9 @@ class ProportionalHazardMixin:
                 value_counts = values.value_counts()
                 n_uniques = value_counts.shape[0]
 
-                # Arbitrary chosen 10 and 4 to check for ability to use strata col.
+                # Arbitrary chosen to check for ability to use strata col.
                 # This should capture dichotomous / low cardinality values.
-                if n_uniques <= 10 and value_counts.min() >= 5:
+                if n_uniques <= 6 and value_counts.min() >= 5:
                     print(
                         fill(
                             "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [E] below.".format(
@@ -178,7 +183,10 @@ class ProportionalHazardMixin:
                     )
 
             if show_plots:
-                print("Bootstrapping lowess lines. May take a moment...")
+                axes.append([])
+                print()
+                print("   Bootstrapping lowess lines. May take a moment...")
+                print()
                 from matplotlib import pyplot as plt
 
                 fig = plt.figure()
@@ -209,6 +217,7 @@ class ProportionalHazardMixin:
                     ax.set_xlim(best_xlim)
 
                     ax.set_xlabel("%s-transformed time\n(p=%.4f)" % (transform_name, p_value), fontsize=10)
+                    axes[-1].append(ax)
 
                 fig.suptitle("Scaled Schoenfeld residuals of '%s'" % variable, fontsize=14)
                 plt.tight_layout()
@@ -230,6 +239,7 @@ class ProportionalHazardMixin:
 
         if counter == 0:
             print("Proportional hazard assumption looks okay.")
+        return axes
 
     @property
     def hazard_ratios_(self):

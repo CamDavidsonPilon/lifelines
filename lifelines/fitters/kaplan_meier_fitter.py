@@ -205,7 +205,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
 
         self._label = coalesce(label, self._label, "NPMLE_estimate")
 
-        results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress, tol=tol)
+        results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress, tol=tol, weights=weights)
         self.survival_function_ = reconstruct_survival_function(*results, self.timeline, label=self._label).loc[self.timeline]
         self.cumulative_density_ = 1 - self.survival_function_
 

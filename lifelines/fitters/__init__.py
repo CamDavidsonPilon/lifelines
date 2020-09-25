@@ -430,7 +430,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         # this diff can be 0 - we can't take the log of that.
         ll = (
             ll
-            + np.clip(
+            + anp.clip(
                 censored_weights
                 * anp.log(self._survival_function(params, censored_starts) - self._survival_function(params, censored_stops)),
                 -1e50,
@@ -927,7 +927,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         if timeline is not None:
             self.timeline = np.sort(np.asarray(timeline).astype(float))
         else:
-            self.timeline = np.linspace(utils.coalesce(*Ts).min(), utils.coalesce(*Ts).max(), n)
+            self.timeline = np.linspace(utils.coalesce(*Ts).min(), utils.coalesce(*Ts).max(), min(n, 500))
 
         self._label = utils.coalesce(label, self._label)
         self._ci_labels = ci_labels
@@ -955,6 +955,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         for param_name, fitted_value in zip(self._fitted_parameter_names, self._fitted_parameters_):
             setattr(self, param_name, fitted_value)
+
         try:
             variance_matrix_ = inv(self._hessian_)
         except np.linalg.LinAlgError:
@@ -970,10 +971,10 @@ class ParametricUnivariateFitter(UnivariateFitter):
             )
             warnings.warn(warning_text, exceptions.ApproximationWarning)
         finally:
-            if (variance_matrix_.diagonal() < 0).any():
+            if (variance_matrix_.diagonal() < 0).any() or np.isnan(variance_matrix_).any():
                 warning_text = dedent(
                     """\
-                    The diagonal of the variance_matrix_ has negative values. This could be a problem with %s's fit to the data.
+                    The diagonal of the variance_matrix_ has negative values or NaNs. This could be a problem with %s's fit to the data.
 
                     It's advisable to not trust the variances reported, and to be suspicious of the fitted parameters too. Perform plots of the cumulative hazard to help understand the latter's bias.
 
@@ -1187,10 +1188,17 @@ class ParametricUnivariateFitter(UnivariateFitter):
         def _find_root(_p):
             f = lambda t: _p - self.survival_function_at_times(t).values
             fprime = lambda t: self.survival_function_at_times(t).values * self.hazard_at_times(t).values
-            return root_scalar(f, bracket=(1e-10, self.timeline[-1]), fprime=fprime, x0=1.0).root
+            return root_scalar(f, bracket=(1e-10, 2 * self.timeline[-1]), fprime=fprime, x0=1.0).root
 
-        find_root = np.vectorize(_find_root, otypes=[float])
-        return find_root(p)
+        try:
+            find_root = np.vectorize(_find_root, otypes=[float])
+            return find_root(p)
+        except ValueError:
+            warning.warn(
+                "Looking like the model does not hit %g in the specified timeline. Try refitting with a larger timeline." % p,
+                StatisticalWarning,
+            )
+            return None
 
 
 class KnownModelParametricUnivariateFitter(ParametricUnivariateFitter):
@@ -3308,7 +3316,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if np.array_equal(np.eye(len(covariates)), values):
             X.index = ["%s=1" % c for c in covariates]
         else:
-            X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+            X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+
         for covariate, value in zip(covariates, values.T):
             X[covariate] = value
 

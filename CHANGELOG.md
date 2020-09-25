@@ -1,5 +1,16 @@
 ## Changelog
 
+#### 0.25.5 - 2020-09-23
+
+##### API Changes
+ - `check_assumptions` now returns a list of list of axes that can be manipulated
+
+##### Bug fixes
+ - fixed error when using `plot_partial_effects` with categorical data in AFT models
+ - improved warning when Hessian matrix contains NaNs.
+ - fixed performance regression in interval censoring fitting in parametric models
+ - `weights` wasn't being applied properly in NPMLE
+
 #### 0.25.4 - 2020-08-26
 
 ##### New features
