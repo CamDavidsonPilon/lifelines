@@ -1015,8 +1015,8 @@ def test_rmst_exactely_with_known_solution():
 
 @flaky
 def test_rmst_approximate_solution():
-    T = np.random.exponential(2, 5000)
-    exp = ExponentialFitter().fit(T)
+    T = np.random.exponential(2, 4000)
+    exp = ExponentialFitter().fit(T, timeline=np.linspace(0, T.max(), 10000))
     lambda_ = exp.lambda_
 
     with pytest.warns(exceptions.ApproximationWarning) as w:

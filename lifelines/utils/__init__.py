@@ -276,7 +276,7 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
             sf = sf.reset_index()
             return (sf["index"].diff().shift(-1) * sf[model._label]).sum()
         else:
-            return quad(model.predict, 0, t)[0]
+            return quad(model.predict, 0, t, epsabs=1.49e-10, epsrel=1e-10)[0]
     else:
         raise ValueError("Can't compute RMST of object %s" % model_or_survival_function)
 
