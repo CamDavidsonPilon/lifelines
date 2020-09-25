@@ -668,7 +668,7 @@ def datetimes_to_durations(
         E # array([ True, False,  True])
 
     """
-    fill_date_ = pd.Series(fill_date)
+    fill_date_ = pd.Series(fill_date).squeeze()
     freq_string = "timedelta64[%s]" % freq
     start_times = pd.Series(start_times).copy()
     end_times = pd.Series(end_times).copy()

@@ -9,6 +9,7 @@
  - fixed error when using `plot_partial_effects` with categorical data in AFT models
  - improved warning when Hessian matrix contains NaNs.
  - fixed performance regression in interval censoring fitting in parametric models
+ - `weights` wasn't being applied properly in NPMLE
 
 #### 0.25.4 - 2020-08-26
 

@@ -526,7 +526,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             minimizing_results, previous_results, minimizing_ll = None, None, np.inf
             for method, option in zip(
                 ["Nelder-Mead", self._scipy_fit_method],
-                [{"maxiter": 100, "disp": show_progress}, {**{"disp": show_progress}, **self._scipy_fit_options}],
+                [{"maxiter": 100}, {**{"disp": show_progress}, **self._scipy_fit_options}],
             ):
 
                 initial_value = self._initial_values if previous_results is None else utils._to_1d_array(previous_results.x)
@@ -1188,10 +1188,17 @@ class ParametricUnivariateFitter(UnivariateFitter):
         def _find_root(_p):
             f = lambda t: _p - self.survival_function_at_times(t).values
             fprime = lambda t: self.survival_function_at_times(t).values * self.hazard_at_times(t).values
-            return root_scalar(f, bracket=(1e-10, self.timeline[-1]), fprime=fprime, x0=1.0).root
+            return root_scalar(f, bracket=(1e-10, 2 * self.timeline[-1]), fprime=fprime, x0=1.0).root
 
-        find_root = np.vectorize(_find_root, otypes=[float])
-        return find_root(p)
+        try:
+            find_root = np.vectorize(_find_root, otypes=[float])
+            return find_root(p)
+        except ValueError:
+            warning.warn(
+                "Looking like the model does not hit %g in the specified timeline. Try refitting with a larger timeline." % p,
+                StatisticalWarning,
+            )
+            return None
 
 
 class KnownModelParametricUnivariateFitter(ParametricUnivariateFitter):
