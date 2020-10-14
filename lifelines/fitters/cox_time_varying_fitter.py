@@ -838,10 +838,10 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         return baseline_cumulative_hazard
 
     def _compute_baseline_survival(self):
-        survival_df = np.exp(-self.baseline_cumulative_hazard_.baseline_cumulative_hazard)
-        survival_df.name = "survival"
+        survival = np.exp(-self.baseline_cumulative_hazard_.baseline_cumulative_hazard)
+        survival.name = "survival"
 
-        return survival_df
+        return survival
 
     def __repr__(self):
         classname = self._class_name
