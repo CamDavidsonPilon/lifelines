@@ -430,11 +430,15 @@ class ParametricUnivariateFitter(UnivariateFitter):
         # this diff can be 0 - we can't take the log of that.
         ll = (
             ll
-            + anp.clip(
+            + (
                 censored_weights
-                * anp.log(self._survival_function(params, censored_starts) - self._survival_function(params, censored_stops)),
-                -1e50,
-                1e50,
+                * anp.log(
+                    anp.clip(
+                        self._survival_function(params, censored_starts) - self._survival_function(params, censored_stops),
+                        1e-25,
+                        1 - 1e-25,
+                    )
+                )
             ).sum()
         )
         ll = ll + (weights[non_zero_entries] * self._cumulative_hazard(params, entry[non_zero_entries])).sum()
@@ -1401,11 +1405,10 @@ class ParametricRegressionFitter(RegressionFitter):
             anp.clip(
                 self._survival_function(params, start[~E], Xs.filter(~E))
                 - self._survival_function(params, stop[~E], Xs.filter(~E)),
-                -1e50,
-                1e50,
+                1e-25,
+                1 - 1e-25,
             )
         )
-
         delayed_entries = self._cumulative_hazard(params, entries[non_zero_entries], Xs.filter(non_zero_entries))
 
         ll = 0
@@ -1912,13 +1915,13 @@ class ParametricRegressionFitter(RegressionFitter):
 
                 0. Are there any lifelines warnings outputted during the `fit`?
                 1. Inspect your DataFrame: does everything look as expected?
-                2. Try scaling your duration vector down, i.e. `df["{duration_col}"] = df["{duration_col}"]/100`
+                2. Try scaling your duration vector down, i.e. `df[duration_col] = df[duration_col]/100`
                 3. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
                 4. Try using an alternate minimizer: ``fitter._scipy_fit_method = "SLSQP"``.
                 5. Trying adding a small penalizer (or changing it, if already present). Example: `{fitter_name}(penalizer=0.01).fit(...)`.
                 6. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
             """.format(
-                        duration_col=self.duration_col, fitter_name=self._class_name
+                        fitter_name=self._class_name
                     )
                 )
             )

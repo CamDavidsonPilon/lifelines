@@ -363,10 +363,12 @@ def remove_ticks(ax, x=False, y=False):
     return ax
 
 
-def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None, rows_to_show=None, ax=None, **kwargs):
+def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None, rows_to_show=None, ypos=-0.6, ax=None, **kwargs):
     """
     Add counts showing how many individuals were at risk, censored, and observed, at each time point in
     survival/hazard plots.
+
+    Tip: you may want to call ``plt.tight_layout()`` afterwards.
 
     Parameters
     ----------
@@ -380,6 +382,8 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
         False for no labels.
     rows_to_show: list
         list of a subset of {'At risk', 'Censored', 'Events'}. Default shows all columns.
+    ypos:
+        increase to move the table down further.
 
     Returns
     --------
@@ -439,7 +443,8 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
     # Move the ticks below existing axes
     # Appropriate length scaled for 6 inches. Adjust for figure size.
     ax_height = (ax.get_position().y1 - ax.get_position().y0) * fig.get_figheight()  # axis height
-    ax2_ypos = -0.1 * 3.0 / ax_height
+    ax2_ypos = -ypos / ax_height
+
     move_spines(ax2, ["bottom"], [ax2_ypos])
     # Hide all fluff
     remove_spines(ax2, ["top", "right", "bottom", "left"])
@@ -505,7 +510,6 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
     # Align labels to the right so numbers can be compared easily
     ax2.set_xticklabels(ticklabels, ha="right", **kwargs)
 
-    plt.tight_layout()
     return ax
 
 
@@ -892,6 +896,7 @@ def _plot_estimate(
 
     if at_risk_counts:
         add_at_risk_counts(cls, ax=plot_estimate_config.ax)
+        plt.tight_layout()
 
     return plot_estimate_config.ax
 

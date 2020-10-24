@@ -1,5 +1,23 @@
 ## Changelog
 
+#### 0.25.6 - unreleased
+
+##### New features
+ - Parametric Cox models can now handle left and interval censoring datasets.
+
+##### Bug fixes
+ - "improved" the output of `add_at_risk_counts` by removing a call to `plt.tight_layout()` - this works better when you are calling `add_at_risk_counts` on multiple axes, but it is recommended you call `plt.tight_layout()` at the very end of your script.
+
+
+##### API Changes
+ - `check_assumptions` now returns a list of list of axes that can be manipulated
+
+##### Bug fixes
+ - fixed error when using `plot_partial_effects` with categorical data in AFT models
+ - improved warning when Hessian matrix contains NaNs.
+ - fixed performance regression in interval censoring fitting in parametric models
+ - `weights` wasn't being applied properly in NPMLE
+
 #### 0.25.5 - 2020-09-23
 
 ##### API Changes

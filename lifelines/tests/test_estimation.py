@@ -2872,11 +2872,24 @@ class TestCoxPHFitter:
 
     @pytest.fixture
     def cph_spline(self):
-        return CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2)
+        return CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3)
 
     @pytest.fixture
     def cph_pieces(self):
         return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
+
+    def test_parametric_models_can_do_left_and_right_censoring(self, cph_spline, cph_pieces):
+        df = load_diabetes().loc[:100]
+        df["gender"] = df["gender"] == "male"
+        df["gender"] = df["gender"].astype(int)
+
+        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, penalizer=0.001)
+        # cph_spline._scipy_fit_method = "BFGS"
+        cph_spline.fit_interval_censoring(df, "left", "right", formula="gender + 1", show_progress=True)
+        cph_spline.print_summary()
+
+        cph_pieces.fit_interval_censoring(df, "left", "right")
+        cph_spline.print_summary()
 
     def test_parametric_strata_null_dof(self, cph_spline, cph_pieces, rossi):
         cph_spline.fit(rossi, "week", "arrest", strata="paro", formula="age")
