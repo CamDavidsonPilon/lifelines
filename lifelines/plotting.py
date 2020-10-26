@@ -443,7 +443,7 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
     # Move the ticks below existing axes
     # Appropriate length scaled for 6 inches. Adjust for figure size.
     ax_height = (ax.get_position().y1 - ax.get_position().y0) * fig.get_figheight()  # axis height
-    ax2_ypos = -ypos / ax_height
+    ax2_ypos = ypos / ax_height
 
     move_spines(ax2, ["bottom"], [ax2_ypos])
     # Hide all fluff

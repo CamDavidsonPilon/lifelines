@@ -275,7 +275,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         self.strata = utils.coalesce(strata, self.strata)
         self._model = self._fit_model(
             df,
-            (duration_col, None),
+            duration_col,
             event_col=event_col,
             show_progress=show_progress,
             initial_point=initial_point,
@@ -563,7 +563,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         self.strata = utils.coalesce(strata, self.strata)
         self._model = self._fit_model(
             df,
-            (None, duration_col),
+            duration_col,
             event_col=event_col,
             show_progress=show_progress,
             initial_point=initial_point,
