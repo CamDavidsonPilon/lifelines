@@ -2878,6 +2878,33 @@ class TestCoxPHFitter:
     def cph_pieces(self):
         return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
 
+    def test_parametric_models_can_do_interval_censoring(self, cph_spline, cph_pieces):
+        df = load_diabetes()
+        df["gender"] = df["gender"] == "male"
+        df["gender"] = df["gender"].astype(int)
+
+        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, penalizer=0.001)
+        cph_spline.fit_interval_censoring(df, "left", "right", formula="gender + 1", show_progress=True)
+        cph_spline.print_summary()
+
+        cph_pieces.fit_interval_censoring(df, "left", "right")
+        cph_spline.print_summary()
+
+    def test_parametric_models_can_do_left_censoring(self, cph_spline, cph_pieces):
+        df = load_diabetes()
+        df = df.drop("left", axis=1)
+        df["E"] = 0
+
+        df["gender"] = df["gender"] == "male"
+        df["gender"] = df["gender"].astype(int)
+
+        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, penalizer=0.001)
+        cph_spline.fit_left_censoring(df, "right", "E", formula="gender + 1")
+        cph_spline.print_summary()
+
+        cph_pieces.fit_left_censoring(df, "right", "E")
+        cph_spline.print_summary()
+
     def test_parametric_strata_null_dof(self, cph_spline, cph_pieces, rossi):
         cph_spline.fit(rossi, "week", "arrest", strata="paro", formula="age")
         assert cph_spline._ll_null_dof < cph_spline.params_.shape[0]

@@ -221,7 +221,6 @@ def scipy_minimize_fit(turnbull_interval_lookup, turnbull_intervals, weights, to
 def expectation_maximization_fit(
     observation_intervals, turnbull_intervals, turnbull_lookup, weights, tol, max_iter, optimize, verbose
 ):
-
     # convergence init
     converged = False
     i = 0
@@ -235,7 +234,7 @@ def expectation_maximization_fit(
         converged = check_convergence(new_p, p, turnbull_lookup, weights, tol, i, verbose=verbose)
 
         # find alpha that maximizes ll using a line search
-        best_p, best_ll = None, -np.inf
+        best_p, best_ll = p, -np.inf
         delta = log_odds(new_p) - log_odds(p)
         for alpha in np.array([1.0, 1.25, 1.95]):
             p_temp = probs(log_odds(p) + alpha * delta)
@@ -249,7 +248,7 @@ def expectation_maximization_fit(
         i += 1
 
     if i >= max_iter:
-        warnings.warn("Exceeded max iterations", ConvergenceWarning)
+        warnings.warn("Exceeded max iterations.", ConvergenceWarning)
 
     return p
 

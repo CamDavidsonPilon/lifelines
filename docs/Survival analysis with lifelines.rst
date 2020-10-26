@@ -278,6 +278,7 @@ In *lifelines*, confidence intervals are automatically added, but there is the `
 
     kmf = KaplanMeierFitter().fit(T, E, label="all_regimes")
     kmf.plot(at_risk_counts=True)
+    plt.tight_layout()
 
 
 .. image:: images/intro_add_at_risk.png

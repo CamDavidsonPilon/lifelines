@@ -3,6 +3,7 @@ import pytest
 from lifelines.fitters.npmle import npmle, is_subset, create_turnbull_intervals, interval, reconstruct_survival_function
 from numpy import testing as npt
 from lifelines.datasets import load_mice
+from lifelines import KaplanMeierFitter
 import numpy as np
 import pandas as pd
 
@@ -77,3 +78,21 @@ def test_mice_scipy():
     results = npmle(df["l"], df["u"], verbose=True, fit_method="scipy")
     npt.assert_allclose(results[0][0], 1 - 0.8571429, rtol=1e-4)
     npt.assert_allclose(results[0][-1], 0.166667, rtol=1e-4)
+
+
+def test_max_lower_bound_less_than_min_upper_bound():
+    # https://github.com/CamDavidsonPilon/lifelines/issues/1151
+    import numpy as np
+    import pandas as pd
+    from lifelines import KaplanMeierFitter
+
+    # Data
+    np.random.seed(1)
+    left0 = np.random.normal(loc=60, scale=2, size=20)
+    add_time = np.random.normal(loc=100, scale=2, size=10)
+    right1 = left0[0:10] + add_time
+    right0 = right1.tolist() + [np.inf] * 10
+
+    # KaplanMeier
+    model = KaplanMeierFitter()
+    model.fit_interval_censoring(lower_bound=left0, upper_bound=right0)

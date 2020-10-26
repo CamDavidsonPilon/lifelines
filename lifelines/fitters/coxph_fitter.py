@@ -168,7 +168,295 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         entry_col: str = None,
     ) -> "CoxPHFitter":
         """
-        Fit the Cox proportional hazard model to a dataset.
+        Fit the Cox proportional hazard model to a right-censored dataset. Alias of `fit_right_censoring`.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights, strata).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        duration_col: string
+            the name of the column in DataFrame that contains the subjects'
+            lifetimes.
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, assume all individuals are uncensored.
+
+        weights_col: string, optional
+            an optional column in the DataFrame, df, that denotes the weight per subject.
+            This column is expelled and not used as a covariate, but as a weight in the
+            final regression. Default weight is 1.
+            This can be used for case-weights. For example, a weight of 2 means there were two subjects with
+            identical observations.
+            This can be used for sampling weights. In that case, use ``robust=True`` to get more accurate standard errors.
+
+        cluster_col: string, optional
+            specifies what column has unique identifiers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
+            be used.
+
+        entry_col: str, optional
+            a column denoting when a subject entered the study, i.e. left-truncation.
+
+        strata: list or string, optional
+            specify a column or list of columns n to use in stratification. This is useful if a
+            categorical covariate does not obey the proportional hazard assumption. This
+            is used similar to the ``strata`` expression in R.
+            See http://courses.washington.edu/b515/l17.pdf.
+
+        robust: bool, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+            ties, so if there are high number of ties, results may significantly differ. See
+            "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
+
+        formula: str, optional
+            an Wilkinson formula, like in R and statsmodels, for the right-hand-side. If left as None, all columns not assigned as durations, weights, etc. are used.
+
+        batch_mode: bool, optional
+            enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
+
+        step_size: float, optional
+            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
+
+        show_progress: bool, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        Returns
+        -------
+        self: CoxPHFitter
+            self with additional new properties: ``print_summary``, ``hazards_``, ``confidence_intervals_``, ``baseline_survival_``, etc.
+
+
+        Examples
+        --------
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E')
+            cph.print_summary()
+            cph.predict_median(df)
+
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'weights': [1.1, 0.5, 2.0, 1.6, 1.2, 4.3, 1.4, 4.5, 3.0, 3.2, 0.4, 6.2],
+                'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E', strata=['month', 'age'], robust=True, weights_col='weights')
+            cph.print_summary()
+
+        """
+        self.strata = utils.coalesce(strata, self.strata)
+        self._model = self._fit_model(
+            df,
+            duration_col,
+            event_col=event_col,
+            show_progress=show_progress,
+            initial_point=initial_point,
+            strata=self.strata,
+            step_size=step_size,
+            weights_col=weights_col,
+            cluster_col=cluster_col,
+            robust=robust,
+            batch_mode=batch_mode,
+            timeline=timeline,
+            formula=formula,
+            entry_col=entry_col,
+        )
+        return self
+
+    @utils.CensoringType.interval_censoring
+    def fit_interval_censoring(
+        self,
+        df: pd.DataFrame,
+        lower_bound_col: str,
+        upper_bound_col: str,
+        event_col: Optional[str] = None,
+        show_progress: bool = False,
+        initial_point: Optional[ndarray] = None,
+        strata: Optional[Union[str, List[str]]] = None,
+        step_size: Optional[float] = None,
+        weights_col: Optional[str] = None,
+        cluster_col: Optional[str] = None,
+        robust: bool = False,
+        batch_mode: Optional[bool] = None,
+        timeline: Optional[Iterator] = None,
+        formula: str = None,
+        entry_col: str = None,
+    ) -> "CoxPHFitter":
+        """
+        Fit the Cox proportional hazard model to an interval censored dataset.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights, strata).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        lower_bound_col: string
+            the name of the column in DataFrame that contains the lower bounds of the intervals.
+
+        upper_bound_col: string
+            the name of the column in DataFrame that contains the upper bounds of the intervals.
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, this is inferred based on the upper and lower interval limits (equal
+            implies observed death.)
+
+        weights_col: string, optional
+            an optional column in the DataFrame, df, that denotes the weight per subject.
+            This column is expelled and not used as a covariate, but as a weight in the
+            final regression. Default weight is 1.
+            This can be used for case-weights. For example, a weight of 2 means there were two subjects with
+            identical observations.
+            This can be used for sampling weights. In that case, use ``robust=True`` to get more accurate standard errors.
+
+        cluster_col: string, optional
+            specifies what column has unique identifiers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
+            be used.
+
+        entry_col: str, optional
+            a column denoting when a subject entered the study, i.e. left-truncation.
+
+        strata: list or string, optional
+            specify a column or list of columns n to use in stratification. This is useful if a
+            categorical covariate does not obey the proportional hazard assumption. This
+            is used similar to the ``strata`` expression in R.
+            See http://courses.washington.edu/b515/l17.pdf.
+
+        robust: bool, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+            ties, so if there are high number of ties, results may significantly differ. See
+            "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
+
+        formula: str, optional
+            an Wilkinson formula, like in R and statsmodels, for the right-hand-side. If left as None, all columns not assigned as durations, weights, etc. are used.
+
+        batch_mode: bool, optional
+            enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
+
+        step_size: float, optional
+            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
+
+        show_progress: bool, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        Returns
+        -------
+        self: CoxPHFitter
+            self with additional new properties: ``print_summary``, ``hazards_``, ``confidence_intervals_``, ``baseline_survival_``, etc.
+
+
+        Examples
+        --------
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E')
+            cph.print_summary()
+            cph.predict_median(df)
+
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'weights': [1.1, 0.5, 2.0, 1.6, 1.2, 4.3, 1.4, 4.5, 3.0, 3.2, 0.4, 6.2],
+                'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E', strata=['month', 'age'], robust=True, weights_col='weights')
+            cph.print_summary()
+
+        """
+        self.strata = utils.coalesce(strata, self.strata)
+        self._model = self._fit_model(
+            df,
+            (lower_bound_col, upper_bound_col),
+            event_col=event_col,
+            show_progress=show_progress,
+            initial_point=initial_point,
+            strata=self.strata,
+            step_size=step_size,
+            weights_col=weights_col,
+            cluster_col=cluster_col,
+            robust=robust,
+            batch_mode=batch_mode,
+            timeline=timeline,
+            formula=formula,
+            entry_col=entry_col,
+        )
+        return self
+
+    @utils.CensoringType.left_censoring
+    def fit_left_censoring(
+        self,
+        df: pd.DataFrame,
+        duration_col: Optional[str] = None,
+        event_col: Optional[str] = None,
+        show_progress: bool = False,
+        initial_point: Optional[ndarray] = None,
+        strata: Optional[Union[str, List[str]]] = None,
+        step_size: Optional[float] = None,
+        weights_col: Optional[str] = None,
+        cluster_col: Optional[str] = None,
+        robust: bool = False,
+        batch_mode: Optional[bool] = None,
+        timeline: Optional[Iterator] = None,
+        formula: str = None,
+        entry_col: str = None,
+    ) -> "CoxPHFitter":
+        """
+        Fit the Cox proportional hazard model to a left censored dataset.
 
         Parameters
         ----------
@@ -318,8 +606,13 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         model = SemiParametricPHFitter(
             penalizer=self.penalizer, l1_ratio=self.l1_ratio, strata=self.strata, alpha=self.alpha, label=self._label
         )
-        model.fit(*args, **kwargs)
-        return model
+        if utils.CensoringType.is_right_censoring(self):
+            model.fit(*args, **kwargs)
+            return model
+        else:
+            raise ValueError(
+                "Left or interval censoring is not supported for the semi-parametric Cox model. Try changing the baseline estimation method to something else, ex: `CoxPHFitter(baseline_estimation_method='spline').fit_...."
+            )
 
     def _fit_model_piecewise(self, *args, **kwargs):
         df = args[0].copy()
@@ -365,7 +658,13 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             alpha=self.alpha,
             label=self._label,
         )
-        model.fit(df, *args[1:], regressors=regressors, **kwargs)
+        if utils.CensoringType.is_right_censoring(self):
+            model.fit_right_censoring(df, *args[1:], regressors=regressors, **kwargs)
+        elif utils.CensoringType.is_left_censoring(self):
+            model.fit_left_censoring(df, *args[1:], regressors=regressors, **kwargs)
+        elif utils.CensoringType.is_interval_censoring(self):
+            lb, ub = args[1]
+            model.fit_interval_censoring(df, lb, ub, *args[2:], regressors=regressors, **kwargs)
         return model
 
     def _fit_model_spline(self, *args, **kwargs):
@@ -414,7 +713,13 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             alpha=self.alpha,
             label=self._label,
         )
-        model.fit(df, *args[1:], regressors=regressors, **kwargs)
+        if utils.CensoringType.is_right_censoring(self):
+            model.fit_right_censoring(df, *args[1:], regressors=regressors, **kwargs)
+        elif utils.CensoringType.is_left_censoring(self):
+            model.fit_left_censoring(df, *args[1:], regressors=regressors, **kwargs)
+        elif utils.CensoringType.is_interval_censoring(self):
+            lb, ub = args[1]
+            model.fit_interval_censoring(df, lb, ub, *args[2:], regressors=regressors, **kwargs)
         return model
 
     def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
@@ -439,7 +744,12 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         justify = utils.string_rjustify(25)
 
         headers = []
-        headers.append(("duration col", "'%s'" % self.duration_col))
+
+        if utils.CensoringType.is_interval_censoring(self):
+            headers.append(("lower bound col", "'%s'" % self.lower_bound_col))
+            headers.append(("upper bound col", "'%s'" % self.upper_bound_col))
+        else:
+            headers.append(("duration col", "'%s'" % self.duration_col))
 
         if self.event_col:
             headers.append(("event col", "'%s'" % self.event_col))
@@ -2657,7 +2967,11 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
         return
 
     def _pre_fit_model(self, Ts, E, df):
-        self._set_knots(Ts[0], E)
+        if E.sum() > 4:
+            self._set_knots(utils.coalesce(*Ts), E)
+        else:
+            # very few observations
+            self._set_knots(utils.coalesce(*Ts), pd.Series(np.ones_like(E)))
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.

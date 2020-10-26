@@ -20,8 +20,9 @@ class CRCSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
     n_baseline_knots: int
         the number of knots in the cubic spline. If equal to 2, then the model is equal to the WeibullAFT model.
 
-    Reference
-    ----------
+
+    References
+    ------------
     Crowther MJ, Royston P, Clements M. A flexible parametric accelerated failure time model.
 
 
