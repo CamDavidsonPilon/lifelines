@@ -2967,7 +2967,11 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
         return
 
     def _pre_fit_model(self, Ts, E, df):
-        self._set_knots(Ts[0], E)
+        if E.sum() > 4:
+            self._set_knots(utils.coalesce(*Ts), E)
+        else:
+            # very few observations
+            self._set_knots(utils.coalesce(*Ts), pd.Series(np.ones_like(E)))
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
