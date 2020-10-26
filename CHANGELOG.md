@@ -1,6 +1,6 @@
 ## Changelog
 
-#### 0.25.6 - unreleased
+#### 0.25.6 - 2020-10-26
 
 ##### New features
  - Parametric Cox models can now handle left and interval censoring datasets.
