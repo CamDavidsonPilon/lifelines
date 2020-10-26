@@ -7,6 +7,7 @@
 
 ##### Bug fixes
  - "improved" the output of `add_at_risk_counts` by removing a call to `plt.tight_layout()` - this works better when you are calling `add_at_risk_counts` on multiple axes, but it is recommended you call `plt.tight_layout()` at the very end of your script.
+ - Fix bug in `KaplanMeierFitter`'s interval censoring where max(lower bound) < min(upper bound).
 
 
 #### 0.25.5 - 2020-09-23

@@ -431,6 +431,7 @@ Displaying at-risk counts below plots
 
     kmf.fit(T, E, label="label name")
     kmf.plot(at_risk_counts=True)
+    plt.tight_layout()
 
 .. image:: /images/single_at_risk_plots.png
     :width: 500px
@@ -460,6 +461,7 @@ The function :func:`lifelines.plotting.add_at_risk_counts` allows you to add cou
 
     from lifelines.plotting import add_at_risk_counts
     add_at_risk_counts(kmf_exp, kmf_control, ax=ax)
+    plt.tight_layout()
 
 will display
 

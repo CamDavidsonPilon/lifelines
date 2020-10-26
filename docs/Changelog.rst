@@ -1,6 +1,25 @@
 Changelog
 =========
 
+0.25.6 - unreleased
+-------------------
+
+New features
+~~~~~~~~~~~~
+
+-  Parametric Cox models can now handle left and interval censoring
+   datasets.
+
+Bug fixes
+~~~~~~~~~
+
+-  “improved” the output of ``add_at_risk_counts`` by removing a call to
+   ``plt.tight_layout()`` - this works better when you are calling
+   ``add_at_risk_counts`` on multiple axes, but it is recommended you
+   call ``plt.tight_layout()`` at the very end of your script.
+-  Fix bug in ``KaplanMeierFitter``\ ’s interval censoring where
+   max(lower bound) < min(upper bound).
+
 0.25.5 - 2020-09-23
 -------------------
 
@@ -9,6 +28,8 @@ API Changes
 
 -  ``check_assumptions`` now returns a list of list of axes that can be
    manipulated
+
+.. _bug-fixes-1:
 
 Bug fixes
 ~~~~~~~~~
@@ -25,6 +46,8 @@ Bug fixes
 0.25.4 - 2020-08-26
 -------------------
 
+.. _new-features-1:
+
 New features
 ~~~~~~~~~~~~
 
@@ -33,7 +56,7 @@ New features
    ``log_likelihood_ratio_test()`` and ``print_summary()``
 -  Better step-size defaults for Cox model -> more robust convergence.
 
-.. _bug-fixes-1:
+.. _bug-fixes-2:
 
 Bug fixes
 ~~~~~~~~~
@@ -45,7 +68,7 @@ Bug fixes
 0.25.3 - 2020-08-24
 -------------------
 
-.. _new-features-1:
+.. _new-features-2:
 
 New features
 ~~~~~~~~~~~~
@@ -62,7 +85,7 @@ API Changes
 -  See note on ``survival_difference_at_fixed_point_in_time_test``
    above.
 
-.. _bug-fixes-2:
+.. _bug-fixes-3:
 
 Bug fixes
 ~~~~~~~~~
@@ -76,7 +99,7 @@ Bug fixes
 0.25.2 - 2020-08-08
 -------------------
 
-.. _new-features-2:
+.. _new-features-3:
 
 New features
 ~~~~~~~~~~~~
@@ -96,7 +119,7 @@ API Changes
    the author.). So add 2 to ``n_baseline_knots`` to recover the
    identical model as previously.
 
-.. _bug-fixes-3:
+.. _bug-fixes-4:
 
 Bug fixes
 ~~~~~~~~~
@@ -110,7 +133,7 @@ Bug fixes
 0.25.1 - 2020-08-01
 -------------------
 
-.. _bug-fixes-4:
+.. _bug-fixes-5:
 
 Bug fixes
 ~~~~~~~~~
@@ -126,7 +149,7 @@ Bug fixes
 0.25.0 - 2020-07-27
 -------------------
 
-.. _new-features-3:
+.. _new-features-4:
 
 New features
 ~~~~~~~~~~~~
@@ -183,7 +206,7 @@ API Changes
    `here <https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#plotting-the-effect-of-varying-a-covariate>`__.
 -  all exceptions and warnings have moved to ``lifelines.exceptions``
 
-.. _bug-fixes-5:
+.. _bug-fixes-6:
 
 Bug fixes
 ~~~~~~~~~
@@ -204,7 +227,7 @@ Bug fixes
 0.24.16 - 2020-07-09
 --------------------
 
-.. _new-features-4:
+.. _new-features-5:
 
 New features
 ~~~~~~~~~~~~
@@ -212,7 +235,7 @@ New features
 -  improved algorithm choice for large DataFrames for Cox models. Should
    see a significant performance boost.
 
-.. _bug-fixes-6:
+.. _bug-fixes-7:
 
 Bug fixes
 ~~~~~~~~~
@@ -224,7 +247,7 @@ Bug fixes
 0.24.15 - 2020-07-07
 --------------------
 
-.. _bug-fixes-7:
+.. _bug-fixes-8:
 
 Bug fixes
 ~~~~~~~~~
@@ -240,7 +263,7 @@ Bug fixes
 0.24.14 - 2020-07-02
 --------------------
 
-.. _bug-fixes-8:
+.. _bug-fixes-9:
 
 Bug fixes
 ~~~~~~~~~
@@ -257,7 +280,7 @@ Bug fixes
 0.24.13 - 2020-06-22
 --------------------
 
-.. _bug-fixes-9:
+.. _bug-fixes-10:
 
 Bug fixes
 ~~~~~~~~~
@@ -272,7 +295,7 @@ Bug fixes
 0.24.12 - 2020-06-20
 --------------------
 
-.. _new-features-5:
+.. _new-features-6:
 
 New features
 ~~~~~~~~~~~~
@@ -284,7 +307,7 @@ New features
 0.24.11 - 2020-06-17
 --------------------
 
-.. _new-features-6:
+.. _new-features-7:
 
 New features
 ~~~~~~~~~~~~
@@ -312,7 +335,7 @@ API Changes
 0.24.10 - 2020-06-16
 --------------------
 
-.. _new-features-7:
+.. _new-features-8:
 
 New features
 ~~~~~~~~~~~~
@@ -329,7 +352,7 @@ API Changes
 -  Related to above: the fitted spline parameters are now available in
    the ``.summary`` and ``.print_summary`` methods.
 
-.. _bug-fixes-10:
+.. _bug-fixes-11:
 
 Bug fixes
 ~~~~~~~~~
@@ -342,7 +365,7 @@ Bug fixes
 0.24.9 - 2020-06-05
 -------------------
 
-.. _new-features-8:
+.. _new-features-9:
 
 New features
 ~~~~~~~~~~~~
@@ -352,7 +375,7 @@ New features
    ``tarone-ware``, ``peto``, ``fleming-harrington``. Thanks @sean-reed
 -  new interval censored dataset: ``lifelines.datasets.load_mice``
 
-.. _bug-fixes-11:
+.. _bug-fixes-12:
 
 Bug fixes
 ~~~~~~~~~
@@ -365,7 +388,7 @@ Bug fixes
 0.24.8 - 2020-05-17
 -------------------
 
-.. _new-features-9:
+.. _new-features-10:
 
 New features
 ~~~~~~~~~~~~
@@ -379,7 +402,7 @@ New features
 0.24.7 - 2020-05-17
 -------------------
 
-.. _new-features-10:
+.. _new-features-11:
 
 New features
 ~~~~~~~~~~~~
@@ -400,7 +423,7 @@ New features
 0.24.6 - 2020-05-05
 -------------------
 
-.. _new-features-11:
+.. _new-features-12:
 
 New features
 ~~~~~~~~~~~~
@@ -410,7 +433,7 @@ New features
 -  New ``lifelines.plotting.plot_interval_censored_lifetimes`` for
    plotting interval censored data - thanks @sean-reed!
 
-.. _bug-fixes-12:
+.. _bug-fixes-13:
 
 Bug fixes
 ~~~~~~~~~
@@ -423,14 +446,14 @@ Bug fixes
 0.24.5 - 2020-05-01
 -------------------
 
-.. _new-features-12:
+.. _new-features-13:
 
 New features
 ~~~~~~~~~~~~
 
 -  ``plot_lifetimes`` accepts pandas Series.
 
-.. _bug-fixes-13:
+.. _bug-fixes-14:
 
 Bug fixes
 ~~~~~~~~~
@@ -445,7 +468,7 @@ Bug fixes
 0.24.4 - 2020-04-13
 -------------------
 
-.. _bug-fixes-14:
+.. _bug-fixes-15:
 
 Bug fixes
 ~~~~~~~~~
@@ -459,7 +482,7 @@ Bug fixes
 0.24.3 - 2020-03-25
 -------------------
 
-.. _new-features-13:
+.. _new-features-14:
 
 New features
 ~~~~~~~~~~~~
@@ -469,7 +492,7 @@ New features
    the hazard ratio would be at previous times. This is useful because
    the final hazard ratio is some weighted average of these.
 
-.. _bug-fixes-15:
+.. _bug-fixes-16:
 
 Bug fixes
 ~~~~~~~~~
@@ -482,7 +505,7 @@ Bug fixes
 0.24.2 - 2020-03-15
 -------------------
 
-.. _bug-fixes-16:
+.. _bug-fixes-17:
 
 Bug fixes
 ~~~~~~~~~
@@ -499,7 +522,7 @@ Bug fixes
 0.24.1 - 2020-03-05
 -------------------
 
-.. _new-features-14:
+.. _new-features-15:
 
 New features
 ~~~~~~~~~~~~
@@ -507,7 +530,7 @@ New features
 -  Stability improvements for GeneralizedGammaRegressionFitter and
    CoxPHFitter with spline estimation.
 
-.. _bug-fixes-17:
+.. _bug-fixes-18:
 
 Bug fixes
 ~~~~~~~~~
@@ -523,7 +546,7 @@ This version and future versions of lifelines no longer support py35.
 Pandas 1.0 is fully supported, along with previous versions. Minimum
 Scipy has been bumped to 1.2.0.
 
-.. _new-features-15:
+.. _new-features-16:
 
 New features
 ~~~~~~~~~~~~
@@ -575,7 +598,7 @@ API Changes
    to ``scoring_method``.
 -  removed ``_score_`` and ``path`` from Cox model.
 
-.. _bug-fixes-18:
+.. _bug-fixes-19:
 
 Bug fixes
 ~~~~~~~~~
@@ -593,7 +616,7 @@ Bug fixes
 0.23.9 - 2020-01-28
 -------------------
 
-.. _bug-fixes-19:
+.. _bug-fixes-20:
 
 Bug fixes
 ~~~~~~~~~
@@ -609,7 +632,7 @@ Bug fixes
 0.23.8 - 2020-01-21
 -------------------
 
-.. _bug-fixes-20:
+.. _bug-fixes-21:
 
 Bug fixes
 ~~~~~~~~~
@@ -632,7 +655,7 @@ Bug fixes for py3.5.
 0.23.6 - 2020-01-07
 -------------------
 
-.. _new-features-16:
+.. _new-features-17:
 
 New features
 ~~~~~~~~~~~~
@@ -651,7 +674,7 @@ New features
 0.23.5 - 2020-01-05
 -------------------
 
-.. _new-features-17:
+.. _new-features-18:
 
 New features
 ~~~~~~~~~~~~
@@ -660,7 +683,7 @@ New features
 -  New lymph node cancer dataset, originally from *H.F. for the German
    Breast Cancer Study Group (GBSG) (1994)*
 
-.. _bug-fixes-21:
+.. _bug-fixes-22:
 
 Bug fixes
 ~~~~~~~~~
@@ -682,14 +705,14 @@ Bug fixes
 0.23.3 - 2019-12-11
 -------------------
 
-.. _new-features-18:
+.. _new-features-19:
 
 New features
 ~~~~~~~~~~~~
 
 -  ``StatisticalResult.print_summary`` supports html output.
 
-.. _bug-fixes-22:
+.. _bug-fixes-23:
 
 Bug fixes
 ~~~~~~~~~
@@ -702,7 +725,7 @@ Bug fixes
 0.23.2 - 2019-12-07
 -------------------
 
-.. _new-features-19:
+.. _new-features-20:
 
 New features
 ~~~~~~~~~~~~
@@ -714,7 +737,7 @@ New features
 -  performance improvements on regression models’ preprocessing. Should
    make datasets with high number of columns more performant.
 
-.. _bug-fixes-23:
+.. _bug-fixes-24:
 
 Bug fixes
 ~~~~~~~~~
@@ -728,7 +751,7 @@ Bug fixes
 0.23.1 - 2019-11-27
 -------------------
 
-.. _new-features-20:
+.. _new-features-21:
 
 New features
 ~~~~~~~~~~~~
@@ -738,7 +761,7 @@ New features
 -  performance improvements for ``CoxPHFitter`` - up to 30% performance
    improvements for some datasets.
 
-.. _bug-fixes-24:
+.. _bug-fixes-25:
 
 Bug fixes
 ~~~~~~~~~
@@ -755,7 +778,7 @@ Bug fixes
 0.23.0 - 2019-11-17
 -------------------
 
-.. _new-features-21:
+.. _new-features-22:
 
 New features
 ~~~~~~~~~~~~
@@ -764,7 +787,7 @@ New features
    Jupyter notebooks!
 -  silenced some warnings.
 
-.. _bug-fixes-25:
+.. _bug-fixes-26:
 
 Bug fixes
 ~~~~~~~~~
@@ -794,7 +817,7 @@ API Changes
 The tests were re-factored to be shipped with the package. Let me know
 if this causes problems.
 
-.. _bug-fixes-26:
+.. _bug-fixes-27:
 
 Bug fixes
 ~~~~~~~~~
@@ -809,7 +832,7 @@ Bug fixes
 0.22.9 - 2019-10-30
 -------------------
 
-.. _bug-fixes-27:
+.. _bug-fixes-28:
 
 Bug fixes
 ~~~~~~~~~
@@ -826,7 +849,7 @@ Bug fixes
 0.22.8 - 2019-10-06
 -------------------
 
-.. _new-features-22:
+.. _new-features-23:
 
 New features
 ~~~~~~~~~~~~
@@ -836,7 +859,7 @@ New features
 -  ``conditional_after`` now available in ``CoxPHFitter.predict_median``
 -  Suppressed some unimportant warnings.
 
-.. _bug-fixes-28:
+.. _bug-fixes-29:
 
 Bug fixes
 ~~~~~~~~~
@@ -848,7 +871,7 @@ Bug fixes
 0.22.7 - 2019-09-29
 -------------------
 
-.. _new-features-23:
+.. _new-features-24:
 
 New features
 ~~~~~~~~~~~~
@@ -856,7 +879,7 @@ New features
 -  new ``ApproximationWarning`` to tell you if the package is making an
    potentially mislead approximation.
 
-.. _bug-fixes-29:
+.. _bug-fixes-30:
 
 Bug fixes
 ~~~~~~~~~
@@ -880,14 +903,14 @@ API Changes
 0.22.6 - 2019-09-25
 -------------------
 
-.. _new-features-24:
+.. _new-features-25:
 
 New features
 ~~~~~~~~~~~~
 
 -  ``conditional_after`` works for ``CoxPHFitter`` prediction models 😅
 
-.. _bug-fixes-30:
+.. _bug-fixes-31:
 
 Bug fixes
 ~~~~~~~~~
@@ -908,7 +931,7 @@ API Changes
 0.22.5 - 2019-09-20
 -------------------
 
-.. _new-features-25:
+.. _new-features-26:
 
 New features
 ~~~~~~~~~~~~
@@ -917,7 +940,7 @@ New features
    weights.
 -  Better support for predicting on Pandas Series
 
-.. _bug-fixes-31:
+.. _bug-fixes-32:
 
 Bug fixes
 ~~~~~~~~~
@@ -939,7 +962,7 @@ API Changes
 0.22.4 - 2019-09-04
 -------------------
 
-.. _new-features-26:
+.. _new-features-27:
 
 New features
 ~~~~~~~~~~~~
@@ -958,7 +981,7 @@ API changes
 -  ``KaplanMeierFitter.survival_function_``\ ‘s’ index is no longer
    given the name “timeline”.
 
-.. _bug-fixes-32:
+.. _bug-fixes-33:
 
 Bug fixes
 ~~~~~~~~~
@@ -971,7 +994,7 @@ Bug fixes
 0.22.3 - 2019-08-08
 -------------------
 
-.. _new-features-27:
+.. _new-features-28:
 
 New features
 ~~~~~~~~~~~~
@@ -995,7 +1018,7 @@ API changes
    gains only in Cox models, and only a small fraction of the API was
    being used.
 
-.. _bug-fixes-33:
+.. _bug-fixes-34:
 
 Bug fixes
 ~~~~~~~~~
@@ -1012,14 +1035,14 @@ Bug fixes
 0.22.2 - 2019-07-25
 -------------------
 
-.. _new-features-28:
+.. _new-features-29:
 
 New features
 ~~~~~~~~~~~~
 
 -  lifelines is now compatible with scipy>=1.3.0
 
-.. _bug-fixes-34:
+.. _bug-fixes-35:
 
 Bug fixes
 ~~~~~~~~~
@@ -1035,7 +1058,7 @@ Bug fixes
 0.22.1 - 2019-07-14
 -------------------
 
-.. _new-features-29:
+.. _new-features-30:
 
 New features
 ~~~~~~~~~~~~
@@ -1063,7 +1086,7 @@ API changes
    ``.print_summary`` includes confidence intervals for the exponential
    of the value.
 
-.. _bug-fixes-35:
+.. _bug-fixes-36:
 
 Bug fixes
 ~~~~~~~~~
@@ -1078,7 +1101,7 @@ Bug fixes
 0.22.0 - 2019-07-03
 -------------------
 
-.. _new-features-30:
+.. _new-features-31:
 
 New features
 ~~~~~~~~~~~~
@@ -1112,7 +1135,7 @@ API changes
    could set ``fit_intercept`` to False and not have to set
    ``ancillary_df`` - now one must specify a DataFrame.
 
-.. _bug-fixes-36:
+.. _bug-fixes-37:
 
 Bug fixes
 ~~~~~~~~~
@@ -1128,14 +1151,14 @@ Bug fixes
 
 I’m skipping 0.21.4 version because of deployment issues.
 
-.. _new-features-31:
+.. _new-features-32:
 
 New features
 ~~~~~~~~~~~~
 
 -  ``scoring_method`` now a kwarg on ``sklearn_adapter``
 
-.. _bug-fixes-37:
+.. _bug-fixes-38:
 
 Bug fixes
 ~~~~~~~~~
@@ -1150,7 +1173,7 @@ Bug fixes
 0.21.3 - 2019-06-04
 -------------------
 
-.. _new-features-32:
+.. _new-features-33:
 
 New features
 ~~~~~~~~~~~~
@@ -1164,7 +1187,7 @@ New features
 -  ``CoxPHFitter.check_assumptions`` now accepts a ``columns`` parameter
    to specify only checking a subset of columns.
 
-.. _bug-fixes-38:
+.. _bug-fixes-39:
 
 Bug fixes
 ~~~~~~~~~
@@ -1176,7 +1199,7 @@ Bug fixes
 0.21.2 - 2019-05-16
 -------------------
 
-.. _new-features-33:
+.. _new-features-34:
 
 New features
 ~~~~~~~~~~~~
@@ -1200,7 +1223,7 @@ API changes
 -  removing ``_compute_likelihood_ratio_test`` on regression models. Use
    ``log_likelihood_ratio_test`` now.
 
-.. _bug-fixes-39:
+.. _bug-fixes-40:
 
 Bug fixes
 ~~~~~~~~~
@@ -1210,7 +1233,7 @@ Bug fixes
 0.21.1 - 2019-04-26
 -------------------
 
-.. _new-features-34:
+.. _new-features-35:
 
 New features
 ~~~~~~~~~~~~
@@ -1227,7 +1250,7 @@ API changes
 -  output of ``survival_table_from_events`` when collapsing rows to
    intervals now removes the “aggregate” column multi-index.
 
-.. _bug-fixes-40:
+.. _bug-fixes-41:
 
 Bug fixes
 ~~~~~~~~~
@@ -1239,7 +1262,7 @@ Bug fixes
 0.21.0 - 2019-04-12
 -------------------
 
-.. _new-features-35:
+.. _new-features-36:
 
 New features
 ~~~~~~~~~~~~
@@ -1264,7 +1287,7 @@ API changes
 -  ``entries`` property in multivariate parametric models has a new
    Series name: ``entry``
 
-.. _bug-fixes-41:
+.. _bug-fixes-42:
 
 Bug fixes
 ~~~~~~~~~
@@ -1279,7 +1302,7 @@ Bug fixes
 0.20.5 - 2019-04-08
 -------------------
 
-.. _new-features-36:
+.. _new-features-37:
 
 New features
 ~~~~~~~~~~~~
@@ -1296,7 +1319,7 @@ API changes
 -  in ``AalenJohansenFitter``, the ``variance`` parameter is renamed to
    ``variance_`` to align with the usual lifelines convention.
 
-.. _bug-fixes-42:
+.. _bug-fixes-43:
 
 Bug fixes
 ~~~~~~~~~
@@ -1310,7 +1333,7 @@ Bug fixes
 0.20.4 - 2019-03-27
 -------------------
 
-.. _new-features-37:
+.. _new-features-38:
 
 New features
 ~~~~~~~~~~~~
@@ -1329,7 +1352,7 @@ API changes
 -  Pandas is now correctly pinned to >= 0.23.0. This was always the
    case, but not specified in setup.py correctly.
 
-.. _bug-fixes-43:
+.. _bug-fixes-44:
 
 Bug fixes
 ~~~~~~~~~
@@ -1343,7 +1366,7 @@ Bug fixes
 0.20.3 - 2019-03-23
 -------------------
 
-.. _new-features-38:
+.. _new-features-39:
 
 New features
 ~~~~~~~~~~~~
@@ -1361,7 +1384,7 @@ New features
 0.20.2 - 2019-03-21
 -------------------
 
-.. _new-features-39:
+.. _new-features-40:
 
 New features
 ~~~~~~~~~~~~
@@ -1385,7 +1408,7 @@ API changes
    @vpolimenov!
 -  The ``C`` column in ``load_lcd`` dataset is renamed to ``E``.
 
-.. _bug-fixes-44:
+.. _bug-fixes-45:
 
 Bug fixes
 ~~~~~~~~~
@@ -1434,7 +1457,7 @@ API changes
    recent installs where Py3.
 -  Updated minimum dependencies, specifically Matplotlib and Pandas.
 
-.. _new-features-40:
+.. _new-features-41:
 
 New features
 ~~~~~~~~~~~~
@@ -1454,7 +1477,7 @@ API changes
    transposed now (previous parameters where columns, now parameters are
    rows).
 
-.. _bug-fixes-45:
+.. _bug-fixes-46:
 
 Bug fixes
 ~~~~~~~~~
@@ -1466,7 +1489,7 @@ Bug fixes
 0.19.5 - 2019-02-26
 -------------------
 
-.. _new-features-41:
+.. _new-features-42:
 
 New features
 ~~~~~~~~~~~~
@@ -1481,7 +1504,7 @@ New features
 0.19.4 - 2019-02-25
 -------------------
 
-.. _bug-fixes-46:
+.. _bug-fixes-47:
 
 Bug fixes
 ~~~~~~~~~
@@ -1493,7 +1516,7 @@ Bug fixes
 0.19.3 - 2019-02-25
 -------------------
 
-.. _new-features-42:
+.. _new-features-43:
 
 New features
 ~~~~~~~~~~~~
@@ -1510,7 +1533,7 @@ New features
 0.19.2 - 2019-02-22
 -------------------
 
-.. _new-features-43:
+.. _new-features-44:
 
 New features
 ~~~~~~~~~~~~
@@ -1518,7 +1541,7 @@ New features
 -  ``ParametricUnivariateFitters``, like ``WeibullFitter``, have
    smoothed plots when plotting (vs stepped plots)
 
-.. _bug-fixes-47:
+.. _bug-fixes-48:
 
 Bug fixes
 ~~~~~~~~~
@@ -1533,7 +1556,7 @@ Bug fixes
 0.19.1 - 2019-02-21
 -------------------
 
-.. _new-features-44:
+.. _new-features-45:
 
 New features
 ~~~~~~~~~~~~
@@ -1555,7 +1578,7 @@ API changes
 0.19.0 - 2019-02-20
 -------------------
 
-.. _new-features-45:
+.. _new-features-46:
 
 New features
 ~~~~~~~~~~~~
@@ -1594,7 +1617,7 @@ API changes
    means that the *default* for alpha is set to 0.05 in the latest
    lifelines, instead of 0.95 in previous versions.
 
-.. _bug-fixes-48:
+.. _bug-fixes-49:
 
 Bug Fixes
 ~~~~~~~~~
