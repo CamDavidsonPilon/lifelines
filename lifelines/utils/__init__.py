@@ -715,22 +715,18 @@ def k_fold_cross_validation(
       a Pandas DataFrame with necessary columns `duration_col` and (optional) `event_col`, plus
       other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
       refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
-    duration_col: (n,) array
-      the column in DataFrame that contains the subjects lifetimes.
-    event_col: (n,) array
-      the column in DataFrame that contains the subject's death observation. If left
-      as None, assumes all individuals are non-censored.
+    duration_col: string
+        the name of the column in DataFrame that contains the subjects'
+        lifetimes.
+    event_col: string, optional
+        the  name of the column in DataFrame that contains the subjects' death
+        observation. If left as None, assume all individuals are uncensored.
     k: int
       the number of folds to perform. n/k data will be withheld for testing on.
-    evaluation_measure: function
-      a function that accepts either (event_times, predicted_event_times),
-      or (event_times, predicted_event_times, event_observed).
-      Default: statistics.concordance_index: (C-index)
-    predictor: string
-      a string that matches a prediction method on the fitter instances.
-      For example, ``predict_expectation`` or ``predict_percentile``.
-      Default is "predict_expectation"
-      The interface for the method is: ``predict(self, data, **optional_kwargs)``
+    scoring_method: str
+        one of {'log_likelihood', 'concordance_index'}
+        log_likelihood: returns the average unpenalized partial log-likelihood.
+        concordance_index: returns the concordance-index
     fitter_kwargs:
       keyword args to pass into fitter.fit method.
 
