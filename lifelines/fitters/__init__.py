@@ -1250,7 +1250,7 @@ class RegressionFitter(BaseFitter):
             return v
 
         else:
-            described = df.describe(include="all")
+            described = df.describe(include="all", datetime_is_numeric=True)
             if "top" in described.index and "50%" not in described.index:
                 central_stats = described.loc["top"].copy()
             elif "50%" in described.index and "top" not in described.index:
