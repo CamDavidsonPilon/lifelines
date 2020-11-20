@@ -127,6 +127,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         weights=None,
         tol: float = 1e-5,
         show_progress: bool = False,
+        **kwargs,
     ) -> "KaplanMeierFitter":
         """
         Fit the model to a interval-censored dataset using non-parametric MLE. This estimator is
@@ -205,7 +206,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
 
         self._label = coalesce(label, self._label, "NPMLE_estimate")
 
-        results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress, tol=tol, weights=weights)
+        results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress, tol=tol, weights=weights, **kwargs)
         self.survival_function_ = reconstruct_survival_function(*results, self.timeline, label=self._label).loc[self.timeline]
         self.cumulative_density_ = 1 - self.survival_function_
 
