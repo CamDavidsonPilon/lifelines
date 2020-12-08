@@ -39,7 +39,7 @@ Source code and issue tracker
 ------------------------------
 
 Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_.
-Please report bugs, issues and feature extensions there. We also have `Gitter channel <https://gitter.im/python-lifelines/Lobby>`_ available to discuss survival analysis and *lifelines*:
+Please report bugs, issues and feature extensions there. We also have `discussion channel <https://github.com/camdavidsonpilon/lifelines/discussions>`_ available to discuss survival analysis and *lifelines*:
 
 Citing *lifelines*
 ------------------------------

@@ -4,7 +4,6 @@
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/lifelines/badges/installer/conda.svg)](https://conda.anaconda.org/conda-forge)
 [![Build Status](https://travis-ci.org/CamDavidsonPilon/lifelines.svg?branch=master)](https://travis-ci.org/CamDavidsonPilon/lifelines)
 [![Coverage Status](https://coveralls.io/repos/github/CamDavidsonPilon/lifelines/badge.svg?branch=master)](https://coveralls.io/github/CamDavidsonPilon/lifelines?branch=master)
-[![Join the chat at https://gitter.im/python-lifelines/Lobby](https://badges.gitter.im/python-lifelines/Lobby.svg)](https://gitter.im/python-lifelines/Lobby)
 [![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
 
 
@@ -25,7 +24,7 @@ But outside of medicine and actuarial science, there are many other interesting 
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples, API, and syntax, please read the [Documentation and Tutorials page](http://lifelines.readthedocs.org/en/latest/index.html)
 
 ## Contact
- - Start a conversation in our [Discussions room](https://github.com/CamDavidsonPilon/lifelines/discussions). 
+ - Start a conversation in our [Discussions room](https://github.com/CamDavidsonPilon/lifelines/discussions).
  - Some users have posted common questions at [stats.stackexchange.com](https://stats.stackexchange.com/search?tab=votes&q=%22lifelines%22%20is%3aquestion)
  - creating an issue in the [Github repository](https://github.com/camdavidsonpilon/lifelines).
 
