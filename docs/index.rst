@@ -95,7 +95,7 @@ Documentation
   :maxdepth: 1
   :caption: Questions? Suggestions?
 
-  Gitter channel <https://gitter.im/python-lifelines/Lobby>
+  Discussion forum <https://github.com/camdavidsonpilon/lifelines/discussions>
   Create a GitHub issue <https://github.com/camdavidsonpilon/lifelines/issues>
 
 .. toctree::
