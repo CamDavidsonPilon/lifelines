@@ -25,7 +25,7 @@ But outside of medicine and actuarial science, there are many other interesting 
 If you are new to survival analysis, wondering why it is useful, or are interested in *lifelines* examples, API, and syntax, please read the [Documentation and Tutorials page](http://lifelines.readthedocs.org/en/latest/index.html)
 
 ## Contact
- - There is a [Gitter](https://gitter.im/python-lifelines/) channel available.
+ - Start a conversation in our [Discussions room](https://github.com/CamDavidsonPilon/lifelines/discussions). 
  - Some users have posted common questions at [stats.stackexchange.com](https://stats.stackexchange.com/search?tab=votes&q=%22lifelines%22%20is%3aquestion)
  - creating an issue in the [Github repository](https://github.com/camdavidsonpilon/lifelines).
 
