@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import warnings
 
-# pylint: disable=wrong-import-position
-warnings.simplefilter(action="ignore", category=DeprecationWarning)
-
 from io import StringIO, BytesIO as stringio
 from collections.abc import Iterable
 from itertools import combinations

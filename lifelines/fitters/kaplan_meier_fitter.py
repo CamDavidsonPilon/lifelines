@@ -406,6 +406,10 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         return pd.Series(1 - self.predict(times), index=_to_1d_array(times), name=label)
 
     def plot(self, **kwargs):
+        warnings.warn(
+            "The `plot` function is deprecated, and will be removed in future versions. Use `plot_survival_function`",
+            DeprecationWarning,
+        )
         return self.plot_survival_function(**kwargs)
 
     def plot_survival_function(self, **kwargs):

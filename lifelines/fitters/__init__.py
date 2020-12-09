@@ -131,6 +131,10 @@ class UnivariateFitter(BaseFitter):
         ax:
             a pyplot axis object
         """
+        warnings.warn(
+            "The `plot` function is deprecated, and will be removed in future versions. Use `plot_%s`" % self._estimate_name,
+            DeprecationWarning,
+        )
         return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
 
     def subtract(self, other) -> pd.DataFrame:
@@ -1138,11 +1142,15 @@ class ParametricUnivariateFitter(UnivariateFitter):
         Produce a pretty-plot of the estimate.
         """
         set_kwargs_drawstyle(kwargs, "default")
+        warnings.warn(
+            "The `plot` function is deprecated, and will be removed in future versions. Use `plot_%s`" % self._estimate_name,
+            DeprecationWarning,
+        )
         return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
 
     def plot_cumulative_hazard(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
-        return self.plot(**kwargs)
+        return _plot_estimate(self, estimate="cumulative_hazard_", **kwargs)
 
     def plot_survival_function(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")

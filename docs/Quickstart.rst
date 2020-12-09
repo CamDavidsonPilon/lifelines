@@ -70,7 +70,7 @@ After calling the :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitte
 
     kmf.survival_function_
     kmf.cumulative_density_
-    kmf.plot_survival_function() # or just kmf.plot()
+    kmf.plot_survival_function()
 
 
 .. image:: images/quickstart_kmf.png
@@ -147,10 +147,10 @@ Multiple groups
     ix = (groups == 'miR-137')
 
     kmf.fit(T[~ix], E[~ix], label='control')
-    ax = kmf.plot()
+    ax = kmf.plot_survival_function()
 
     kmf.fit(T[ix], E[ix], label='miR-137')
-    ax = kmf.plot(ax=ax)
+    ax = kmf.plot_survival_function(ax=ax)
 
 
 .. image:: images/quickstart_multi.png
@@ -168,7 +168,7 @@ Alternatively, for many more groups and more "pandas-esque":
 
     for name, grouped_df in df.groupby('group'):
         kmf.fit(grouped_df["T"], grouped_df["E"], label=name)
-        kmf.plot(ax=ax)
+        kmf.plot_survival_function(ax=ax)
 
 
 Similar functionality exists for the :class:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter`:
