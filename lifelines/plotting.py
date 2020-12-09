@@ -2,7 +2,7 @@
 
 import warnings
 from typing import Union, Optional, Iterable
-
+from scipy import stats as stats
 
 import pandas as pd
 import numpy as np
@@ -841,6 +841,8 @@ def _plot_estimate(
     ax:
         a pyplot axis object
     """
+    from matplotlib import pyplot as plt
+
     if ci_force_lines:
         warnings.warn(
             "ci_force_lines is deprecated. Use ci_only_lines instead (no functional difference, only a name change).",
