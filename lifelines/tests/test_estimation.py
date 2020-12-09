@@ -2272,7 +2272,7 @@ class TestAFTFitters:
     def test_warning_is_present_if_entry_greater_than_duration(self, rossi, models):
         rossi["start"] = 10
         for fitter in models:
-            with pytest.raises(ValueError, match="entry > duration"):
+            with pytest.raises(ValueError, match="entry >= duration"):
                 fitter.fit(rossi, "week", "arrest", entry_col="start")
 
     def test_weights_col_and_start_col_is_not_included_in_the_output(self, models, rossi):
@@ -2908,12 +2908,16 @@ class TestCoxPHFitter:
         df = load_diabetes()
         df["gender"] = df["gender"] == "male"
         df["gender"] = df["gender"].astype(int)
-
-        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, penalizer=0.001)
-        cph_spline.fit_interval_censoring(df, "left", "right", formula="gender + 1", show_progress=True)
-        cph_spline.print_summary()
+        df["left"] = df["left"]
+        df["right"] = df["right"]
 
         cph_pieces.fit_interval_censoring(df, "left", "right")
+        cph_pieces.print_summary()
+
+        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, penalizer=0.01)
+        cph_spline.fit_interval_censoring(
+            df, "left", "right", formula="gender", show_progress=True, initial_point=np.array([-8.68, -0.13, 3.04, 0.52])
+        )
         cph_spline.print_summary()
 
     def test_parametric_models_can_do_left_censoring(self, cph_spline, cph_pieces):

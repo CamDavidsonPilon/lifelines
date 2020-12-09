@@ -2988,7 +2988,7 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
         else:
             return {
                 **{"beta_": np.zeros(len(Xs["beta_"].columns))},
-                **{"phi%d_" % i: np.array([0.001]) for i in range(1, self.n_baseline_knots + 1)},
+                **{"phi%d_" % i: np.array([0.01]) for i in range(1, self.n_baseline_knots + 1)},
             }
 
     def _cumulative_hazard_with_strata(self, params, T, Xs):
