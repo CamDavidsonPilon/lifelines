@@ -2626,9 +2626,13 @@ class ParametricRegressionFitter(RegressionFitter):
         """
         # pylint: disable=access-member-before-definition
         if not hasattr(self, "_concordance_index_"):
-            self._concordance_index_ = utils.concordance_index(self.durations, self._predicted_median, self.event_observed)
-            del self._predicted_median
-            return self.concordance_index_
+            try:
+                self._concordance_index_ = utils.concordance_index(self.durations, self._predicted_median, self.event_observed)
+                del self._predicted_median
+                return self.concordance_index_
+            except ZeroDivisionError:
+                # this can happen if there are no observations, see #1172
+                return 0.5
         return self._concordance_index_
 
     @property

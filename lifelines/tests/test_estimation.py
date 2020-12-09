@@ -1807,6 +1807,12 @@ class TestRegressionFitters:
         )
         return regression_models_sans_strata_model
 
+    def test_no_observations(self, rossi, regression_models):
+        rossi["arrest"] == 0
+        for fitter in regression_models:
+            fitter.fit(rossi, "week", "arrest")
+            fitter.print_summary()
+
     def test_compute_central_values_of_raw_training_data(self):
 
         central_values = RegressionFitter()._compute_central_values_of_raw_training_data
