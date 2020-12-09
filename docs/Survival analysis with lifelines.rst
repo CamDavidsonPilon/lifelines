@@ -690,11 +690,7 @@ Instead of producing a survival function, left-censored data analysis is more in
 
     print(kmf.cumulative_density_.head())
 
-<<<<<<< HEAD
     kmf.plot_cumulative_density() #will plot the CDF
-=======
-    kmf.plot_survival_function() #will plot the CDF
->>>>>>> start #1186
     plt.xlabel("Concentration of NH_4")
 
     """
