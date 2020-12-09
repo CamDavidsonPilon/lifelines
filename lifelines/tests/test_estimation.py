@@ -2475,6 +2475,14 @@ class TestWeibullAFTFitter:
     def aft(self):
         return WeibullAFTFitter()
 
+    def test_interval_censoring_with_formula(self, aft):
+        df = load_diabetes()
+        df["gender"] = df["gender"] == "male"
+        df["E"] = df["left"] == df["right"]
+        df["gender"] = df["gender"].astype(int)
+
+        aft.fit_interval_censoring(df, "left", "right", "E", formula="gender")
+
     def test_fitted_coefs_with_eha_when_left_truncated(self, aft, rossi):
         """
         library(eha)

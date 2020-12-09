@@ -2944,7 +2944,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             raise ValueError("All upper bound measurements must be greater than or equal to lower bound measurements.")
 
         if formula:
-            primary_columns_or_formula = [formula]
+            primary_columns_or_formula = formula
         else:
             primary_columns_or_formula = df.columns.difference(
                 [self.lower_bound_col, self.upper_bound_col, self.event_col, self.entry_col, self.weights_col]
