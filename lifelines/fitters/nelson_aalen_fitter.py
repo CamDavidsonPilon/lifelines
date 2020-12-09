@@ -14,6 +14,7 @@ from lifelines.utils import (
     check_nans_or_infs,
     CensoringType,
     coalesce,
+    _to_1d_array,
 )
 
 
@@ -242,3 +243,19 @@ class NelsonAalenFitter(UnivariateFitter):
 
     def percentile(self, p):
         raise NotImplementedError()
+
+    def cumulative_hazard_at_times(self, times, label=None) -> pd.Series:
+        """
+        Return a Pandas series of the predicted cumhaz value at specific times
+
+        Parameters
+        -----------
+        times: iterable or float
+
+        Returns
+        --------
+        pd.Series
+
+        """
+        label = coalesce(label, self._label)
+        return pd.Series(self.predict(times), index=_to_1d_array(times), name=label)

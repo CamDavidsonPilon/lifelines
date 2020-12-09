@@ -1511,6 +1511,12 @@ class TestNelsonAalenFitter:
             na = np.insert(na, 0, 0.0)
         return na.reshape(len(na), 1)
 
+    def test_cumulative_hazard_at_times(self, sample_lifetimes):
+        T, _ = sample_lifetimes
+        naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
+        naf.fit(T)
+        naf.cumulative_hazard_at_times([0.5, 0.9, 1.0])
+
     def test_nelson_aalen_no_censorship(self, sample_lifetimes):
         T, _ = sample_lifetimes
         naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
