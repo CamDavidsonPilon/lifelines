@@ -346,6 +346,15 @@ class TestUnivariateFitters:
             SplineFitterTesting,
         ]
 
+    def test_label_is_not_overwritten(self):
+        fitter = WeibullFitter(label="Weibull")
+        fitter.fit([1, 2, 3, 4], event_observed=[1, 1, 1, 1])
+        assert fitter._label == "Weibull"
+
+        fitter = KaplanMeierFitter(label="KM")
+        fitter.fit([1, 2, 3, 4], event_observed=[1, 1, 1, 1])
+        assert fitter._label == "KM"
+
     def test_confidence_interval_has_the_correct_order_so_plotting_doesnt_break(self, sample_lifetimes, univariate_fitters):
         T, E = sample_lifetimes
         for f in univariate_fitters:

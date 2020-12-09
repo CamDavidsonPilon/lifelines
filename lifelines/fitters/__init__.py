@@ -916,7 +916,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
         initial_point=None,
     ) -> "ParametricUnivariateFitter":
 
-        label = utils.coalesce(label, self._class_name.replace("Fitter", "") + "_estimate")
         n = len(utils.coalesce(*Ts))
 
         if event_observed is not None:
@@ -933,7 +932,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         else:
             self.timeline = np.linspace(utils.coalesce(*Ts).min(), utils.coalesce(*Ts).max(), min(n, 500))
 
-        self._label = utils.coalesce(label, self._label)
+        self._label = utils.coalesce(label, self._label, self._class_name.replace("Fitter", "") + "_estimate")
         self._ci_labels = ci_labels
         self.alpha = utils.coalesce(alpha, self.alpha)
 
