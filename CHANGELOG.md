@@ -1,5 +1,18 @@
 ## Changelog
 
+#### 0.25.7 - 2020-12-09
+
+##### API Changes
+ - Adding `cumulative_hazard_at_times` to NelsonAalenFitter
+
+
+##### Bug fixes
+ - Fixed error in `CoxPHFitter` when entry time == event time.
+ - Fixed formulas in AFT interval censoring regression.
+ - Fixed `concordance_index_` when no events observed
+ - Fixed label being overwritten in ParametricUnivariate models
+
+
 #### 0.25.6 - 2020-10-26
 
 ##### New features

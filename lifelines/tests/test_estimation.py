@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import warnings
 
-# pylint: disable=wrong-import-position
-warnings.simplefilter(action="ignore", category=DeprecationWarning)
-
 from io import StringIO, BytesIO as stringio
 from collections.abc import Iterable
 from itertools import combinations
@@ -345,6 +342,15 @@ class TestUnivariateFitters:
             GeneralizedGammaFitter,
             SplineFitterTesting,
         ]
+
+    def test_label_is_not_overwritten(self):
+        fitter = WeibullFitter(label="Weibull")
+        fitter.fit([1, 2, 3, 4], event_observed=[1, 1, 1, 1])
+        assert fitter._label == "Weibull"
+
+        fitter = KaplanMeierFitter(label="KM")
+        fitter.fit([1, 2, 3, 4], event_observed=[1, 1, 1, 1])
+        assert fitter._label == "KM"
 
     def test_confidence_interval_has_the_correct_order_so_plotting_doesnt_break(self, sample_lifetimes, univariate_fitters):
         T, E = sample_lifetimes
@@ -1502,6 +1508,12 @@ class TestNelsonAalenFitter:
             na = np.insert(na, 0, 0.0)
         return na.reshape(len(na), 1)
 
+    def test_cumulative_hazard_at_times(self, sample_lifetimes):
+        T, _ = sample_lifetimes
+        naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
+        naf.fit(T)
+        naf.cumulative_hazard_at_times([0.5, 0.9, 1.0])
+
     def test_nelson_aalen_no_censorship(self, sample_lifetimes):
         T, _ = sample_lifetimes
         naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
@@ -1806,6 +1818,12 @@ class TestRegressionFitters:
             CoxPHFitter(strata=["wexp"], baseline_estimation_method="piecewise", breakpoints=[15])
         )
         return regression_models_sans_strata_model
+
+    def test_no_observations(self, rossi, regression_models):
+        rossi["arrest"] == 0
+        for fitter in regression_models:
+            fitter.fit(rossi, "week", "arrest")
+            fitter.print_summary()
 
     def test_compute_central_values_of_raw_training_data(self):
 
@@ -2254,7 +2272,7 @@ class TestAFTFitters:
     def test_warning_is_present_if_entry_greater_than_duration(self, rossi, models):
         rossi["start"] = 10
         for fitter in models:
-            with pytest.raises(ValueError, match="entry > duration"):
+            with pytest.raises(ValueError, match="entry >= duration"):
                 fitter.fit(rossi, "week", "arrest", entry_col="start")
 
     def test_weights_col_and_start_col_is_not_included_in_the_output(self, models, rossi):
@@ -2453,6 +2471,14 @@ class TestWeibullAFTFitter:
     @pytest.fixture
     def aft(self):
         return WeibullAFTFitter()
+
+    def test_interval_censoring_with_formula(self, aft):
+        df = load_diabetes()
+        df["gender"] = df["gender"] == "male"
+        df["E"] = df["left"] == df["right"]
+        df["gender"] = df["gender"].astype(int)
+
+        aft.fit_interval_censoring(df, "left", "right", "E", formula="gender")
 
     def test_fitted_coefs_with_eha_when_left_truncated(self, aft, rossi):
         """
@@ -2882,12 +2908,16 @@ class TestCoxPHFitter:
         df = load_diabetes()
         df["gender"] = df["gender"] == "male"
         df["gender"] = df["gender"].astype(int)
-
-        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, penalizer=0.001)
-        cph_spline.fit_interval_censoring(df, "left", "right", formula="gender + 1", show_progress=True)
-        cph_spline.print_summary()
+        df["left"] = df["left"]
+        df["right"] = df["right"]
 
         cph_pieces.fit_interval_censoring(df, "left", "right")
+        cph_pieces.print_summary()
+
+        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, penalizer=0.01)
+        cph_spline.fit_interval_censoring(
+            df, "left", "right", formula="gender", show_progress=True, initial_point=np.array([-8.68, -0.13, 3.04, 0.52])
+        )
         cph_spline.print_summary()
 
     def test_parametric_models_can_do_left_censoring(self, cph_spline, cph_pieces):
@@ -2911,6 +2941,19 @@ class TestCoxPHFitter:
 
         cph_pieces.fit(rossi, "week", "arrest", strata="paro", formula="age")
         assert cph_pieces._ll_null_dof < cph_pieces.params_.shape[0]
+
+    def test_late_entries_where_obs_is_equal_to_entry(self, cph):
+
+        df = load_multicenter_aids_cohort_study()
+
+        df.loc[1, "W"] = df.loc[1, "T"]
+        df.loc[1, "D"] = 1
+
+        with pytest.raises(ValueError):
+            cph.fit(df, "T", "D", entry_col="W")
+
+        df.loc[1, "T"] = df.loc[1, "T"] + 0.00001
+        cph.fit(df, "T", "D", entry_col="W")
 
     def test_parametric_strata_score(self, cph_spline, cph_pieces, rossi):
         cph_spline.fit(rossi, "week", "arrest", strata="paro", formula="age")

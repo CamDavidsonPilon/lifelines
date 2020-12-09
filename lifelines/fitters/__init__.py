@@ -131,6 +131,10 @@ class UnivariateFitter(BaseFitter):
         ax:
             a pyplot axis object
         """
+        warnings.warn(
+            "The `plot` function is deprecated, and will be removed in future versions. Use `plot_%s`" % self._estimate_name,
+            DeprecationWarning,
+        )
         return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
 
     def subtract(self, other) -> pd.DataFrame:
@@ -916,7 +920,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
         initial_point=None,
     ) -> "ParametricUnivariateFitter":
 
-        label = utils.coalesce(label, self._class_name.replace("Fitter", "") + "_estimate")
         n = len(utils.coalesce(*Ts))
 
         if event_observed is not None:
@@ -933,7 +936,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         else:
             self.timeline = np.linspace(utils.coalesce(*Ts).min(), utils.coalesce(*Ts).max(), min(n, 500))
 
-        self._label = utils.coalesce(label, self._label)
+        self._label = utils.coalesce(label, self._label, self._class_name.replace("Fitter", "") + "_estimate")
         self._ci_labels = ci_labels
         self.alpha = utils.coalesce(alpha, self.alpha)
 
@@ -1139,11 +1142,15 @@ class ParametricUnivariateFitter(UnivariateFitter):
         Produce a pretty-plot of the estimate.
         """
         set_kwargs_drawstyle(kwargs, "default")
+        warnings.warn(
+            "The `plot` function is deprecated, and will be removed in future versions. Use `plot_%s`" % self._estimate_name,
+            DeprecationWarning,
+        )
         return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
 
     def plot_cumulative_hazard(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
-        return self.plot(**kwargs)
+        return _plot_estimate(self, estimate="cumulative_hazard_", **kwargs)
 
     def plot_survival_function(self, **kwargs):
         set_kwargs_drawstyle(kwargs, "default")
@@ -2626,9 +2633,13 @@ class ParametricRegressionFitter(RegressionFitter):
         """
         # pylint: disable=access-member-before-definition
         if not hasattr(self, "_concordance_index_"):
-            self._concordance_index_ = utils.concordance_index(self.durations, self._predicted_median, self.event_observed)
-            del self._predicted_median
-            return self.concordance_index_
+            try:
+                self._concordance_index_ = utils.concordance_index(self.durations, self._predicted_median, self.event_observed)
+                del self._predicted_median
+                return self.concordance_index_
+            except ZeroDivisionError:
+                # this can happen if there are no observations, see #1172
+                return 0.5
         return self._concordance_index_
 
     @property
@@ -2941,7 +2952,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             raise ValueError("All upper bound measurements must be greater than or equal to lower bound measurements.")
 
         if formula:
-            primary_columns_or_formula = [formula]
+            primary_columns_or_formula = formula
         else:
             primary_columns_or_formula = df.columns.difference(
                 [self.lower_bound_col, self.upper_bound_col, self.event_col, self.entry_col, self.weights_col]

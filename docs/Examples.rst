@@ -326,10 +326,10 @@ When ``.plot`` is called, an ``axis`` object is returned which can be passed int
 .. code-block:: python
 
     kmf.fit(data1)
-    ax = kmf.plot()
+    ax = kmf.plot_survival_function()
 
     kmf.fit(data2)
-    ax = kmf.plot(ax=ax)
+    ax = kmf.plot_survival_function(ax=ax)
 
 
 If you have a pandas DataFrame with columns "T", "E", and some categorical variable, then something like the following would work:
@@ -347,7 +347,7 @@ If you have a pandas DataFrame with columns "T", "E", and some categorical varia
 
     for name, grouped_df in df.groupby('group'):
         kmf.fit(grouped_df["T"], grouped_df["E"], label=name)
-        kmf.plot(ax=ax)
+        kmf.plot_survival_function(ax=ax)
 
 
 Plotting interval censored data
@@ -391,8 +391,8 @@ Standard
 
 
     kmf = KaplanMeierFitter()
-    kmf.fit(T, E, label="kmf.plot()")
-    kmf.plot()
+    kmf.fit(T, E, label="kmf.plot_survival_function()")
+    kmf.plot_survival_function()
 
 .. image:: /images/normal_plot.png
     :width: 500px
@@ -403,8 +403,8 @@ Show censors and edit markers
 
 .. code-block:: python
 
-    kmf.fit(T, E, label="kmf.plot(show_censors=True, \ncensor_styles={'ms': 6, 'marker': 's'})")
-    kmf.plot(show_censors=True, censor_styles={'ms': 6, 'marker': 's'})
+    kmf.fit(T, E, label="kmf.plot_survival_function(show_censors=True, \ncensor_styles={'ms': 6, 'marker': 's'})")
+    kmf.plot_survival_function(show_censors=True, censor_styles={'ms': 6, 'marker': 's'})
 
 .. image:: images/flat_plot.png
     :width: 500px
@@ -416,8 +416,8 @@ Hide confidence intervals
 
 .. code-block:: python
 
-    kmf.fit(T, E, label="kmf.plot(ci_show=False)")
-    kmf.plot(ci_show=False)
+    kmf.fit(T, E, label="kmf.plot_survival_function(ci_show=False)")
+    kmf.plot_survival_function(ci_show=False)
 
 .. image:: /images/ci_show_plot.png
     :width: 500px
@@ -430,8 +430,10 @@ Displaying at-risk counts below plots
 .. code-block:: python
 
     kmf.fit(T, E, label="label name")
-    kmf.plot(at_risk_counts=True)
+    kmf.plot_survival_function(at_risk_counts=True)
     plt.tight_layout()
+
+
 
 .. image:: /images/single_at_risk_plots.png
     :width: 500px
@@ -453,10 +455,10 @@ The function :func:`lifelines.plotting.add_at_risk_counts` allows you to add cou
     ax = plt.subplot(111)
 
     kmf_control = KaplanMeierFitter()
-    ax = kmf_control.fit(waltons.loc[ix]['T'], waltons.loc[ix]['E'], label='control').plot(ax=ax)
+    ax = kmf_control.fit(waltons.loc[ix]['T'], waltons.loc[ix]['E'], label='control').plot_survival_function(ax=ax)
 
     kmf_exp = KaplanMeierFitter()
-    ax = kmf_exp.fit(waltons.loc[~ix]['T'], waltons.loc[~ix]['E'], label='exp').plot(ax=ax)
+    ax = kmf_exp.fit(waltons.loc[~ix]['T'], waltons.loc[~ix]['E'], label='exp').plot_survival_function(ax=ax)
 
 
     from lifelines.plotting import add_at_risk_counts

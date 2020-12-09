@@ -1115,9 +1115,12 @@ def pearson_correlation(x: np.ndarray, y: np.ndarray):
 
 
 def check_entry_times(T, entries):
-    count_invalid_rows = (entries > T).sum()
+    count_invalid_rows = (entries >= T).sum()
     if count_invalid_rows:
-        raise ValueError("""There exist %d rows where entry > duration.""" % count_invalid_rows)
+        raise ValueError(
+            """There exist %d row(s) where entry >= duration. Recommendation is to add a very small value to duration for these rows."""
+            % count_invalid_rows
+        )
 
 
 def check_complete_separation_close_to_perfect_correlation(df: pd.DataFrame, durations: pd.Series):

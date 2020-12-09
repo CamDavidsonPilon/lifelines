@@ -504,7 +504,6 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)
         log_lik = 0
-        # weights = weights[:, None]
         unique_death_times = np.unique(stop[events])
 
         for t in unique_death_times:

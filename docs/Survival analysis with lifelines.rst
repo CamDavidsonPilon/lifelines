@@ -125,7 +125,7 @@ property. (The method uses exponential Greenwood confidence interval. The mathem
 
 .. code:: python
 
-    kmf.plot()
+    kmf.plot_survival_function()
 
 .. image:: images/lifelines_intro_kmf_fitter.png
     :width: 600px
@@ -160,10 +160,10 @@ an ``axis`` object, that can be used for plotting further estimates:
     dem = (data["democracy"] == "Democracy")
 
     kmf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
-    kmf.plot(ax=ax)
+    kmf.plot_survival_function(ax=ax)
 
     kmf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
-    kmf.plot(ax=ax)
+    kmf.plot_survival_function(ax=ax)
 
     plt.title("Lifespans of different global regimes");
 
@@ -185,10 +185,10 @@ probabilities of survival at those points:
 
     t = np.linspace(0, 50, 51)
     kmf.fit(T[dem], event_observed=E[dem], timeline=t, label="Democratic Regimes")
-    ax = kmf.plot(ax=ax)
+    ax = kmf.plot_survival_function(ax=ax)
 
     kmf.fit(T[~dem], event_observed=E[~dem], timeline=t, label="Non-democratic Regimes")
-    ax = kmf.plot(ax=ax)
+    ax = kmf.plot_survival_function(ax=ax)
 
     plt.title("Lifespans of different global regimes");
 
@@ -251,7 +251,7 @@ Lets compare the different *types* of regimes present in the dataset:
 
         ix = data['regime'] == regime_type
         kmf.fit(T[ix], E[ix], label=regime_type)
-        kmf.plot(ax=ax, legend=False)
+        kmf.plot_survival_function(ax=ax, legend=False)
 
         plt.title(regime_type)
         plt.xlim(0, 50)
@@ -277,8 +277,9 @@ In *lifelines*, confidence intervals are automatically added, but there is the `
 .. code:: python
 
     kmf = KaplanMeierFitter().fit(T, E, label="all_regimes")
-    kmf.plot(at_risk_counts=True)
+    kmf.plot_survival_function(at_risk_counts=True)
     plt.tight_layout()
+
 
 
 .. image:: images/intro_add_at_risk.png
@@ -369,7 +370,7 @@ a DataFrame:
 .. code:: python
 
     print(naf.cumulative_hazard_.head())
-    naf.plot()
+    naf.plot_cumulative_hazard()
 
 .. parsed-literal::
 
@@ -400,15 +401,15 @@ gets smaller (as seen by the decreasing rate of change). Let's break the
 regimes down between democratic and non-democratic, during the first 20
 years:
 
-.. note::  We are using the ``loc`` argument in the call to ``plot`` here: it accepts a ``slice`` and plots only points within that slice.
+.. note::  We are using the ``loc`` argument in the call to ``plot_cumulative_hazard`` here: it accepts a ``slice`` and plots only points within that slice.
 
 .. code:: python
 
     naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
-    ax = naf.plot(loc=slice(0, 20))
+    ax = naf.plot_cumulative_hazard(loc=slice(0, 20))
 
     naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
-    naf.plot(ax=ax, loc=slice(0, 20))
+    naf.plot_cumulative_hazard(ax=ax, loc=slice(0, 20))
 
     plt.title("Cumulative hazard function of different global regimes");
 
@@ -516,7 +517,7 @@ In lifelines, estimation is available using the :class:`~lifelines.fitters.weibu
     wf = WeibullFitter().fit(T, E)
 
     wf.print_summary()
-    ax = wf.plot()
+    ax = wf.plot_cumulative_hazard()
     ax.set_title("Cumulative hazard of Weibull model; estimated parameters")
 
 
@@ -832,10 +833,10 @@ So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, b
 
         kmf = KaplanMeierFitter()
         kmf.fit(df["T"], event_observed=df["D"], entry=df["W"], label='modeling late entries')
-        ax = kmf.plot()
+        ax = kmf.plot_survival_function()
 
         kmf.fit(df["T"], event_observed=df["D"], label='ignoring late entries')
-        kmf.plot(ax=ax)
+        kmf.plot_survival_function(ax=ax)
 
 
 .. image:: images/kmf_mcas.png

@@ -1306,7 +1306,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         utils.check_nans_or_infs(E)
         E = E.astype(bool)
 
-        self._check_values_pre_fitting(X, T, E, W)
+        self._check_values_pre_fitting(X, T, E, W, entries)
 
         return X, T, E, W, entries, original_index, _clusters
 
@@ -1317,7 +1317,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         utils.check_dimensions(X)
         utils.check_complete_separation(X, E, T, self.event_col)
 
-    def _check_values_pre_fitting(self, X, T, E, W):
+    def _check_values_pre_fitting(self, X, T, E, W, entries):
         """
         Some utilities to check for bad data coming in, like NaNs or complete separation.
         """
@@ -1337,6 +1337,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 )
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
+
+        if self.entry_col:
+            utils.check_entry_times(T, entries)
 
     def _fit_model(
         self,
@@ -2985,7 +2988,7 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
         else:
             return {
                 **{"beta_": np.zeros(len(Xs["beta_"].columns))},
-                **{"phi%d_" % i: np.array([0.001]) for i in range(1, self.n_baseline_knots + 1)},
+                **{"phi%d_" % i: np.array([0.01]) for i in range(1, self.n_baseline_knots + 1)},
             }
 
     def _cumulative_hazard_with_strata(self, params, T, Xs):
