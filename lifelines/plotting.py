@@ -3,10 +3,7 @@
 import warnings
 from typing import Union, Optional, Iterable
 
-from matplotlib.ticker import MaxNLocator
-from matplotlib import pyplot as plt
-import matplotlib as mpl
-from scipy import stats
+
 import pandas as pd
 import numpy as np
 
@@ -84,6 +81,7 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
 
     """
     from lifelines import KaplanMeierFitter
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -164,6 +162,7 @@ def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_
 
     """
     from lifelines.utils import restricted_mean_survival_time
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -256,6 +255,7 @@ def qq_plot(model, ax=None, **plot_kwargs):
     """
     from lifelines.utils import qth_survival_times
     from lifelines import KaplanMeierFitter
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -421,6 +421,7 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
      Morris TP, Jarvis CI, Cragg W, et al. Proposals on Kaplan–Meier plots in medical research and a survey of stakeholder views: KMunicate. BMJ Open 2019;9:e030215. doi:10.1136/bmjopen-2019-030215
 
     """
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -560,6 +561,7 @@ def plot_interval_censored_lifetimes(
         df = pd.DataFrame({'lb':[20,15,30, 10, 20, 30], 'ub':[25, 15, np.infty, 20, 20, np.infty]})
         ax = plot_interval_censored_lifetimes(lower_bound=df['lb'], upper_bound=df['ub'])
     """
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -603,6 +605,8 @@ def plot_interval_censored_lifetimes(
         ax.set_yticks(range(0, N))
         ax.set_yticklabels(lower_bound.index)
     else:
+        from matplotlib.ticker import MaxNLocator
+
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     ax.set_xlim(0)
@@ -655,6 +659,7 @@ def plot_lifetimes(
         ax = plot_lifetimes(T.loc[:50], event_observed=E.loc[:50])
 
     """
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -694,6 +699,8 @@ def plot_lifetimes(
         ax.set_yticks(range(0, N))
         ax.set_yticklabels(durations.index)
     else:
+        from matplotlib.ticker import MaxNLocator
+
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     ax.set_xlim(0)
@@ -728,6 +735,7 @@ def loglogs_plot(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
     """
     Specifies a plot of the log(-log(SV)) versus log(time) where SV is the estimated survival function.
     """
+    from matplotlib import pyplot as plt
 
     def loglog(s):
         return np.log(-np.log(s))
@@ -903,6 +911,7 @@ def _plot_estimate(
 
 class PlotEstimateConfig:
     def __init__(self, cls, estimate: Union[str, pd.DataFrame], loc, iloc, show_censors, censor_styles, logx, ax, **kwargs):
+        from matplotlib import pyplot as plt
 
         self.censor_styles = coalesce(censor_styles, {})
 
