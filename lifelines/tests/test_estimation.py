@@ -2927,6 +2927,19 @@ class TestCoxPHFitter:
         cph_pieces.fit(rossi, "week", "arrest", strata="paro", formula="age")
         assert cph_pieces._ll_null_dof < cph_pieces.params_.shape[0]
 
+    def test_late_entries_where_obs_is_equal_to_entry(self, cph):
+
+        df = load_multicenter_aids_cohort_study()
+
+        df.loc[1, "W"] = df.loc[1, "T"]
+        df.loc[1, "D"] = 1
+
+        with pytest.raises(ValueError):
+            cph.fit(df, "T", "D", entry_col="W")
+
+        df.loc[1, "T"] = df.loc[1, "T"] + 0.00001
+        cph.fit(df, "T", "D", entry_col="W")
+
     def test_parametric_strata_score(self, cph_spline, cph_pieces, rossi):
         cph_spline.fit(rossi, "week", "arrest", strata="paro", formula="age")
         cph_spline.score(rossi)

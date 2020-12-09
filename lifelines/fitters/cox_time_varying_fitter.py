@@ -504,7 +504,6 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)
         log_lik = 0
-        # weights = weights[:, None]
         unique_death_times = np.unique(stop[events])
 
         for t in unique_death_times:
@@ -566,6 +565,10 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             else:
                 # no tensors here, but do some casting to make it easier in the converging step next.
                 denom = 1.0 / np.array([risk_phi])
+                if risk_phi == 0:
+                    import pdb
+
+                    pdb.set_trace()
                 numer = risk_phi_x
                 a1 = risk_phi_x_x * denom
 
