@@ -4806,7 +4806,7 @@ class TestAalenAdditiveFitter:
         aaf.fit(X, duration_col="T")
 
     def test_aalen_additive_median_predictions_split_data(self):
-        # This tests to make sure that my median predictions statisfy
+        # This tests to make sure that my median predictions satisfy
         # the prediction are greater than the actual 1/2 the time.
         # generate some hazard rates and a survival data set
         n = 2500
