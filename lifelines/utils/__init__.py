@@ -1093,8 +1093,8 @@ if convergence fails.%s\n"
 def check_complete_separation_low_variance(df: pd.DataFrame, events: np.ndarray, event_col: str):
 
     events = events.astype(bool)
-    deaths_only = df.columns[_low_var(df.loc[events.values])]
-    censors_only = df.columns[_low_var(df.loc[~events.values])]
+    deaths_only = df.columns[_low_var(df.loc[events])]
+    censors_only = df.columns[_low_var(df.loc[~events])]
     total = df.columns[_low_var(df)]
     problem_columns = (censors_only | deaths_only).difference(total).tolist()
     if problem_columns:
