@@ -959,12 +959,27 @@ When you want to save (and later load) a *lifelines* model to disk, you can use 
 
     s_cph = dumps(cph)
     cph_new = loads(s_cph)
-    cph.summary
+    cph_new.summary
 
 
     s_kmf = dumps(kmf)
     kmf_new = loads(s_kmf)
-    kmf.survival_function_
+    kmf_new.survival_function_
+    
+
+The codes above save the trained models as binary objects in memory. To serialize a *lifelines* model to a given path on disk:
+
+.. code-block:: python
+
+    import pickle
+
+    with open('/path/my.pickle', 'wb') as f:
+        pickle.dump(cph, f) # saving my trained cph model as my.pickle
+
+    with open('/path/my.pickle', 'rb') as f:
+        cph_new = pickle.load(f)
+
+    cph_new.summary # should produce the same output as cph.summary
 
 
 Produce a LaTex or HTML table
