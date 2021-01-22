@@ -999,32 +999,6 @@ located under :class:`~lifelines.fitters.aalen_additive_fitter.AalenAdditiveFitt
     +-----------+--------+----------+--------------+-----------------+---------------------+---------------------------------------------------------+-------------+-------------+----------+--------+--------+
 
 
-I'm using the lovely library `Patsy <https://github.com/pydata/patsy>`__ here to create a
-design matrix from my original DataFrame.
-
-.. code:: python
-
-    import patsy
-    X = patsy.dmatrix('un_continent_name + regime + start_year', data, return_type='dataframe')
-    X = X.rename(columns={'Intercept': 'baseline'})
-
-    print(X.columns.tolist())
-
-
-.. parsed-literal::
-
-  ['baseline',
-   'un_continent_name[T.Americas]',
-   'un_continent_name[T.Asia]',
-   'un_continent_name[T.Europe]',
-   'un_continent_name[T.Oceania]',
-   'regime[T.Military Dict]',
-   'regime[T.Mixed Dem]',
-   'regime[T.Monarchy]',
-   'regime[T.Parliamentary Dem]',
-   'regime[T.Presidential Dem]',
-   'start_year']
-
 
 We have also included the ``coef_penalizer`` option. During the estimation, a
 linear regression is computed at each step. Often the regression can be
@@ -1047,7 +1021,7 @@ two individual columns: a *duration* column and a boolean *event occurred* colum
 
 .. code:: python
 
-    aaf.fit(X, 'T', event_col='E')
+    aaf.fit(X, 'T', event_col='E', formula='un_continent_name + regime + start_year')
 
 
 After fitting, the instance exposes a :attr:`~lifelines.fitters.aalen_additive_fitter.AalenAdditiveFitter.cumulative_hazards_` DataFrame

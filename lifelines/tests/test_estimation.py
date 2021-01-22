@@ -1911,7 +1911,6 @@ class TestRegressionFitters:
             fitter.fit(rossi, "week", "arrest")
             assert hasattr(fitter, "regressors")
 
-    @pytest.mark.xfail
     def test_pickle_serialization(self, rossi, regression_models):
         for fitter in regression_models:
             fitter.fit(rossi, "week", "arrest")
@@ -1920,7 +1919,6 @@ class TestRegressionFitters:
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
-    @pytest.mark.xfail
     def test_dill_serialization(self, rossi, regression_models):
         from dill import dumps, loads
 
@@ -1931,7 +1929,6 @@ class TestRegressionFitters:
             dif = (fitter.durations - unpickled.durations).sum()
             assert dif == 0
 
-    @pytest.mark.xfail
     def test_joblib_serialization(self, rossi, regression_models):
         from joblib import dump, load
 
