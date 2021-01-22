@@ -288,6 +288,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
     _MIN_PARAMETER_VALUE = 1e-9
     _scipy_fit_method = "L-BFGS-B"
     _scipy_fit_options: Dict[str, Any] = dict()
+    _scipy_fit_callback = None
     _fitted_parameter_names: List[str]
 
     def __init__(self, *args, **kwargs):
@@ -547,6 +548,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                     args=(Ts, E, entry, weights),
                     bounds=self._bounds,
                     options=option,
+                    callback=self._scipy_fit_callback,
                 )
                 previous_results = results
 
@@ -1258,9 +1260,10 @@ class RegressionFitter(BaseFitter):
 
         else:
             from distutils.version import LooseVersion
-            if LooseVersion(pd.__version__) >= '1.1.0':
+
+            if LooseVersion(pd.__version__) >= "1.1.0":
                 # silence deprecation warning
-                describe_kwarg = {'datetime_is_numeric': True}
+                describe_kwarg = {"datetime_is_numeric": True}
             else:
                 describe_kwarg = {}
             described = df.describe(include="all", **describe_kwarg)
@@ -1317,6 +1320,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = dict()
+    _scipy_fit_callback = None
     fit_intercept = False
     force_no_intercept = False
     regressors = None
@@ -1902,6 +1906,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 jac=True,
                 args=(Ts, E, weights, entries, utils.DataframeSlicer(Xs)),
                 options={**{"disp": show_progress}, **self._scipy_fit_options},
+                callback=self._scipy_fit_callback,
             )
 
             if results.fun < minimum_ll:
