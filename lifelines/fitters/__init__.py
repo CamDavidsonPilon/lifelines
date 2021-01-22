@@ -288,6 +288,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
     _MIN_PARAMETER_VALUE = 1e-9
     _scipy_fit_method = "L-BFGS-B"
     _scipy_fit_options: Dict[str, Any] = dict()
+    _scipy_fit_callback = None
     _fitted_parameter_names: List[str]
 
     def __init__(self, *args, **kwargs):
@@ -547,6 +548,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                     args=(Ts, E, entry, weights),
                     bounds=self._bounds,
                     options=option,
+                    callback=self._scipy_fit_callback,
                 )
                 previous_results = results
 
@@ -1258,9 +1260,10 @@ class RegressionFitter(BaseFitter):
 
         else:
             from distutils.version import LooseVersion
-            if LooseVersion(pd.__version__) >= '1.1.0':
+
+            if LooseVersion(pd.__version__) >= "1.1.0":
                 # silence deprecation warning
-                describe_kwarg = {'datetime_is_numeric': True}
+                describe_kwarg = {"datetime_is_numeric": True}
             else:
                 describe_kwarg = {}
             described = df.describe(include="all", **describe_kwarg)
@@ -1317,6 +1320,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
     _scipy_fit_method = "BFGS"
     _scipy_fit_options: Dict[str, Any] = dict()
+    _scipy_fit_callback = None
     fit_intercept = False
     force_no_intercept = False
     regressors = None
@@ -1803,8 +1807,8 @@ class ParametricRegressionFitter(RegressionFitter):
         # https://github.com/CamDavidsonPilon/lifelines/issues/931
         assert list(self.regressors.keys()) == list(self._norm_std.index.get_level_values(0).unique())
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
-        self.params_ = _params / self._norm_std
 
+        self.params_ = _params / self._norm_std
         self.variance_matrix_ = pd.DataFrame(self._compute_variance_matrix(), index=_index, columns=_index)
         self.standard_errors_ = self._compute_standard_errors(Ts, E.values, weights.values, entries.values, Xs)
         self.confidence_intervals_ = self._compute_confidence_intervals()
@@ -1902,6 +1906,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 jac=True,
                 args=(Ts, E, weights, entries, utils.DataframeSlicer(Xs)),
                 options={**{"disp": show_progress}, **self._scipy_fit_options},
+                callback=self._scipy_fit_callback,
             )
 
             if results.fun < minimum_ll:
@@ -2704,7 +2709,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             diagnostics. Useful if convergence is failing.
 
         formula: string
-            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
+            Use an R-style formula for modeling the dataset. See formula syntax: https://matthewwardrop.github.io/formulaic/basic/grammar/
 
         ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
@@ -2859,7 +2864,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             observation. If left as None, will be inferred from the start and stop columns (lower_bound==upper_bound means uncensored)
 
         formula: string
-            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
+            Use an R-style formula for modeling the dataset. See formula syntax: https://matthewwardrop.github.io/formulaic/basic/grammar/
 
         ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
@@ -3036,7 +3041,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             observation. If left as None, assume all individuals are uncensored.
 
         formula: string
-            Use an R-style formula for modeling the dataset. See formula syntax: https://patsy.readthedocs.io/en/latest/quickstart.html
+            Use an R-style formula for modeling the dataset. See formula syntax: https://matthewwardrop.github.io/formulaic/basic/grammar/
 
         ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.

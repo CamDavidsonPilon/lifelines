@@ -1894,12 +1894,14 @@ class CovariateParameterMappings:
 
     def transform_df(self, df: pd.DataFrame):
 
-        import patsy
+        import formulaic
 
         Xs = {}
         for param_name, transform in self.mappings.items():
-            if isinstance(transform, patsy.design_info.DesignInfo):
-                (X,) = patsy.build_design_matrices([transform], df, return_type="dataframe")
+            if isinstance(transform, formulaic.formula.Formula):
+                index = df.index
+                X = transform.get_model_matrix(df)
+                X.index = index
             elif isinstance(transform, list):
                 if self.force_intercept:
                     df = self.add_intercept_col(df)
@@ -1941,11 +1943,11 @@ class CovariateParameterMappings:
 
     def _string_seed_transform(self, formula: str, df: pd.DataFrame):
         # user input a formula, hopefully
-        import patsy
+        import formulaic
 
         if self.force_intercept:
             formula += "+ 1"
 
-        _X = patsy.dmatrix(formula, df, 1, NA_action="raise")
+        design_info = formulaic.Formula(formula)
 
-        return _X.design_info
+        return design_info

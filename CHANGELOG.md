@@ -1,5 +1,14 @@
 ## Changelog
 
+#### 0.25.8 - 2021-01-22
+
+Important: we dropped Patsy as our formula framework, and adopted Formulaic. Will the latter is less mature than Patsy, we feel the core capabilities are satisfactory and it provides new opportunities.
+
+##### New features
+ - Parametric models with formulas are able to be serialized now.
+ - a `_scipy_callback` function is available to use in fitting algorithms.
+
+
 #### 0.25.7 - 2020-12-09
 
 ##### API Changes
