@@ -1,5 +1,11 @@
 ## Changelog
 
+
+#### 0.25.9 - 2021-02-04
+
+Small bump in dependencies.
+
+
 #### 0.25.8 - 2021-01-22
 
 Important: we dropped Patsy as our formula framework, and adopted Formulaic. Will the latter is less mature than Patsy, we feel the core capabilities are satisfactory and it provides new opportunities.
