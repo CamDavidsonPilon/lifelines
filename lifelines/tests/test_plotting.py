@@ -155,8 +155,8 @@ class TestPlotting:
         kmf_test.plot(ax=ax)
         kmf_con.plot(ax=ax)
         add_at_risk_counts(kmf_test, kmf_con, ax=ax, rows_to_show=["At risk"], ypos=-0.4)
-        self.plt.tight_layout()
         self.plt.title("test_kmf_add_at_risk_counts_with_single_row_multi_groups")
+        self.plt.tight_layout()
         self.plt.show(block=block)
 
     def test_kmf_add_at_risk_counts_with_custom_subplot(self, block, kmf):
