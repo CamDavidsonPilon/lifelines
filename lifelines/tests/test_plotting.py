@@ -136,8 +136,27 @@ class TestPlotting:
         ax = fig.subplots(1, 1)
         kmf.plot(ax=ax)
         add_at_risk_counts(kmf, ax=ax, rows_to_show=["Censored", "At risk"])
-
+        self.plt.tight_layout()
         self.plt.title("test_kmf_add_at_risk_counts_with_specific_rows")
+        self.plt.show(block=block)
+
+    def test_kmf_add_at_risk_counts_with_single_row_multi_groups(self, block, kmf):
+        T = np.random.exponential(10, size=(100))
+        E = np.random.binomial(1, 0.8, size=(100))
+        kmf_test = KaplanMeierFitter().fit(T, E, label="test")
+
+        T = np.random.exponential(15, size=(1000))
+        E = np.random.binomial(1, 0.6, size=(1000))
+        kmf_con = KaplanMeierFitter().fit(T, E, label="con")
+
+        fig = self.plt.figure()
+        ax = fig.subplots(1, 1)
+
+        kmf_test.plot(ax=ax)
+        kmf_con.plot(ax=ax)
+        add_at_risk_counts(kmf_test, kmf_con, ax=ax, rows_to_show=["At risk"], ypos=-0.4)
+        self.plt.tight_layout()
+        self.plt.title("test_kmf_add_at_risk_counts_with_single_row_multi_groups")
         self.plt.show(block=block)
 
     def test_kmf_add_at_risk_counts_with_custom_subplot(self, block, kmf):

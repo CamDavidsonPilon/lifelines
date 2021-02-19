@@ -1,6 +1,5 @@
 ## Changelog
 
-
 #### 0.25.9 - 2021-02-04
 
 Small bump in dependencies.
