@@ -363,12 +363,14 @@ def remove_ticks(ax, x=False, y=False):
     return ax
 
 
-def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None, rows_to_show=None, ypos=-0.6, ax=None, **kwargs):
+def add_at_risk_counts(
+    *fitters, labels: Optional[Union[Iterable, bool]] = None, rows_to_show=None, ypos=-0.6, xticks=None, ax=None, **kwargs
+):
     """
     Add counts showing how many individuals were at risk, censored, and observed, at each time point in
     survival/hazard plots.
 
-    Tip: you may want to call ``plt.tight_layout()`` afterwards.
+    Tip: you probably want to call ``plt.tight_layout()`` afterwards.
 
     Parameters
     ----------
@@ -382,6 +384,8 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
         a sub-list of ['At risk', 'Censored', 'Events']. Default to show all.
     ypos:
         make more positive to move the table up.
+    xticks: list
+        specify the time periods (as a list) you want to evaluate the counts at.
     ax:
         a matplotlib axes
 
@@ -462,7 +466,6 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
     min_time, max_time = ax.get_xlim()
     ax2.set_xlim(min_time, max_time)
     # Set ticks to kwarg or visible ticks
-    xticks = kwargs.pop("xticks", None)
     if xticks is None:
         xticks = [xtick for xtick in ax.get_xticks() if min_time <= xtick <= max_time]
     ax2.set_xticks(xticks)

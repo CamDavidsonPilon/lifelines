@@ -154,6 +154,12 @@ class TestPlotting:
 
         kmf_test.plot(ax=ax)
         kmf_con.plot(ax=ax)
+
+        ax.set_ylim([0.0, 1.1])
+        ax.set_xlim([0.0, 100])
+        ax.set_xlabel("Days")
+        ax.set_ylabel("Survival probability")
+
         add_at_risk_counts(kmf_test, kmf_con, ax=ax, rows_to_show=["At risk"], ypos=-0.4)
         self.plt.title("test_kmf_add_at_risk_counts_with_single_row_multi_groups")
         self.plt.tight_layout()
