@@ -363,27 +363,31 @@ def remove_ticks(ax, x=False, y=False):
     return ax
 
 
-def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None, rows_to_show=None, ypos=-0.6, ax=None, **kwargs):
+def add_at_risk_counts(
+    *fitters, labels: Optional[Union[Iterable, bool]] = None, rows_to_show=None, ypos=-0.6, xticks=None, ax=None, **kwargs
+):
     """
     Add counts showing how many individuals were at risk, censored, and observed, at each time point in
     survival/hazard plots.
 
-    Tip: you may want to call ``plt.tight_layout()`` afterwards.
+    Tip: you probably want to call ``plt.tight_layout()`` afterwards.
 
     Parameters
     ----------
     fitters:
       One or several fitters, for example KaplanMeierFitter, WeibullFitter,
       NelsonAalenFitter, etc...
-    ax:
-        a matplotlib axes
     labels:
         provide labels for the fitters, default is to use the provided fitter label. Set to
         False for no labels.
     rows_to_show: list
-        list of a subset of {'At risk', 'Censored', 'Events'}. Default shows all columns.
+        a sub-list of ['At risk', 'Censored', 'Events']. Default to show all.
     ypos:
-        increase to move the table down further.
+        make more positive to move the table up.
+    xticks: list
+        specify the time periods (as a list) you want to evaluate the counts at.
+    ax:
+        a matplotlib axes
 
     Returns
     --------
@@ -406,15 +410,22 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
         f2.fit(data)
         f2.plot(ax=ax)
 
-        # There are equivalent
+        # These calls below are equivalent
         add_at_risk_counts(f1, f2)
         add_at_risk_counts(f1, f2, ax=ax, fig=fig)
+        plt.tight_layout()
 
         # This overrides the labels
         add_at_risk_counts(f1, f2, labels=['fitter one', 'fitter two'])
+        plt.tight_layout()
 
         # This hides the labels
         add_at_risk_counts(f1, f2, labels=False)
+        plt.tight_layout()
+
+        # Only show at-risk:
+        add_at_risk_counts(f1, f2, rows_to_show=['At risk'])
+        plt.tight_layout()
 
     References
     -----------
@@ -455,7 +466,6 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
     min_time, max_time = ax.get_xlim()
     ax2.set_xlim(min_time, max_time)
     # Set ticks to kwarg or visible ticks
-    xticks = kwargs.pop("xticks", None)
     if xticks is None:
         xticks = [xtick for xtick in ax.get_xticks() if min_time <= xtick <= max_time]
     ax2.set_xticks(xticks)
@@ -483,28 +493,48 @@ def add_at_risk_counts(*fitters, labels: Optional[Union[Iterable, bool]] = None,
             )
             counts.extend([int(c) for c in event_table_slice.loc[rows_to_show]])
 
-        if tick == ax2.get_xticks()[0]:
-            max_length = len(str(max(counts)))
-            for i, c in enumerate(counts):
-                if i % n_rows == 0:
-                    if is_latex_enabled():
-                        lbl += ("\n" if i > 0 else "") + r"\textbf{%s}" % labels[int(i / n_rows)] + "\n"
-                    else:
-                        lbl += ("\n" if i > 0 else "") + r"%s" % labels[int(i / n_rows)] + "\n"
+        if n_rows > 1:
+            if tick == ax2.get_xticks()[0]:
+                max_length = len(str(max(counts)))
+                for i, c in enumerate(counts):
+                    if i % n_rows == 0:
+                        if is_latex_enabled():
+                            lbl += ("\n" if i > 0 else "") + r"\textbf{%s}" % labels[int(i / n_rows)] + "\n"
+                        else:
+                            lbl += ("\n" if i > 0 else "") + r"%s" % labels[int(i / n_rows)] + "\n"
 
-                l = rows_to_show[i % n_rows]
-                l = {"At risk": "  At risk", "Censored": "Censored  ", "Events": " Events  "}.get(l)
-                s = "{}   ".format(l.rjust(10, " ")) + "{{:>{}d}}\n".format(max_length)
-                lbl += s.format(c)
+                    l = rows_to_show[i % n_rows]
+                    l = {"At risk": "  At risk", "Censored": "Censored  ", "Events": " Events  "}.get(l)
+                    s = "{}   ".format(l.rjust(10, " ")) + "{{:>{}d}}\n".format(max_length)
+
+                    lbl += s.format(c)
+
+            else:
+                # Create tick label
+                lbl += ""
+                for i, c in enumerate(counts):
+                    if i % n_rows == 0 and i > 0:
+                        lbl += "\n\n"
+                    s = "\n{}"
+                    lbl += s.format(c)
 
         else:
-            # Create tick label
-            lbl += ""
-            for i, c in enumerate(counts):
-                if i % n_rows == 0 and i > 0:
-                    lbl += "\n\n"
-                s = "\n{}"
-                lbl += s.format(c)
+            # if only one row to show, show in "condensed" version
+            if tick == ax2.get_xticks()[0]:
+                max_length = len(str(max(counts)))
+
+                lbl += rows_to_show[0] + "\n"
+
+                for i, c in enumerate(counts):
+                    s = "{}   ".format(labels[i].rjust(10, " ")) + "{{:>{}d}}\n".format(max_length)
+                    lbl += s.format(c)
+
+            else:
+                # Create tick label
+                lbl += ""
+                for i, c in enumerate(counts):
+                    s = "\n{}"
+                    lbl += s.format(c)
 
         ticklabels.append(lbl)
 

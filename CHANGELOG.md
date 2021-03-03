@@ -1,9 +1,11 @@
 ## Changelog
 
+
 #### 0.25.10 - 2021-03-03
 
 ##### New features
  - Better appearance when using a single row to show in `add_at_risk_table`.
+
 
 #### 0.25.9 - 2021-02-04
 
