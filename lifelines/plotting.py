@@ -490,6 +490,7 @@ def add_at_risk_counts(
                 .loc[:tick, ["at_risk", "censored", "observed"]]
                 .agg({"at_risk": "min", "censored": "sum", "observed": "sum"})
                 .rename({"at_risk": "At risk", "censored": "Censored", "observed": "Events"})
+                .fillna(0)  # if tick is before all events (left-trunc data), then min produces a NaN
             )
             counts.extend([int(c) for c in event_table_slice.loc[rows_to_show]])
 
@@ -504,7 +505,7 @@ def add_at_risk_counts(
                             lbl += ("\n" if i > 0 else "") + r"%s" % labels[int(i / n_rows)] + "\n"
 
                     l = rows_to_show[i % n_rows]
-                    l = {"At risk": "  At risk", "Censored": "Censored  ", "Events": " Events  "}.get(l)
+                    l = {"At risk": " At risk  ", "Censored": "Censored  ", "Events": " Events  "}.get(l)
                     s = "{}   ".format(l.rjust(10, " ")) + "{{:>{}d}}\n".format(max_length)
 
                     lbl += s.format(c)
