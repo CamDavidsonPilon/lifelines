@@ -485,14 +485,17 @@ def add_at_risk_counts(
             # b) we group by the tick intervals
             # c) we want to start at 0, so we give it it's own interval
 
-            event_table_slice = (
-                f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed)
-                .loc[:tick, ["at_risk", "censored", "observed"]]
-                .agg({"at_risk": "min", "censored": "sum", "observed": "sum"})
-                .rename({"at_risk": "At risk", "censored": "Censored", "observed": "Events"})
-                .fillna(0)  # if tick is before all events (left-trunc data), then min produces a NaN
-            )
-            counts.extend([int(c) for c in event_table_slice.loc[rows_to_show]])
+            event_table_slice = f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed).loc[
+                :tick, ["at_risk", "censored", "observed"]
+            ]
+
+            if event_table_slice.empty:
+                counts.extend([0] * len(rows_to_show))
+            else:
+                event_table_slice = event_table_slice.agg(
+                    {"at_risk": lambda s: list(s)[-1], "censored": "sum", "observed": "sum"}
+                ).rename({"at_risk": "At risk", "censored": "Censored", "observed": "Events"})
+                counts.extend([int(c) for c in event_table_slice.loc[rows_to_show]])
 
         if n_rows > 1:
             if tick == ax2.get_xticks()[0]:
