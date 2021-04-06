@@ -1,5 +1,11 @@
 ## Changelog
 
+#### 0.25.10 - 2021-04-06
+
+##### Bug fixes
+ - Fix integer-valued categorical variables in regression model predictions.
+ - numpy > 1.20 is allowed.
+
 
 #### 0.25.10 - 2021-03-03
 

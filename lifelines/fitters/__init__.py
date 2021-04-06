@@ -3352,6 +3352,11 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         for covariate, value in zip(covariates, values.T):
             ancillary_X[covariate] = value
 
+        # if a column is typeA in the dataset, but the user gives us typeB, we want to cast it. This is
+        # most relevant for categoricals.
+        X = X.astype(self._central_values.dtypes)
+        ancillary_X = ancillary_X.astype(self._central_values.dtypes)
+
         getattr(self, "predict_%s" % y)(X, ancillary=ancillary_X, times=times).plot(ax=ax, **kwargs)
         if plot_baseline:
             getattr(self, "predict_%s" % y)(x_bar, ancillary=x_bar_anc, times=times).rename(columns={0: "baseline %s" % y}).plot(
