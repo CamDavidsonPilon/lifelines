@@ -1275,7 +1275,7 @@ class RegressionFitter(BaseFitter):
                 central_stats = described.loc["top"].copy()
                 central_stats.update(described.loc["50%"])
 
-            central_stats = central_stats.to_frame(name=name).T.infer_objects()
+            central_stats = central_stats.to_frame(name=name).T.astype(df.dtypes)
             return central_stats
 
     def compute_residuals(self, training_dataframe: pd.DataFrame, kind: str) -> pd.DataFrame:
@@ -3351,6 +3351,11 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         ancillary_X = pd.concat([x_bar_anc] * values.shape[0])
         for covariate, value in zip(covariates, values.T):
             ancillary_X[covariate] = value
+
+        # if a column is typeA in the dataset, but the user gives us typeB, we want to cast it. This is
+        # most relevant for categoricals.
+        X = X.astype(self._central_values.dtypes)
+        ancillary_X = ancillary_X.astype(self._central_values.dtypes)
 
         getattr(self, "predict_%s" % y)(X, ancillary=ancillary_X, times=times).plot(ax=ax, **kwargs)
         if plot_baseline:
