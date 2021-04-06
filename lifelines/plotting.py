@@ -739,7 +739,7 @@ def plot_lifetimes(
 
 
 def set_kwargs_color(kwargs):
-    kwargs["color"] = coalesce(kwargs.get("c"), kwargs.get("color"), kwargs["ax"]._get_lines.get_next_color())
+    kwargs["color"] = coalesce(kwargs.pop("c", None), kwargs.pop("color", None), kwargs["ax"]._get_lines.get_next_color())
 
 
 def set_kwargs_drawstyle(kwargs, default="steps-post"):
