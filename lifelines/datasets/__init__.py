@@ -166,6 +166,8 @@ def load_dd(**kwargs):
 
 def load_kidney_transplant(**kwargs):
     """
+    D.3 from Klein and Moeschberger Statistics for Biology and Health, 1997.
+
     ::
 
         Size: (863,6)
