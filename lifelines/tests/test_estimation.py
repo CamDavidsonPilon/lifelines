@@ -1169,11 +1169,11 @@ class TestKaplanMeierFitter:
         event_table = kmf.event_table[kmf.event_table["observed"] > 0]
 
         assert event_table.shape[0] == 26
-        assert event_table.loc[0.26899999999999996, "at_risk"] == 42
-        assert event_table.loc[0.7909999999999999, "at_risk"] == 44
+        assert event_table.loc[0.269, "at_risk"] == 42
+        assert event_table.loc[0.791, "at_risk"] == 44
         assert event_table.loc[4.688, "at_risk"] == 11
 
-        assert kmf.survival_function_.loc[0.7909999999999999, "KM_estimate"] == 0.9540043290043292
+        assert kmf.survival_function_.loc[0.791, "KM_estimate"] == 0.9540043290043292
         assert abs(kmf.median_survival_time_ - 3) < 0.1
 
     def test_kaplan_meier_no_censorship(self, sample_lifetimes):
@@ -1836,10 +1836,10 @@ class TestRegressionFitters:
         assert_frame_equal(central_values(all_categorical), pd.DataFrame([{"var1": "B", "var2": "C"}], index=["baseline"]))
 
         all_numeric = pd.DataFrame([{"var1": 0.4, "var2": -1}, {"var1": 0.5, "var2": -2}, {"var1": 0.6, "var2": -100}])
-        assert_frame_equal(central_values(all_numeric), pd.DataFrame([{"var1": 0.5, "var2": -2.0}], index=["baseline"]))
+        assert_frame_equal(central_values(all_numeric), pd.DataFrame([{"var1": 0.5, "var2": -2}], index=["baseline"]))
 
         mix = pd.DataFrame([{"var1": "A", "var2": -1}, {"var1": "A", "var2": -2}, {"var1": "B", "var2": -100}])
-        assert_frame_equal(central_values(mix), pd.DataFrame([{"var1": "A", "var2": -2.0}], index=["baseline"]))
+        assert_frame_equal(central_values(mix), pd.DataFrame([{"var1": "A", "var2": -2}], index=["baseline"]))
 
     def test_compute_central_values_of_raw_training_data_with_strata(self):
 
@@ -5484,13 +5484,13 @@ class TestAalenJohansenFitter:
 
         expected_event_table = pd.DataFrame.from_records(
             [
-                {"event_at": 0, "removed": 0, "observed": 0, "observed_2": 0, "censored": 0, "entrance": 6, "at_risk": 6},
-                {"event_at": 1, "removed": 1, "observed": 0, "observed_2": 0, "censored": 1, "entrance": 0, "at_risk": 6},
-                {"event_at": 2, "removed": 1, "observed": 1, "observed_2": 0, "censored": 0, "entrance": 0, "at_risk": 5},
-                {"event_at": 3, "removed": 1, "observed": 1, "observed_2": 0, "censored": 0, "entrance": 0, "at_risk": 4},
-                {"event_at": 4, "removed": 1, "observed": 1, "observed_2": 1, "censored": 0, "entrance": 0, "at_risk": 3},
-                {"event_at": 5, "removed": 1, "observed": 1, "observed_2": 1, "censored": 0, "entrance": 0, "at_risk": 2},
-                {"event_at": 6, "removed": 1, "observed": 0, "observed_2": 0, "censored": 1, "entrance": 0, "at_risk": 1},
+                {"event_at": 0.0, "removed": 0, "observed": 0, "observed_2": 0, "censored": 0, "entrance": 6, "at_risk": 6},
+                {"event_at": 1.0, "removed": 1, "observed": 0, "observed_2": 0, "censored": 1, "entrance": 0, "at_risk": 6},
+                {"event_at": 2.0, "removed": 1, "observed": 1, "observed_2": 0, "censored": 0, "entrance": 0, "at_risk": 5},
+                {"event_at": 3.0, "removed": 1, "observed": 1, "observed_2": 0, "censored": 0, "entrance": 0, "at_risk": 4},
+                {"event_at": 4.0, "removed": 1, "observed": 1, "observed_2": 1, "censored": 0, "entrance": 0, "at_risk": 3},
+                {"event_at": 5.0, "removed": 1, "observed": 1, "observed_2": 1, "censored": 0, "entrance": 0, "at_risk": 2},
+                {"event_at": 6.0, "removed": 1, "observed": 0, "observed_2": 0, "censored": 1, "entrance": 0, "at_risk": 1},
             ]
         ).set_index("event_at")[["removed", "observed", "observed_2", "censored", "entrance", "at_risk"]]
         # pandas util for checking if two dataframes are equal
