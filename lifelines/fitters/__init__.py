@@ -1275,7 +1275,7 @@ class RegressionFitter(BaseFitter):
                 central_stats = described.loc["top"].copy()
                 central_stats.update(described.loc["50%"])
 
-            central_stats = central_stats.to_frame(name=name).T.infer_objects()
+            central_stats = central_stats.to_frame(name=name).T.astype(df.dtypes)
             return central_stats
 
     def compute_residuals(self, training_dataframe: pd.DataFrame, kind: str) -> pd.DataFrame:

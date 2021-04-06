@@ -933,7 +933,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         if self.strata is None:
             axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
             x_bar = self._central_values
-            X = pd.concat([x_bar] * values.shape[0]).infer_objects()
+            X = pd.concat([x_bar] * values.shape[0])
 
             if np.array_equal(np.eye(n_covariates), values) or np.array_equal(
                 np.append(np.eye(n_covariates), np.zeros((n_covariates, 1)), axis=1), values
@@ -943,7 +943,13 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
                 X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
             for covariate, value in zip(covariates, values.T):
                 X[covariate] = value
+
+            # if a column is typeA in the dataset, but the user gives us typeB, we want to cast it. This is
+            # most relevant for categoricals.
+            X = X.astype(self._central_values.dtypes)
+
             getattr(self, "predict_%s" % y)(X).plot(ax=axes, **kwargs)
+
             if plot_baseline:
                 getattr(self, "predict_%s" % y)(x_bar).plot(ax=axes, ls=":", color="k", drawstyle=drawstyle)
 
@@ -958,7 +964,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
                 for name, value in zip(utils._to_list(self.strata), utils._to_tuple(stratum)):
                     x_bar[name] = value
 
-                X = pd.concat([x_bar] * values.shape[0]).infer_objects()
+                X = pd.concat([x_bar] * values.shape[0])
 
                 if np.array_equal(np.eye(len(covariates)), values):
                     X.index = ["%s=1" % c for c in covariates]
@@ -967,6 +973,10 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
                 for covariate, value in zip(covariates, values.T):
                     X[covariate] = value
+
+                # if a column is typeA in the dataset, but the user gives us typeB, we want to cast it. This is
+                # most relevant for categoricals.
+                X = X.astype(self._central_values.dtypes)
 
                 getattr(self, "predict_%s" % y)(X).plot(ax=ax, **kwargs)
                 if plot_baseline:

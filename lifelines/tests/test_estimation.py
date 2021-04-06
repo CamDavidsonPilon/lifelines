@@ -1858,6 +1858,23 @@ class TestRegressionFitters:
             pd.DataFrame([{"var1": 0.1, "var2": "D"}, {"var1": 0.15, "var2": "C"}], index=pd.Index(["s1", "s2"], name="strata")),
         )
 
+    def test_compute_central_values_of_raw_training_data_with_integer_categorical_data(self):
+        central_values = RegressionFitter()._compute_central_values_of_raw_training_data
+
+        df = pd.DataFrame(
+            [{"var1": 0.1, "cat1": 1}, {"var1": 0.1, "cat1": 2}, {"var1": 0.1, "cat1": 1}, {"var1": 0.2, "cat1": 3}]
+        )
+        df["cat1"] = pd.Categorical(df["cat1"])
+
+        expected = pd.DataFrame(
+            {
+                "var1": pd.Series([0.1], dtype=float, index=["baseline"]),
+                "cat1": pd.Series([1], dtype=pd.CategoricalDtype(categories=[1, 2, 3]), index=["baseline"]),
+            }
+        )
+
+        assert_frame_equal(central_values(df), expected)
+
     def test_alpha_will_vary_the_statistics_in_summary(self, rossi):
         reg_005 = WeibullAFTFitter(alpha=0.05).fit(rossi, "week", "arrest")
         reg_010 = WeibullAFTFitter(alpha=0.10).fit(rossi, "week", "arrest")
