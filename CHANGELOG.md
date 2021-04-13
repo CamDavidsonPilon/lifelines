@@ -1,10 +1,11 @@
 ## Changelog
 
-#### 0.25.10 - 2021-04-06
+#### 0.25.11 - 2021-04-06
 
 ##### Bug fixes
  - Fix integer-valued categorical variables in regression model predictions.
  - numpy > 1.20 is allowed.
+ - Bug fix in the elastic-net penalty for Cox models that wasn't weighting the terms correctly.
 
 
 #### 0.25.10 - 2021-03-03
