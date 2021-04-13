@@ -56,7 +56,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         Attach a penalty to the size of the coefficients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the magnitude value of :math:`\beta_i`. See ``l1_ratio`` below.
-        The penalty term is :math:`\frac{1}{2} \text{penalizer} \left( (1-\text{l1_ratio}) ||\beta||_2^2 + \text{l1_ratio}||\beta||_1\right)`.
+        The penalty term is :math:`\text{penalizer} \left( \frac{1-\text{l1_ratio}}{2} ||\beta||_2^2 + \text{l1_ratio}||\beta||_1\right)`.
 
         Alternatively, penalizer is an array equal in size to the number of parameters, with penalty coefficients for specific variables. For
         example, `penalizer=0.01 * np.ones(p)` is the same as `penalizer=0.01`
@@ -1008,7 +1008,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         Attach a penalty to the size of the coefficients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the magnitude value of :math:`\beta_i`. See ``l1_ratio`` below.
-        The penalty term is :math:`\frac{1}{2} \text{penalizer} \left( (1-\text{l1_ratio}) ||\beta||_2^2 + \text{l1_ratio}||\beta||_1\right)`.
+        The penalty term is :math:`\text{penalizer} \left( \frac{1-\text{l1_ratio}}{2} ||\beta||_2^2 + \text{l1_ratio}||\beta||_1\right)`.
 
         Alternatively, penalizer is an array equal in size to the number of parameters, with penalty coefficients for specific variables. For
         example, `penalizer=0.01 * np.ones(p)` is the same as `penalizer=0.01`
@@ -1447,10 +1447,10 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
         elastic_net_penalty = (
             lambda beta, a: n
-            * 0.5
+            * self.penalizer
             * (
-                self.l1_ratio * (self.penalizer * soft_abs(beta, a)).sum()
-                + (1 - self.l1_ratio) * (self.penalizer * beta ** 2).sum()
+                self.l1_ratio * (soft_abs(beta, a)).sum()
+                + 0.5 * (1 - self.l1_ratio) * (beta ** 2).sum()
             )
         )
         d_elastic_net_penalty = elementwise_grad(elastic_net_penalty)
