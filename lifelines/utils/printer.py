@@ -114,7 +114,7 @@ class Printer:
         df.columns = utils.map_leading_space(df.columns)
 
         if self.columns is not None:
-            columns = df.columns & utils.map_leading_space(self.columns)
+            columns = df.columns.intersection(utils.map_leading_space(self.columns))
         else:
             columns = df.columns
 

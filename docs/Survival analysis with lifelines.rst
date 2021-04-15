@@ -272,7 +272,7 @@ Best practices for presenting Kaplan Meier plots
 A recent survey of statisticians, medical professionals, and other stakeholders suggested that the addition
 of two pieces of information, summary tables and confidence intervals, greatly increased the effectiveness of Kaplan Meier plots, see "Morris TP, Jarvis CI, Cragg W, et al. Proposals on Kaplan–Meier plots in medical research and a survey of stakeholder views: KMunicate. BMJ Open 2019;9:e030215. doi:10.1136/bmjopen-2019-030215".
 
-In *lifelines*, confidence intervals are automatically added, but there is the `at_risk_counts` kwarg to add summary tables as well:
+In *lifelines*, confidence intervals are automatically added, but there is the ``at_risk_counts`` kwarg to add summary tables as well:
 
 .. code:: python
 
