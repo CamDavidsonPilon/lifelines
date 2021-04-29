@@ -12,12 +12,12 @@ if __name__ == "__main__":
 
     reps = 1
     df = load_rossi()
+    # df['s'] = "a"
     df = pd.concat([df] * reps)
-    cph = CoxPHFitter()
+    print(df.shape)
+
+    cph = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=3, strata=["wexp"])
     start_time = time.time()
-    cph.fit(df, duration_col="week", event_col="arrest", show_progress=True)
+    cph.fit(df, duration_col="week", event_col="arrest", show_progress=True, timeline=np.linspace(1, 60, 100))
+    print(cph.score(df))
     print("--- %s seconds ---" % (time.time() - start_time))
-    cph.print_summary(2)
-    print(cph.compute_followup_hazard_ratios(df, [15, 20, 30, 40, 50, 52]))
-    print(cph.hazard_ratios_)
-    cph.compute_followup_hazard_ratios(df, [15, 20, 30, 40, 50, 52]).plot()

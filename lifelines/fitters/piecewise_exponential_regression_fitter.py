@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import autograd.numpy as np
+import pandas as pd
+
 from lifelines.utils import coalesce, _get_index, CensoringType
 from lifelines.fitters import ParametricRegressionFitter
-import pandas as pd
 from lifelines.utils.safe_exp import safe_exp
 
 
@@ -36,9 +37,12 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
 
     """
 
+    _FAST_MEDIAN_PREDICT = True  # mmm not really...
+
     # about 50% faster than BFGS
     _scipy_fit_method = "SLSQP"
     _scipy_fit_options = {"ftol": 1e-6, "maxiter": 200}
+    fit_intercept = True
 
     def __init__(self, breakpoints, alpha=0.05, penalizer=0.0):
         super(PiecewiseExponentialRegressionFitter, self).__init__(alpha=alpha)
@@ -53,16 +57,16 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         self.breakpoints = breakpoints
         self.n_breakpoints = len(self.breakpoints)
 
+        assert isinstance(self.penalizer, float), "penalizer must be a float"
         self.penalizer = penalizer
         self._fitted_parameter_names = ["lambda_%d_" % i for i in range(self.n_breakpoints + 1)]
 
     def _add_penalty(self, params, neg_ll):
         params_stacked = np.stack(params.values())
         coef_penalty = 0
-
         if self.penalizer > 0:
             for i in range(params_stacked.shape[1]):
-                if not self._constant_cols[i]:
+                if not self._cols_to_not_penalize[i]:
                     coef_penalty = coef_penalty + (params_stacked[:, i]).var()
 
         return neg_ll + self.penalizer * coef_penalty
@@ -76,16 +80,11 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         lambdas_ = np.array([safe_exp(-np.dot(Xs[param], params[param])) for param in self._fitted_parameter_names])
         return (M * lambdas_.T).sum(1)
 
-    def _log_hazard(self, params, T, X):
-        hz = self._hazard(params, T, X)
-        hz = np.clip(hz, 1e-20, np.inf)
-        return np.log(hz)
-
     def _prep_inputs_for_prediction_and_return_parameters(self, X):
         X = X.copy()
 
         if isinstance(X, pd.DataFrame):
-            X = X[self.params_["lambda_0_"].index]
+            X = self.regressors.transform_df(X)["lambda_0_"]
 
         return np.array([np.exp(np.dot(X, self.params_["lambda_%d_" % i])) for i in range(self.n_breakpoints + 1)])
 
@@ -116,7 +115,7 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
         if conditional_after is not None:
             raise NotImplementedError()
 
-        times = np.atleast_1d(coalesce(times, self.timeline, np.unique(self.durations))).astype(float)
+        times = np.atleast_1d(coalesce(times, self.timeline)).astype(float)
         n = times.shape[0]
         times = times.reshape((n, 1))
 

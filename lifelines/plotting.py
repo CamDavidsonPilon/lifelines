@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import warnings
-from typing import Union
+from typing import Union, Optional, Iterable
+from scipy import stats as stats
 
-import numpy as np
-from scipy import stats
-from matplotlib import pyplot as plt
-from matplotlib.ticker import MaxNLocator
 import pandas as pd
+import numpy as np
 
-from lifelines.utils import coalesce, CensoringType
+from lifelines.utils import coalesce, CensoringType, _group_event_table_by_intervals
 
 
 __all__ = [
@@ -73,10 +71,17 @@ def create_scipy_stats_model_from_lifelines_model(model):
 
 def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
     """
+    This plot compares the empirical CDF (derived by KaplanMeier) vs the model CDF.
 
+    Parameters
+    ------------
+    model: lifelines univariate model
+    timeline: iterable
+    ax: matplotlib axis
 
     """
     from lifelines import KaplanMeierFitter
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -95,7 +100,9 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
             model.durations, model.event_observed, label=COL_EMP, timeline=timeline, weights=model.weights, entry=model.entry
         )
     elif CensoringType.is_interval_censoring(model):
-        raise NotImplementedError("lifelines does not have a non-parametric interval model yet.")
+        empirical_kmf = KaplanMeierFitter().fit_interval_censoring(
+            model.lower_bound, model.upper_bound, label=COL_EMP, timeline=timeline, weights=model.weights, entry=model.entry
+        )
 
     empirical_kmf.plot_cumulative_density(ax=ax, **plot_kwargs)
 
@@ -155,6 +162,7 @@ def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_
 
     """
     from lifelines.utils import restricted_mean_survival_time
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -240,10 +248,14 @@ def qq_plot(model, ax=None, **plot_kwargs):
         wf = WeibullFitter().fit(df['week'], df['arrest'])
         qq_plot(wf)
 
+    Notes
+    ------
+    The interval censoring case uses the mean between the upper and lower bounds.
 
     """
     from lifelines.utils import qth_survival_times
     from lifelines import KaplanMeierFitter
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -258,16 +270,22 @@ def qq_plot(model, ax=None, **plot_kwargs):
         kmf = KaplanMeierFitter().fit_left_censoring(
             model.durations, model.event_observed, label=COL_EMP, weights=model.weights, entry=model.entry
         )
+        sf, cdf = kmf.survival_function_[COL_EMP], kmf.cumulative_density_[COL_EMP]
     elif CensoringType.is_right_censoring(model):
         kmf = KaplanMeierFitter().fit_right_censoring(
             model.durations, model.event_observed, label=COL_EMP, weights=model.weights, entry=model.entry
         )
+        sf, cdf = kmf.survival_function_[COL_EMP], kmf.cumulative_density_[COL_EMP]
+
     elif CensoringType.is_interval_censoring(model):
-        raise NotImplementedError("lifelines does not have a non-parametric interval model yet.")
+        kmf = KaplanMeierFitter().fit_interval_censoring(
+            model.lower_bound, model.upper_bound, label=COL_EMP, weights=model.weights, entry=model.entry
+        )
+        sf, cdf = kmf.survival_function_.mean(1), kmf.cumulative_density_[COL_EMP + "_lower"]
 
-    q = np.unique(kmf.cumulative_density_.values[:, 0])
+    q = np.unique(cdf.values)
 
-    quantiles = qth_survival_times(1 - q, kmf.survival_function_)
+    quantiles = qth_survival_times(1 - q, sf)
     quantiles[COL_THEO] = dist_object.ppf(q)
     quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
 
@@ -345,16 +363,29 @@ def remove_ticks(ax, x=False, y=False):
     return ax
 
 
-def add_at_risk_counts(*fitters, ax=None, **kwargs):
+def add_at_risk_counts(
+    *fitters, labels: Optional[Union[Iterable, bool]] = None, rows_to_show=None, ypos=-0.6, xticks=None, ax=None, **kwargs
+):
     """
-    Add counts showing how many individuals were at risk at each time point in
+    Add counts showing how many individuals were at risk, censored, and observed, at each time point in
     survival/hazard plots.
+
+    Tip: you probably want to call ``plt.tight_layout()`` afterwards.
 
     Parameters
     ----------
     fitters:
-      One or several fitters, for example KaplanMeierFitter,
+      One or several fitters, for example KaplanMeierFitter, WeibullFitter,
       NelsonAalenFitter, etc...
+    labels:
+        provide labels for the fitters, default is to use the provided fitter label. Set to
+        False for no labels.
+    rows_to_show: list
+        a sub-list of ['At risk', 'Censored', 'Events']. Default to show all.
+    ypos:
+        make more positive to move the table up.
+    xticks: list
+        specify the time periods (as a list) you want to evaluate the counts at.
     ax:
         a matplotlib axes
 
@@ -379,17 +410,30 @@ def add_at_risk_counts(*fitters, ax=None, **kwargs):
         f2.fit(data)
         f2.plot(ax=ax)
 
-        # There are equivalent
+        # These calls below are equivalent
         add_at_risk_counts(f1, f2)
         add_at_risk_counts(f1, f2, ax=ax, fig=fig)
+        plt.tight_layout()
 
         # This overrides the labels
         add_at_risk_counts(f1, f2, labels=['fitter one', 'fitter two'])
+        plt.tight_layout()
 
         # This hides the labels
-        add_at_risk_counts(f1, f2, labels=None)
+        add_at_risk_counts(f1, f2, labels=False)
+        plt.tight_layout()
+
+        # Only show at-risk:
+        add_at_risk_counts(f1, f2, rows_to_show=['At risk'])
+        plt.tight_layout()
+
+    References
+    -----------
+     Morris TP, Jarvis CI, Cragg W, et al. Proposals on Kaplan–Meier plots in medical research and a survey of stakeholder views: KMunicate. BMJ Open 2019;9:e030215. doi:10.1136/bmjopen-2019-030215
+
     """
-    # Axes and Figure can't be None
+    from matplotlib import pyplot as plt
+
     if ax is None:
         ax = plt.gca()
 
@@ -397,22 +441,22 @@ def add_at_risk_counts(*fitters, ax=None, **kwargs):
     if fig is None:
         fig = plt.gcf()
 
-    if "labels" not in kwargs:
+    if labels is None:
         labels = [f._label for f in fitters]
-    else:
-        # Allow None, in which case no labels should be used
-        labels = kwargs.pop("labels", None)
-        if labels is None:
-            labels = [None] * len(fitters)
+    elif labels is False:
+        labels = [None] * len(fitters)
 
-    # remove xlabel
-    ax.set_xlabel("")
+    if rows_to_show is None:
+        rows_to_show = ["At risk", "Censored", "Events"]
+    n_rows = len(rows_to_show)
+
     # Create another axes where we can put size ticks
     ax2 = plt.twiny(ax=ax)
     # Move the ticks below existing axes
     # Appropriate length scaled for 6 inches. Adjust for figure size.
     ax_height = (ax.get_position().y1 - ax.get_position().y0) * fig.get_figheight()  # axis height
-    ax2_ypos = -0.1 * 6.0 / ax_height
+    ax2_ypos = ypos / ax_height
+
     move_spines(ax2, ["bottom"], [ax2_ypos])
     # Hide all fluff
     remove_spines(ax2, ["top", "right", "bottom", "left"])
@@ -422,40 +466,81 @@ def add_at_risk_counts(*fitters, ax=None, **kwargs):
     min_time, max_time = ax.get_xlim()
     ax2.set_xlim(min_time, max_time)
     # Set ticks to kwarg or visible ticks
-    xticks = kwargs.pop("xticks", None)
     if xticks is None:
         xticks = [xtick for xtick in ax.get_xticks() if min_time <= xtick <= max_time]
     ax2.set_xticks(xticks)
     # Remove ticks, need to do this AFTER moving the ticks
     remove_ticks(ax2, x=True, y=True)
-    # Add population size at times
+
     ticklabels = []
+
     for tick in ax2.get_xticks():
         lbl = ""
+
         # Get counts at tick
-        counts = [f.durations[f.durations >= tick].shape[0] for f in fitters]
-        # Create tick label
-        for l, c in zip(labels, counts):
-            # First tick is prepended with the label
-            if tick == ax2.get_xticks()[0] and l is not None:
-                # Get length of largest count
+        counts = []
+        for f in fitters:
+            # this is a messy:
+            # a) to align with R (and intuition), we do a subtraction off the at_risk column
+            # b) we group by the tick intervals
+            # c) we want to start at 0, so we give it it's own interval
+
+            event_table_slice = (
+                f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed)
+                .loc[:tick, ["at_risk", "censored", "observed"]]
+                .agg({"at_risk": "min", "censored": "sum", "observed": "sum"})
+                .rename({"at_risk": "At risk", "censored": "Censored", "observed": "Events"})
+            )
+            counts.extend([int(c) for c in event_table_slice.loc[rows_to_show]])
+
+        if n_rows > 1:
+            if tick == ax2.get_xticks()[0]:
                 max_length = len(str(max(counts)))
-                if is_latex_enabled():
-                    s = "\n{}\\quad".format(l) + "{{:>{}d}}".format(max_length)
-                else:
-                    s = "\n{}   ".format(l) + "{{:>{}d}}".format(max_length)
+                for i, c in enumerate(counts):
+                    if i % n_rows == 0:
+                        if is_latex_enabled():
+                            lbl += ("\n" if i > 0 else "") + r"\textbf{%s}" % labels[int(i / n_rows)] + "\n"
+                        else:
+                            lbl += ("\n" if i > 0 else "") + r"%s" % labels[int(i / n_rows)] + "\n"
+
+                    l = rows_to_show[i % n_rows]
+                    l = {"At risk": "  At risk", "Censored": "Censored  ", "Events": " Events  "}.get(l)
+                    s = "{}   ".format(l.rjust(10, " ")) + "{{:>{}d}}\n".format(max_length)
+
+                    lbl += s.format(c)
+
             else:
-                s = "\n{}"
-            lbl += s.format(c)
-        ticklabels.append(lbl.strip())
+                # Create tick label
+                lbl += ""
+                for i, c in enumerate(counts):
+                    if i % n_rows == 0 and i > 0:
+                        lbl += "\n\n"
+                    s = "\n{}"
+                    lbl += s.format(c)
+
+        else:
+            # if only one row to show, show in "condensed" version
+            if tick == ax2.get_xticks()[0]:
+                max_length = len(str(max(counts)))
+
+                lbl += rows_to_show[0] + "\n"
+
+                for i, c in enumerate(counts):
+                    s = "{}   ".format(labels[i].rjust(10, " ")) + "{{:>{}d}}\n".format(max_length)
+                    lbl += s.format(c)
+
+            else:
+                # Create tick label
+                lbl += ""
+                for i, c in enumerate(counts):
+                    s = "\n{}"
+                    lbl += s.format(c)
+
+        ticklabels.append(lbl)
+
     # Align labels to the right so numbers can be compared easily
     ax2.set_xticklabels(ticklabels, ha="right", **kwargs)
 
-    # Add a descriptive headline.
-    ax2.xaxis.set_label_coords(0, ax2_ypos)
-    ax2.set_xlabel("At risk")
-
-    plt.tight_layout()
     return ax
 
 
@@ -506,6 +591,7 @@ def plot_interval_censored_lifetimes(
         df = pd.DataFrame({'lb':[20,15,30, 10, 20, 30], 'ub':[25, 15, np.infty, 20, 20, np.infty]})
         ax = plot_interval_censored_lifetimes(lower_bound=df['lb'], upper_bound=df['ub'])
     """
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -514,8 +600,8 @@ def plot_interval_censored_lifetimes(
     label_plot_bars = type(lower_bound) is pd.Series and type(lower_bound.index) is not pd.RangeIndex
 
     N = lower_bound.shape[0]
-    if N > 80:
-        warnings.warn("For less visual clutter, you may want to subsample to less than 80 individuals.")
+    if N > 25:
+        warnings.warn("For less visual clutter, you may want to subsample to less than 25 individuals.")
 
     assert upper_bound.shape[0] == N
 
@@ -549,6 +635,8 @@ def plot_interval_censored_lifetimes(
         ax.set_yticks(range(0, N))
         ax.set_yticklabels(lower_bound.index)
     else:
+        from matplotlib.ticker import MaxNLocator
+
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     ax.set_xlim(0)
@@ -601,6 +689,7 @@ def plot_lifetimes(
         ax = plot_lifetimes(T.loc[:50], event_observed=E.loc[:50])
 
     """
+    from matplotlib import pyplot as plt
 
     if ax is None:
         ax = plt.gca()
@@ -609,8 +698,8 @@ def plot_lifetimes(
     label_plot_bars = type(durations) is pd.Series and type(durations.index) is not pd.RangeIndex
 
     N = durations.shape[0]
-    if N > 80:
-        warnings.warn("For less visual clutter, you may want to subsample to less than 80 individuals.")
+    if N > 25:
+        warnings.warn("For less visual clutter, you may want to subsample to less than 25 individuals.")
 
     if event_observed is None:
         event_observed = np.ones(N, dtype=bool)
@@ -640,6 +729,8 @@ def plot_lifetimes(
         ax.set_yticks(range(0, N))
         ax.set_yticklabels(durations.index)
     else:
+        from matplotlib.ticker import MaxNLocator
+
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
 
     ax.set_xlim(0)
@@ -648,7 +739,7 @@ def plot_lifetimes(
 
 
 def set_kwargs_color(kwargs):
-    kwargs["color"] = coalesce(kwargs.get("c"), kwargs.get("color"), kwargs["ax"]._get_lines.get_next_color())
+    kwargs["color"] = coalesce(kwargs.pop("c", None), kwargs.pop("color", None), kwargs["ax"]._get_lines.get_next_color())
 
 
 def set_kwargs_drawstyle(kwargs, default="steps-post"):
@@ -674,6 +765,7 @@ def loglogs_plot(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
     """
     Specifies a plot of the log(-log(SV)) versus log(time) where SV is the estimated survival function.
     """
+    from matplotlib import pyplot as plt
 
     def loglog(s):
         return np.log(-np.log(s))
@@ -690,7 +782,6 @@ def loglogs_plot(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
     kwargs["ax"] = ax
     set_kwargs_color(kwargs)
     set_kwargs_drawstyle(kwargs)
-    kwargs["logx"] = True
 
     dataframe_slicer = create_dataframe_slicer(iloc, loc, cls.timeline)
 
@@ -702,13 +793,15 @@ def loglogs_plot(cls, loc=None, iloc=None, show_censors=False, censor_styles=Non
         cs.update(censor_styles)
         times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
-        # don't log times, as Pandas will take care of all log-scaling later.
-        ax.plot(times, loglog(v), linestyle="None", color=colour, **cs)
+        ax.plot(np.log(times), loglog(v), linestyle="None", color=colour, **cs)
 
     # plot estimate
-    dataframe_slicer(loglog(cls.survival_function_)).plot(**kwargs)
+    sliced_estimates = dataframe_slicer(loglog(cls.survival_function_))
+    sliced_estimates["log(timeline)"] = np.log(sliced_estimates.index)
+    sliced_estimates.plot(x="log(timeline)", **kwargs)
     ax.set_xlabel("log(timeline)")
     ax.set_ylabel("log(-log(survival_function_))")
+
     return ax
 
 
@@ -732,7 +825,7 @@ def _plot_estimate(
 ):
 
     """
-    Plots a pretty figure of {0}.{1}
+    Plots a pretty figure of estimates
 
     Matplotlib plot arguments can be passed in inside the kwargs, plus
 
@@ -778,6 +871,8 @@ def _plot_estimate(
     ax:
         a pyplot axis object
     """
+    from matplotlib import pyplot as plt
+
     if ci_force_lines:
         warnings.warn(
             "ci_force_lines is deprecated. Use ci_only_lines instead (no functional difference, only a name change).",
@@ -841,12 +936,14 @@ def _plot_estimate(
 
     if at_risk_counts:
         add_at_risk_counts(cls, ax=plot_estimate_config.ax)
+        plt.tight_layout()
 
     return plot_estimate_config.ax
 
 
 class PlotEstimateConfig:
     def __init__(self, cls, estimate: Union[str, pd.DataFrame], loc, iloc, show_censors, censor_styles, logx, ax, **kwargs):
+        from matplotlib import pyplot as plt
 
         self.censor_styles = coalesce(censor_styles, {})
 

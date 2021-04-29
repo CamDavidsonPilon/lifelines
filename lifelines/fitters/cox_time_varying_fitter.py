@@ -11,15 +11,18 @@ from scipy import stats
 
 from numpy.linalg import norm, inv
 from numpy import sum as array_sum_to_scalar
+
 from scipy.linalg import solve as spsolve, LinAlgError
+
 from autograd import elementwise_grad
 from autograd import numpy as anp
 
 
-from lifelines.fitters import RegressionFitter
+from lifelines.fitters import SemiParametricRegressionFitter
 from lifelines.fitters.mixins import ProportionalHazardMixin
 from lifelines.utils.printer import Printer
 from lifelines.statistics import _chisq_test_p_value, StatisticalResult
+from lifelines.exceptions import ConvergenceError, ConvergenceWarning
 from lifelines.utils import (
     _get_index,
     _to_list,
@@ -32,22 +35,21 @@ from lifelines.utils import (
     check_for_instantaneous_events_at_death_time,
     check_for_nonnegative_intervals,
     pass_for_numeric_dtypes_or_raise_array,
-    ConvergenceError,
-    ConvergenceWarning,
     inv_normal_cdf,
     normalize,
     StepSizer,
     check_nans_or_infs,
-    string_justify,
+    string_rjustify,
     coalesce,
 )
+from lifelines import utils
 
 __all__ = ["CoxTimeVaryingFitter"]
 
 matrix_axis_0_sum_to_1d_array = lambda m: np.sum(m, 0)
 
 
-class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
+class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMixin):
     r"""
     This class implements fitting Cox's time-varying proportional hazard model:
 
@@ -72,7 +74,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
         The event_observed variable provided
     weights: Series
         The event_observed variable provided
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     strata: list
         the strata provided
@@ -86,9 +88,6 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio: float = 0.0, strata=None):
         super(CoxTimeVaryingFitter, self).__init__(alpha=alpha)
-        if penalizer < 0:
-            raise ValueError("penalizer parameter must be >= 0.")
-
         self.alpha = alpha
         self.penalizer = penalizer
         self.strata = strata
@@ -107,6 +106,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
         robust=False,
         strata=None,
         initial_point=None,
+        formula: str = None,
     ):  # pylint: disable=too-many-arguments
         """
         Fit the Cox Proportional Hazard model to a time varying dataset. Tied survival times
@@ -148,6 +148,8 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
         initial_point: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
+        formula: str, optional
+            A R-like formula for transforming the covariates
 
         Returns
         --------
@@ -164,6 +166,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
         self.id_col = id_col
         self.stop_col = stop_col
         self.start_col = start_col
+        self.formula = formula
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
 
         df = df.copy()
@@ -173,9 +176,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
 
         if weights_col is None:
             self.weights_col = None
-            assert (
-                "__weights" not in df.columns
-            ), "__weights is an internal lifelines column, please rename your column first."
+            assert "__weights" not in df.columns, "__weights is an internal lifelines column, please rename your column first."
             df["__weights"] = 1.0
         else:
             self.weights_col = weights_col
@@ -199,14 +200,16 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
         )
         weights = df.pop("__weights").astype(float)
 
-        df = df.astype(float)
-        self._check_values(df, events, start, stop)
+        self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True)
+        X = self.regressors.transform_df(df)["beta_"]
 
-        self._norm_mean = df.mean(0)
-        self._norm_std = df.std(0)
+        self._check_values(X, events, start, stop)
+
+        self._norm_mean = X.mean(0)
+        self._norm_std = X.std(0)
 
         params_ = self._newton_rhaphson(
-            normalize(df, self._norm_mean, self._norm_std),
+            normalize(X, self._norm_mean, self._norm_std),
             events,
             start,
             stop,
@@ -216,12 +219,10 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
             step_size=step_size,
         )
 
-        self.params_ = pd.Series(params_, index=df.columns, name="coef") / self._norm_std
-        self.variance_matrix_ = pd.DataFrame(
-            -inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=df.columns
-        )
+        self.params_ = pd.Series(params_, index=pd.Index(X.columns, name="covariate"), name="coef") / self._norm_std
+        self.variance_matrix_ = pd.DataFrame(-inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns)
         self.standard_errors_ = self._compute_standard_errors(
-            normalize(df, self._norm_mean, self._norm_std), events, start, stop, weights
+            normalize(X, self._norm_mean, self._norm_std), events, start, stop, weights
         )
         self.confidence_intervals_ = self._compute_confidence_intervals()
         self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, events, start, stop, weights)
@@ -230,8 +231,8 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
         self.start_stop_and_events = pd.DataFrame({"event": events, "start": start, "stop": stop})
         self.weights = weights
 
-        self._n_examples = df.shape[0]
-        self._n_unique = df.index.unique().shape[0]
+        self._n_examples = X.shape[0]
+        self._n_unique = X.index.unique().shape[0]
         return self
 
     def _check_values(self, df, events, start, stop):
@@ -260,10 +261,9 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
             ), stratum
 
     def _partition_by_strata_and_apply(self, X, events, start, stop, weights, function, *args):
-        for (
-            (stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W),
-            _,
-        ) in self._partition_by_strata(X, events, start, stop, weights):
+        for ((stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W), _) in self._partition_by_strata(
+            X, events, start, stop, weights
+        ):
             yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
 
     def _compute_z_values(self):
@@ -305,7 +305,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
             df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * np.exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
-            df["-log2(p)"] = -np.log2(df["p"])
+            df["-log2(p)"] = -utils.quiet_log2(df["p"])
             return df
 
     def _newton_rhaphson(
@@ -344,13 +344,14 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
         assert precision <= 1.0, "precision must be less than or equal to 1."
 
         # soft penalizer functions, from https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
-        # soft penalizer functions, from https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
         soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
         penalizer = (
             lambda beta, a: n
-            * 0.5
             * self.penalizer
-            * (self.l1_ratio * soft_abs(beta, a).sum() + (1 - self.l1_ratio) * ((beta) ** 2).sum())
+            * (
+                self.l1_ratio * (soft_abs(beta, a)).sum()
+                + 0.5 * (1 - self.l1_ratio) * (beta ** 2).sum()
+            )
         )
         d_penalizer = elementwise_grad(penalizer)
         dd_penalizer = elementwise_grad(d_penalizer)
@@ -375,9 +376,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
             i += 1
 
             if self.strata is None:
-                h, g, ll = self._get_gradients(
-                    df.values, events.values, start.values, stop.values, weights.values, beta
-                )
+                h, g, ll = self._get_gradients(df.values, events.values, start.values, stop.values, weights.values, beta)
             else:
                 g = np.zeros_like(beta)
                 h = np.zeros((d, d))
@@ -395,7 +394,7 @@ class CoxTimeVaryingFitter(RegressionFitter, ProportionalHazardMixin):
                 # if the user supplied a non-trivial initial point, we need to delay this.
                 self._log_likelihood_null = ll
 
-            if self.penalizer > 0:
+            if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
                 ll -= penalizer(beta, 1.5 ** i)
                 g -= d_penalizer(beta, 1.5 ** i)
                 h[np.diag_indices(d)] -= dd_penalizer(beta, 1.5 ** i)
@@ -489,14 +488,15 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         return beta
 
-    def _get_gradients(self, X, events, start, stop, weights, beta):  # pylint: disable=too-many-locals
+    @staticmethod
+    def _get_gradients(X, events, start, stop, weights, beta):  # pylint: disable=too-many-locals
         """
         Calculates the first and second order vector differentials, with respect to beta.
 
         Returns
         -------
         hessian: (d, d) numpy array,
-        gradient: (d,) numpy array
+        gradient: (1, d) numpy array
         log_likelihood: float
         """
 
@@ -504,7 +504,6 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         hessian = np.zeros((d, d))
         gradient = np.zeros(d)
         log_lik = 0
-        # weights = weights[:, None]
         unique_death_times = np.unique(stop[events])
 
         for t in unique_death_times:
@@ -602,10 +601,11 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
+        hazard_names = self.params_.index
+
         if isinstance(X, pd.DataFrame):
-            order = self.params_.index
-            X = X[order]
-            check_for_numeric_dtypes_or_raise(X)
+            X = self.regressors.transform_df(X)["beta_"]
+            X = X.values
 
         X = X.astype(float)
         index = _get_index(X)
@@ -637,7 +637,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         """
         return np.exp(self.predict_log_partial_hazard(X))
 
-    def print_summary(self, decimals=2, style=None, **kwargs):
+    def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -647,12 +647,14 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             specify the number of decimal places to show
         style: string
             {html, ascii, latex}
+        columns:
+            only display a subset of ``summary`` columns. Default all.
         kwargs:
             print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
 
         """
-        justify = string_justify(18)
+        justify = string_rjustify(18)
 
         headers = []
 
@@ -660,7 +662,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             headers.append(("event col", "'%s'" % self.event_col))
         if self.weights_col:
             headers.append(("weights col", "'%s'" % self.weights_col))
-        if self.penalizer > 0:
+        if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
             headers.append(("penalizer", self.penalizer))
         if self.strata:
             headers.append(("strata", self.strata))
@@ -675,8 +677,20 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             ]
         )
 
-        p = Printer(self, headers, justify, decimals, kwargs)
+        sr = self.log_likelihood_ratio_test()
+        footers = []
+        footers.extend(
+            [
+                ("Partial AIC", "{:.{prec}f}".format(self.AIC_partial_, prec=decimals)),
+                (
+                    "log-likelihood ratio test",
+                    "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
+                ),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals)),
+            ]
+        )
 
+        p = Printer(self, headers, footers, justify, kwargs, decimals, columns)
         p.print(style=style)
 
     def log_likelihood_ratio_test(self):
@@ -714,11 +728,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         degrees_freedom = self.params_.shape[0]
         p_value = _chisq_test_p_value(test_stat, degrees_freedom=degrees_freedom)
         return StatisticalResult(
-            p_value,
-            test_stat,
-            name="log-likelihood ratio test",
-            degrees_freedom=degrees_freedom,
-            null_distribution="chi squared",
+            p_value, test_stat, name="log-likelihood ratio test", degrees_freedom=degrees_freedom, null_distribution="chi squared"
         )
 
     def plot(self, columns=None, ax=None, **errorbar_kwargs):
@@ -766,7 +776,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         ax.errorbar(hazards[order], yaxis_locations, xerr=symmetric_errors[order], **errorbar_kwargs)
         best_ylim = ax.get_ylim()
-        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
+        ax.vlines(0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65, color="k")
         ax.set_ylim(best_ylim)
 
         tick_labels = [columns[i] for i in order]
@@ -777,18 +787,14 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
         return ax
 
-    def _compute_cumulative_baseline_hazard(
-        self, tv_data, events, start, stop, weights
-    ):  # pylint: disable=too-many-locals
+    def _compute_cumulative_baseline_hazard(self, tv_data, events, start, stop, weights):  # pylint: disable=too-many-locals
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             hazards = self.predict_partial_hazard(tv_data).values
 
         unique_death_times = np.unique(stop[events.values])
-        baseline_hazard_ = pd.DataFrame(
-            np.zeros_like(unique_death_times), index=unique_death_times, columns=["baseline hazard"]
-        )
+        baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times), index=unique_death_times, columns=["baseline hazard"])
 
         for t in unique_death_times:
             ix = (start.values < t) & (t <= stop.values)

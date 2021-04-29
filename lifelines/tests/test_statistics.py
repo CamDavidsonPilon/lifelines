@@ -5,9 +5,9 @@ import numpy.testing as npt
 import pytest
 
 from lifelines import statistics as stats
-from lifelines import CoxPHFitter
-from lifelines.utils import StatisticalWarning
-from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset
+from lifelines import CoxPHFitter, KaplanMeierFitter, WeibullFitter
+from lifelines.exceptions import StatisticalWarning
+from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset, load_leukemia
 
 
 def test_sample_size_necessary_under_cph():
@@ -101,6 +101,48 @@ def test_rank_test_output_against_R_with_censorship():
     r_stat = 0.384615
     assert abs(result.p_value - r_p_value) < 10e-6
     assert abs(result.test_statistic - r_stat) < 10e-6
+
+
+def test_wilcoxon_weighted_logrank_on_leukemia_dataset():
+    """
+    Test against result from "Survival Analysis: A Self-learning Text" by Kleinbaum & Klein, 3rd edition, 2012.
+    """
+    data = load_leukemia()
+    group_1 = data[data["Rx"] == 0]
+    group_2 = data[data["Rx"] == 1]
+
+    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="wilcoxon")
+
+    assert abs(result.test_statistic - 13.457852) < 10e-6
+    assert result.test_name == "Wilcoxon_test"
+
+
+def test_tarone_ware_weighted_logrank_on_leukemia_dataset():
+    """
+    Test against result from "Survival Analysis: A Self-learning Text" by Kleinbaum & Klein, 3rd edition, 2012.
+    """
+    data = load_leukemia()
+    group_1 = data[data["Rx"] == 0]
+    group_2 = data[data["Rx"] == 1]
+
+    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="tarone-ware")
+
+    assert abs(result.test_statistic - 15.123575) < 10e-6
+    assert result.test_name == "Tarone-Ware_test"
+
+
+def test_peto_weighted_logrank_on_leukemia_dataset():
+    """
+    Test against result from "Survival Analysis: A Self-learning Text" by Kleinbaum & Klein, 3rd edition, 2012.
+    """
+    data = load_leukemia()
+    group_1 = data[data["Rx"] == 0]
+    group_2 = data[data["Rx"] == 1]
+
+    result = stats.logrank_test(group_1["t"], group_2["t"], group_1["status"], group_2["status"], weightings="peto")
+
+    assert abs(result.test_statistic - 14.084139) < 10e-6
+    assert result.test_name == "Peto_test"
 
 
 def test_unequal_intensity_event_observed():
@@ -279,7 +321,7 @@ def test_proportional_hazard_test_with_weights():
         {
             "var1": [0.209325, 0.693919, 0.443804, 0.065636, 0.386294],
             "T": [5.269797, 6.601666, 7.335846, 11.684092, 12.678458],
-            "w": [1, 1, 1, 1, 1],
+            "w": [1, 0.5, 2, 1, 1],
         }
     )
     df["E"] = True
@@ -289,7 +331,7 @@ def test_proportional_hazard_test_with_weights():
 
     results = stats.proportional_hazard_test(cph, df, time_transform=["km", "rank", "log", "identity"])
     results.print_summary(5)
-    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.000346, rtol=1e-3)
+    npt.assert_allclose(results.summary.loc["var1", "rank"]["test_statistic"], 0.108, rtol=1e-2)
 
 
 def test_proportional_hazard_test_with_strata_weights_and_strata():
@@ -305,6 +347,7 @@ def test_proportional_hazard_test_with_strata_weights_and_strata():
 
     c = coxph(formula=Surv(T, E) ~ var1 + strata(s), data=df, weights=w)
     cz = cox.zph(c, transform='identity')
+    cz_km = cox.zph(c, transform='km')
 
     """
 
@@ -319,11 +362,13 @@ def test_proportional_hazard_test_with_strata_weights_and_strata():
     df["E"] = True
 
     cph = CoxPHFitter()
-    cph.fit(df, "T", "E", weights_col="w", strata="s", robust=True)
+    cph.fit(df, "T", "E", weights_col="w", strata="s")
 
     results = stats.proportional_hazard_test(cph, df, time_transform="identity")
-
     npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.0283, rtol=1e-3)
+
+    results = stats.proportional_hazard_test(cph, df, time_transform="km")
+    npt.assert_allclose(results.summary.loc["var1"]["test_statistic"], 0.0434, rtol=1e-1)
 
 
 def test_proportional_hazard_test_with_kmf():
@@ -447,10 +492,41 @@ def test_proportional_hazard_test_with_list():
     assert results.summary.shape[0] == 2 * 2
 
 
-def test_survival_difference_at_fixed_point_in_time_test():
+def test_survival_difference_at_fixed_point_in_time_test_nonparametric():
     df = load_waltons()
     ix = df["group"] == "miR-137"
-    waltonT1 = df.loc[ix]["T"]
-    waltonT2 = df.loc[~ix]["T"]
-    result = stats.survival_difference_at_fixed_point_in_time_test(10, waltonT1, waltonT2)
+    kmf1 = KaplanMeierFitter().fit(df.loc[ix]["T"], df.loc[ix]["E"])
+    kmf2 = KaplanMeierFitter().fit(df.loc[~ix]["T"], df.loc[~ix]["E"])
+    result = stats.survival_difference_at_fixed_point_in_time_test(10, kmf1, kmf2)
+    assert result.p_value < 0.05
+
+
+def test_survival_difference_at_fixed_point_in_time_test_parametric():
+    df = load_waltons()
+    ix = df["group"] == "miR-137"
+    wf1 = WeibullFitter().fit(df.loc[ix]["T"], df.loc[ix]["E"])
+    wf2 = WeibullFitter().fit(df.loc[~ix]["T"], df.loc[~ix]["E"])
+    result = stats.survival_difference_at_fixed_point_in_time_test(10, wf1, wf2)
+    assert result.p_value < 0.05
+
+
+def test_survival_difference_at_fixed_point_in_time_test_left_censoring():
+    T1 = np.random.exponential(1e-6, size=1000)
+    T2 = np.random.exponential(1e-6, size=1000)
+    E = T1 > T2
+    T = np.maximum(T1, T2)
+    kmf1 = KaplanMeierFitter().fit_left_censoring(T)
+    kmf2 = KaplanMeierFitter().fit_left_censoring(2 * T)
+    result = stats.survival_difference_at_fixed_point_in_time_test(T.mean(), kmf1, kmf2)
+    assert result.p_value < 0.05
+
+
+def test_survival_difference_at_fixed_point_in_time_test_interval_censoring():
+    T1 = np.random.exponential(1e-6, size=1000)
+    T2 = np.random.exponential(1e-6, size=1000)
+    E = T1 > T2
+    T = np.maximum(T1, T2)
+    wf1 = WeibullFitter().fit_interval_censoring(T, T)
+    wf2 = WeibullFitter().fit_interval_censoring(2 * T, 2 * T)
+    result = stats.survival_difference_at_fixed_point_in_time_test(T.mean(), wf1, wf2)
     assert result.p_value < 0.05

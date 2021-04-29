@@ -16,9 +16,7 @@ class SplineFitterMixin:
 
     def basis(self, x: np.array, knot: float, min_knot: float, max_knot: float):
         lambda_ = (max_knot - knot) / (max_knot - min_knot)
-        return self.relu(x - knot) ** 3 - (
-            lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3
-        )
+        return self.relu(x - knot) ** 3 - (lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3)
 
 
 class ProportionalHazardMixin:
@@ -28,7 +26,7 @@ class ProportionalHazardMixin:
         advice: bool = True,
         show_plots: bool = False,
         p_value_threshold: float = 0.01,
-        plot_n_bootstraps: int = 10,
+        plot_n_bootstraps: int = 15,
         columns: Optional[List[str]] = None,
     ) -> None:
         """
@@ -44,7 +42,7 @@ class ProportionalHazardMixin:
         advice: bool, optional
             display advice as output to the user's screen
         show_plots: bool, optional
-            display plots of the scaled schoenfeld residuals and loess curves. This is an eyeball test for violations.
+            display plots of the scaled Schoenfeld residuals and loess curves. This is an eyeball test for violations.
             This will slow down the function significantly.
         p_value_threshold: float, optional
             the threshold to use to alert the user of violations. See note below.
@@ -53,6 +51,10 @@ class ProportionalHazardMixin:
             the function significantly.
         columns: list, optional
             specify a subset of columns to test.
+
+        Returns
+        --------
+            A list of list of axes objects.
 
 
         Examples
@@ -66,7 +68,7 @@ class ProportionalHazardMixin:
             rossi = load_rossi()
             cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
 
-            cph.check_assumptions(rossi)
+            axes = cph.check_assumptions(rossi, show_plots=True)
 
 
         Notes
@@ -94,16 +96,16 @@ class ProportionalHazardMixin:
             )
 
         residuals = self.compute_residuals(training_df, kind="scaled_schoenfeld")
-        test_results = proportional_hazard_test(
-            self, training_df, time_transform=["rank", "km"], precomputed_residuals=residuals
-        )
+        test_results = proportional_hazard_test(self, training_df, time_transform=["rank", "km"], precomputed_residuals=residuals)
 
         residuals_and_duration = residuals.join(training_df[self.duration_col])
+        Xs = self.regressors.transform_df(training_df)
 
         counter = 0
         n = residuals_and_duration.shape[0]
+        axes = []
 
-        for variable in self.params_.index.intersection(columns or self.params_.index):
+        for variable in self.params_.index & (columns or self.params_.index):
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
             if np.round(minumum_observed_p_value, 2) > p_value_threshold:
                 continue
@@ -138,13 +140,13 @@ class ProportionalHazardMixin:
             )
 
             if advice:
-                values = training_df[variable]
+                values = Xs["beta_"][variable]
                 value_counts = values.value_counts()
                 n_uniques = value_counts.shape[0]
 
-                # Arbitrary chosen 10 and 4 to check for ability to use strata col.
+                # Arbitrary chosen to check for ability to use strata col.
                 # This should capture dichotomous / low cardinality values.
-                if n_uniques <= 10 and value_counts.min() >= 5:
+                if n_uniques <= 6 and value_counts.min() >= 5:
                     print(
                         fill(
                             "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [E] below.".format(
@@ -181,7 +183,10 @@ class ProportionalHazardMixin:
                     )
 
             if show_plots:
-
+                axes.append([])
+                print()
+                print("   Bootstrapping lowess lines. May take a moment...")
+                print()
                 from matplotlib import pyplot as plt
 
                 fig = plt.figure()
@@ -212,6 +217,7 @@ class ProportionalHazardMixin:
                     ax.set_xlim(best_xlim)
 
                     ax.set_xlabel("%s-transformed time\n(p=%.4f)" % (transform_name, p_value), fontsize=10)
+                    axes[-1].append(ax)
 
                 fig.suptitle("Scaled Schoenfeld residuals of '%s'" % variable, fontsize=14)
                 plt.tight_layout()
@@ -233,6 +239,7 @@ class ProportionalHazardMixin:
 
         if counter == 0:
             print("Proportional hazard assumption looks okay.")
+        return axes
 
     @property
     def hazard_ratios_(self):
@@ -255,16 +262,14 @@ class ProportionalHazardMixin:
         """
         results = {}
         for t in sorted(followup_times):
-            assert (
-                t <= training_df[self.duration_col].max()
-            ), "all follow-up times must be less than max observed duration"
+            assert t <= training_df[self.duration_col].max(), "all follow-up times must be less than max observed duration"
             df = training_df.copy()
             # if we "rollback" the df to time t, who is dead and who is censored
             df[self.event_col] = (df[self.duration_col] <= t) & df[self.event_col]
             df[self.duration_col] = np.minimum(df[self.duration_col], t)
 
             model = self.__class__(penalizer=self.penalizer, l1_ratio=self.l1_ratio).fit(
-                df, self.duration_col, self.event_col, weights_col=self.weights_col
+                df, self.duration_col, self.event_col, weights_col=self.weights_col, entry_col=self.entry_col
             )
             results[t] = model.hazard_ratios_
         return DataFrame(results).T

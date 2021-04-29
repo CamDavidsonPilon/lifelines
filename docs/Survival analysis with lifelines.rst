@@ -106,6 +106,7 @@ called :attr:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.survival_
 The property is a Pandas DataFrame, so we can call :meth:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter.plot` on it:
 
 .. code:: python
+
     from matplotlib import pyplot as plt
 
 
@@ -113,7 +114,7 @@ The property is a Pandas DataFrame, so we can call :meth:`~lifelines.fitters.kap
     plt.title('Survival function of political regimes');
 
 .. image:: images/lifelines_intro_kmf_curve.png
-    :width: 700px
+    :width: 600px
     :align: center
 
 How do we interpret this? The y-axis represents the probability a leader is still
@@ -124,10 +125,10 @@ property. (The method uses exponential Greenwood confidence interval. The mathem
 
 .. code:: python
 
-    kmf.plot()
+    kmf.plot_survival_function()
 
 .. image:: images/lifelines_intro_kmf_fitter.png
-    :width: 700px
+    :width: 600px
     :align: center
 
 The median time in office, which defines the point in time where on
@@ -159,12 +160,11 @@ an ``axis`` object, that can be used for plotting further estimates:
     dem = (data["democracy"] == "Democracy")
 
     kmf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
-    kmf.plot(ax=ax)
+    kmf.plot_survival_function(ax=ax)
 
     kmf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
-    kmf.plot(ax=ax)
+    kmf.plot_survival_function(ax=ax)
 
-    plt.ylim(0, 1);
     plt.title("Lifespans of different global regimes");
 
 
@@ -178,26 +178,19 @@ times we are interested in and are returned a DataFrame with the
 probabilities of survival at those points:
 
 .. code:: python
+
     import numpy as np
 
     ax = plt.subplot(111)
 
     t = np.linspace(0, 50, 51)
     kmf.fit(T[dem], event_observed=E[dem], timeline=t, label="Democratic Regimes")
-    ax = kmf.plot(ax=ax)
-    print("Median survival time of democratic:", kmf.median_survival_time_)
+    ax = kmf.plot_survival_function(ax=ax)
 
     kmf.fit(T[~dem], event_observed=E[~dem], timeline=t, label="Non-democratic Regimes")
-    ax = kmf.plot(ax=ax)
-    print("Median survival time of non-democratic:", kmf.median_survival_time_)
+    ax = kmf.plot_survival_function(ax=ax)
 
-    plt.ylim(0, 1)
     plt.title("Lifespans of different global regimes");
-
-    """
-    Median survival time of democratic: 3
-    Median survival time of non-democratic: 6
-    """
 
 .. image:: images/lifelines_intro_multi_kmf_fitter_2.png
     :width: 650px
@@ -258,7 +251,7 @@ Lets compare the different *types* of regimes present in the dataset:
 
         ix = data['regime'] == regime_type
         kmf.fit(T[ix], E[ix], label=regime_type)
-        kmf.plot(ax=ax, legend=False)
+        kmf.plot_survival_function(ax=ax, legend=False)
 
         plt.title(regime_type)
         plt.xlim(0, 50)
@@ -270,8 +263,30 @@ Lets compare the different *types* of regimes present in the dataset:
 
 
 .. image:: images/lifelines_intro_all_regimes.png
+    :align: center
+    :width: 700px
+
+Best practices for presenting Kaplan Meier plots
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A recent survey of statisticians, medical professionals, and other stakeholders suggested that the addition
+of two pieces of information, summary tables and confidence intervals, greatly increased the effectiveness of Kaplan Meier plots, see "Morris TP, Jarvis CI, Cragg W, et al. Proposals on Kaplan–Meier plots in medical research and a survey of stakeholder views: KMunicate. BMJ Open 2019;9:e030215. doi:10.1136/bmjopen-2019-030215".
+
+In *lifelines*, confidence intervals are automatically added, but there is the ``at_risk_counts`` kwarg to add summary tables as well:
+
+.. code:: python
+
+    kmf = KaplanMeierFitter().fit(T, E, label="all_regimes")
+    kmf.plot_survival_function(at_risk_counts=True)
+    plt.tight_layout()
 
 
+
+.. image:: images/intro_add_at_risk.png
+    :align: center
+    :width: 700px
+
+For more details, and how to extend this to multiple curves, see `docs here <https://lifelines.readthedocs.io/en/latest/Examples.html#displaying-multiple-at-risk-counts-below-plots>`_.
 
 Getting data into the right format
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -283,8 +298,8 @@ respectively. For example:
 
 ::
 
-    T = [0,3,3,2,1,2]
-    E = [1,1,0,0,1,1]
+    T = [0, 3, 3, 2, 1, 2]
+    E = [1, 1, 0, 0, 1, 1]
     kmf.fit(T, event_observed=E)
 
 The raw data is not always available in this format -- *lifelines*
@@ -355,7 +370,7 @@ a DataFrame:
 .. code:: python
 
     print(naf.cumulative_hazard_.head())
-    naf.plot()
+    naf.plot_cumulative_hazard()
 
 .. parsed-literal::
 
@@ -386,21 +401,21 @@ gets smaller (as seen by the decreasing rate of change). Let's break the
 regimes down between democratic and non-democratic, during the first 20
 years:
 
-.. note::  We are using the ``loc`` argument in the call to ``plot`` here: it accepts a ``slice`` and plots only points within that slice.
+.. note::  We are using the ``loc`` argument in the call to ``plot_cumulative_hazard`` here: it accepts a ``slice`` and plots only points within that slice.
 
 .. code:: python
 
     naf.fit(T[dem], event_observed=E[dem], label="Democratic Regimes")
-    ax = naf.plot(loc=slice(0, 20))
+    ax = naf.plot_cumulative_hazard(loc=slice(0, 20))
 
     naf.fit(T[~dem], event_observed=E[~dem], label="Non-democratic Regimes")
-    naf.plot(ax=ax, loc=slice(0, 20))
+    naf.plot_cumulative_hazard(ax=ax, loc=slice(0, 20))
 
     plt.title("Cumulative hazard function of different global regimes");
 
 
 .. image:: images/lifelines_intro_naf_fitter_multi.png
-    :width: 650px
+    :width: 600px
     :align: center
 
 Looking at the rates of change, I would say that both political
@@ -415,7 +430,7 @@ is not how we usually interpret functions. On the other hand, most
 survival analysis is done using the cumulative hazard function, so understanding
 it is recommended.
 
-Alternatively, we can derive the more-interpretable hazard function, but
+Alternatively, we can derive the more interpretable hazard function, but
 there is a catch. The derivation involves a kernel smoother (to smooth
 out the differences of the cumulative hazard function) , and this requires
 us to specify a bandwidth parameter that controls the amount of
@@ -444,7 +459,8 @@ intervals, similar to the traditional :meth:`~lifelines.fitters.nelson_aalen_fit
 
 
 .. image:: images/lifelines_intro_naf_smooth_multi.png
-
+    :width: 600px
+    :align: center
 
 It is more clear here which group has the higher hazard, and Non-democratic regimes appear to have a constant hazard.
 
@@ -467,7 +483,8 @@ here. My advice: stick with the cumulative hazard function.
 
 
 .. image:: images/lifelines_intro_naf_smooth_multi_2.png
-
+    :width: 600px
+    :align: center
 
 Estimating cumulative hazards using parametric models
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -475,9 +492,6 @@ Estimating cumulative hazards using parametric models
 
 Fitting to a Weibull model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
- .. note:: The parameterization of the Weibull and Exponential model changed in *lifelines 0.19.0*, released in Feb. 2019.
-
 
 Another very popular model for survival data is the Weibull model. In contrast the the Nelson-Aalen estimator, this model is a *parametric model*, meaning it has a functional form with parameters that we are fitting the data to. (The Nelson-Aalen estimator has no parameters to fit to). The survival function looks like:
 
@@ -503,7 +517,9 @@ In lifelines, estimation is available using the :class:`~lifelines.fitters.weibu
     wf = WeibullFitter().fit(T, E)
 
     wf.print_summary()
-    wf.plot()
+    ax = wf.plot_cumulative_hazard()
+    ax.set_title("Cumulative hazard of Weibull model; estimated parameters")
+
 
     """
     <lifelines.WeibullFitter: fitted with 163 observations, 7 censored>
@@ -519,7 +535,7 @@ In lifelines, estimation is available using the :class:`~lifelines.fitters.weibu
     """
 
 .. image:: images/survival_weibull.png
-    :width: 650px
+    :width: 550px
     :align: center
 
 
@@ -613,11 +629,11 @@ With parametric models, we have a functional form that allows us to extend the s
     # these values provided
     wbf = WeibullFitter().fit(T, E, timeline=timeline)
 
-
-    wbf.plot_survival_function()
+    ax = wbf.plot_survival_function()
+    ax.set_title("Survival function of Weibull model; estimated parameters")
 
 .. image:: images/weibull_extrapolation.png
-    :width: 650px
+    :width: 600px
     :align: center
 
 Model Selection
@@ -674,7 +690,7 @@ Instead of producing a survival function, left-censored data analysis is more in
 
     print(kmf.cumulative_density_.head())
 
-    kmf.plot() #will plot the CDF
+    kmf.plot_cumulative_density() #will plot the CDF
     plt.xlabel("Concentration of NH_4")
 
     """
@@ -689,6 +705,8 @@ Instead of producing a survival function, left-censored data analysis is more in
 
 
 .. image:: images/lifelines_intro_lcd.png
+    :width: 600px
+    :align: center
 
 Alternatively, you can use a parametric model to model the data. This allows for you to "peer" below the LOD, however using a parametric model means you need to correctly specify the distribution. You can use plots like qq-plots to help invalidate some distributions, see `Selecting a parametric model using QQ plots`_ and `Selecting a parametric model using AIC`_.
 
@@ -727,18 +745,45 @@ Based on the above, the log-normal distribution seems to fit well, and the Weibu
 Interval censored data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Data can also be interval censored. An example of this is periodically recording the population of micro-organisms as they die-off. Their deaths are interval censored because you know a subject died between two observations periods. New to lifelines in version 0.21.0, all parametric models have support for interval censored data.
+Data can also be *interval* censored. An example of this is periodically recording a population of organisms. Their deaths are interval censored because you know a subject died between two observations periods.
 
-.. note:: The API for ``fit_interval_censoring`` is different than right and left censored data.
 
 .. code:: python
 
 
     from lifelines.datasets import load_diabetes
+    from lifelines.plotting import plot_interval_censored_lifetimes
 
     df = load_diabetes()
+    plot_interval_censored_lifetimes(df['left'], df['right'])
 
-    wf = WeibullFitter().fit_interval_censoring(lower_bound=df['left'], upper_bound=df['right'])
+.. image:: images/interval_censored_lifetimes.png
+    :width: 670px
+    :align: center
+
+
+Above, we can see that some subjects' death was exactly observed (denoted by a red ●), and some subjects' deaths is bounded between two times (denoted by the interval between the red ▶︎ ◀︎).  We can perform inference on the data using any of our models. Note the use of calling ``fit_interval_censoring`` instead of ``fit``.
+
+.. note:: The API for ``fit_interval_censoring`` is different than right and left censored data.
+
+.. code:: python
+
+    wf = WeibullFitter()
+    wf.fit_interval_censoring(lower_bound=df['left'], upper_bound=df['right'])
+
+    # or, a non-parametric estimator:
+    # for now, this assumes closed observation intervals, ex: [4,5], not (4, 5) or (4, 5]
+    kmf = KaplanMeierFitter()
+    kmf.fit_interval_censoring(df['left'], df['right'])
+
+    ax = kmf.plot_survival_function()
+    wf.plot_survival_function(ax=ax)
+
+
+.. image:: images/interval_censored_inference.png
+    :width: 670px
+    :align: center
+
 
 
 Another example of using lifelines for interval censored data is located `here <https://dataorigami.net/blogs/napkin-folding/counting-and-interval-censoring>`_.
@@ -750,10 +795,9 @@ Left truncated (late entry) data
 
 Another form of bias that is introduced into a dataset is called left-truncation (or late entry). Left-truncation can occur in many situations. One situation is when individuals may have the opportunity to die before entering into the study. For example, if you are measuring time to death of prisoners in prison, the prisoners will enter the study at different ages. So it's possible there are some counter-factual individuals who *would* have entered into your study (that is, went to prison), but instead died early.
 
-All univariate fitters, like :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and any parametric models, have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between actual "birth" (or "exposure") to entering the study.
+All fitters, like :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and any parametric models, have an optional argument for ``entry``, which is an array of equal size to the duration array. It describes the time between actual "birth" (or "exposure") to entering the study.
 
  .. note:: Nothing changes in the duration array: it still measures time from "birth" to time exited study (either by death or censoring). That is, durations refers to the absolute death time rather than a duration relative to the study entry.
-
 
 Another situation with left-truncation occurs when subjects are exposed before entry into study. For example, a study of time to all-cause mortality of AIDS patients that recruited individuals previously diagnosed with AIDS, possibly years before. In our example below we will use a dataset like this, called the Multicenter Aids Cohort Study. In the figure below, we plot the lifetimes of subjects. A solid line is when the subject was under our observation, and a dashed line represents the unobserved period between diagnosis and study entry. A solid dot at the end of the line represents death.
 
@@ -789,10 +833,10 @@ So subject #77, the subject at the top, was diagnosed with AIDS 7.5 years ago, b
 
         kmf = KaplanMeierFitter()
         kmf.fit(df["T"], event_observed=df["D"], entry=df["W"], label='modeling late entries')
-        ax = kmf.plot()
+        ax = kmf.plot_survival_function()
 
         kmf.fit(df["T"], event_observed=df["D"], label='ignoring late entries')
-        kmf.plot(ax=ax)
+        kmf.plot_survival_function(ax=ax)
 
 
 .. image:: images/kmf_mcas.png

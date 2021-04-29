@@ -7,10 +7,6 @@ from sybil import Sybil
 from sybil.parsers.codeblock import CodeBlockParser
 from sybil.parsers.doctest import DocTestParser
 
-"""
-run `py.test` in the docs folder
-"""
-
 
 @pytest.fixture(scope="module")
 def tempdir():
@@ -26,6 +22,7 @@ def tempdir():
 
 
 # uncomment to use locally.
+# run `py.test` in the docs folder
 """
 pytest_collect_file = Sybil(
     parsers=[DocTestParser(), CodeBlockParser(future_imports=["print_function"])], pattern="*.rst", fixtures=["tempdir"]

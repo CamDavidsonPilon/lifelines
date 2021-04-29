@@ -4,7 +4,6 @@ Reimplementation of "A Heteroscedastic Accelerated Failure Time Model
 for Survival Analysis", Wang, You, Lysy, 2019
 """
 import pandas as pd
-from patsy import dmatrix
 import autograd.numpy as np
 from autograd.scipy.stats import norm
 from lifelines.fitters import ParametricRegressionFitter
@@ -12,7 +11,7 @@ from lifelines import CoxPHFitter, LogNormalAFTFitter
 
 
 # this is all that's need to implement the HAFT model.
-# Lifelines handles all estimation.
+# lifelines handles all estimation.
 class HAFT(ParametricRegressionFitter):
 
     _fitted_parameter_names = ["mu_", "sigma_"]
@@ -40,14 +39,12 @@ cph_string = """{extent} +
     age:sex +
     {rx}:sex +
     {rx}:obstruct +
-    adhere:nodes +
-    time + status
+    adhere:nodes
 """.format(
     rx="C(rx, Treatment('Obs'))", differ="C(differ, Treatment(1))", extent="C(extent, Treatment(1))"
 )
-cph_df_ = dmatrix(cph_string, df, return_type="dataframe")
 
-cph = CoxPHFitter().fit(cph_df_.drop("Intercept", axis=1), "time", "status")
+cph = CoxPHFitter().fit(df, "time", "status", formula=cph_string)
 cph.print_summary()
 
 # Log Normal model
@@ -60,22 +57,16 @@ aft_string = """{extent} +
     age:sex +
     {rx}:sex +
     age:adhere +
-    adhere:{differ} +
-    time + status
+    adhere:{differ}
 """.format(
     rx="C(rx, Treatment('Obs'))", differ="C(differ, Treatment(1))", extent="C(extent, Treatment(1))"
 )
-aft_df_ = dmatrix(aft_string, df, return_type="dataframe")
-lnf = LogNormalAFTFitter().fit(aft_df_, "time", "status")
+lnf = LogNormalAFTFitter().fit(df, "time", "status", formula=aft_string)
 lnf.print_summary()
-
 
 # H-AFT log normal model
 haft = HAFT()
-covariates = {
-    "mu_": aft_df_.columns,
-    "sigma_": ["Intercept", "C(rx, Treatment('Obs'))[T.Lev]", "C(rx, Treatment('Obs'))[T.Lev+5FU]"],
-}
+covariates = {"mu_": aft_string, "sigma_": "C(rx, Treatment('Obs'))"}
 
-haft.fit(aft_df_, "time", event_col="status", regressors=covariates)
+haft.fit(df, "time", event_col="status", regressors=covariates)
 haft.print_summary(4)

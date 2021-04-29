@@ -1,20 +1,24 @@
 # -*- coding: utf-8 -*-
 
-import warnings
-import collections
+from typing import Union, Any, Tuple, List, Callable, Optional, Dict
 from datetime import datetime
 from functools import wraps
 from textwrap import dedent
-from typing import Union, Any, Tuple, List, Callable, Optional, Dict
+from enum import Enum
+import collections
+import warnings
 
-import numpy as np
 from numpy import ndarray
+import numpy as np
+
+from scipy.integrate import quad, trapz
 from scipy.linalg import solve
 from scipy import stats
-from scipy.integrate import quad, trapz
+
 import pandas as pd
 
 from lifelines.utils.concordance import concordance_index
+from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError
 
 
 __all__ = [
@@ -36,82 +40,62 @@ __all__ = [
 ]
 
 
-class CensoringType:
+class CensoringType(Enum):
 
-    LEFT = 1
-    INTERVAL = 2
-    RIGHT = 3
+    LEFT = "left"
+    INTERVAL = "interval"
+    RIGHT = "right"
 
     @classmethod
     def right_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
-        def f(self, *args, **kwargs):
-            self._censoring_type = cls.RIGHT
-            return function(self, *args, **kwargs)
+        def f(model, *args, **kwargs):
+            cls.set_censoring_type(model, cls.RIGHT)
+            return function(model, *args, **kwargs)
 
         return f
 
     @classmethod
     def left_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
-        def f(self, *args, **kwargs):
-            self._censoring_type = cls.LEFT
-            return function(self, *args, **kwargs)
+        def f(model, *args, **kwargs):
+            cls.set_censoring_type(model, cls.LEFT)
+            return function(model, *args, **kwargs)
 
         return f
 
     @classmethod
     def interval_censoring(cls, function: Callable) -> Callable:
         @wraps(function)
-        def f(self, *args, **kwargs):
-            self._censoring_type = cls.INTERVAL
-            return function(self, *args, **kwargs)
+        def f(model, *args, **kwargs):
+            cls.set_censoring_type(model, cls.INTERVAL)
+            return function(model, *args, **kwargs)
 
         return f
 
     @classmethod
     def is_right_censoring(cls, model) -> bool:
-        return model._censoring_type == cls.RIGHT
+        return cls.get_censoring_type(model) == cls.RIGHT
 
     @classmethod
     def is_left_censoring(cls, model) -> bool:
-        return model._censoring_type == cls.LEFT
+        return cls.get_censoring_type(model) == cls.LEFT
 
     @classmethod
     def is_interval_censoring(cls, model) -> bool:
-        return model._censoring_type == cls.INTERVAL
+        return cls.get_censoring_type(model) == cls.INTERVAL
 
     @classmethod
-    def get_human_readable_censoring_type(cls, model) -> str:
-        if cls.is_interval_censoring(model):
-            return "interval"
-        elif cls.is_right_censoring(model):
-            return "right"
-        else:
-            return "left"
+    def get_censoring_type(cls, model) -> str:
+        return model._censoring_type
 
+    @classmethod
+    def str_censoring_type(cls, model) -> str:
+        return model._censoring_type.value
 
-class StatError(Exception):
-    pass
-
-
-class ConvergenceError(ValueError):
-    # inherits from ValueError for backwards compatibility reasons
-    def __init__(self, msg, original_exception=""):
-        super(ConvergenceError, self).__init__(msg + "%s" % original_exception)
-        self.original_exception = original_exception
-
-
-class ConvergenceWarning(RuntimeWarning):
-    pass
-
-
-class StatisticalWarning(RuntimeWarning):
-    pass
-
-
-class ApproximationWarning(RuntimeWarning):
-    pass
+    @classmethod
+    def set_censoring_type(cls, model, censoring_type) -> None:
+        model._censoring_type = censoring_type
 
 
 def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
@@ -122,9 +106,9 @@ def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
     ----------
     q: float or array
       a float between 0 and 1 that represents the time when the survival function hits the qth percentile.
-    survival_functions: a (n,d) DataFrame or numpy array.
-      If DataFrame, will return index values (actual times)
-      If numpy array, will return indices.
+    survival_functions: a (n,d) DataFrame, Series, or NumPy array.
+      If DataFrame or Series, will return index values (actual times)
+      If NumPy array, will return indices.
 
     Returns
     -------
@@ -212,7 +196,7 @@ def median_survival_times(model_or_survival_function) -> float:
     """
     import lifelines
 
-    if isinstance(model_or_survival_function, pd.DataFrame):
+    if isinstance(model_or_survival_function, (pd.DataFrame, pd.Series)):
         return qth_survival_times(0.5, model_or_survival_function)
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
         return model_or_survival_function.median_survival_time_
@@ -292,12 +276,14 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
             sf = sf.reset_index()
             return (sf["index"].diff().shift(-1) * sf[model._label]).sum()
         else:
-            return quad(model.predict, 0, t)[0]
+            return quad(model.predict, 0, t, epsabs=1.49e-10, epsrel=1e-10)[0]
     else:
         raise ValueError("Can't compute RMST of object %s" % model_or_survival_function)
 
 
-def _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t: float = np.inf) -> float:
+def _expected_value_of_survival_squared_up_to_t(
+    model_or_survival_function: Union["UnivariateFitter", pd.DataFrame], t: float = np.inf
+) -> float:
     r"""
     Compute the restricted mean survival time, RMST, of a survival function. This is defined as
 
@@ -337,7 +323,7 @@ def _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t: f
 
 def group_survival_table_from_events(
     groups, durations, event_observed, birth_times=None, limit=-1
-):  # pylint: disable=too-many-locals
+) -> Tuple[ndarray, pd.DataFrame, pd.DataFrame, pd.DataFrame]:  # pylint: disable=too-many-locals
     """
     Joins multiple event series together into DataFrames. A generalization of
     `survival_table_from_events` to data with groups.
@@ -564,12 +550,12 @@ def _group_event_table_by_intervals(event_table, intervals) -> pd.DataFrame:
 
         intervals = np.arange(0, event_max + bin_width, bin_width)
 
-    event_table = event_table.groupby(pd.cut(event_table["event_at"], intervals)).agg(
+    event_table = event_table.groupby(pd.cut(event_table["event_at"], intervals, include_lowest=True)).agg(
         {"removed": ["sum"], "observed": ["sum"], "censored": ["sum"], "at_risk": ["max"]}
     )
     # convert columns from multiindex
     event_table.columns = event_table.columns.droplevel(1)
-    return event_table
+    return event_table.bfill()
 
 
 def survival_events_from_table(survival_table, observed_deaths_col="observed", censored_col="censored"):
@@ -636,7 +622,9 @@ def survival_events_from_table(survival_table, observed_deaths_col="observed", c
     return np.asarray(T_), np.asarray(E_), np.asarray(W_)
 
 
-def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None):
+def datetimes_to_durations(
+    start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None, format=None
+):
     """
     This is a very flexible function for transforming arrays of start_times and end_times
     to the proper format for lifelines: duration and event observation arrays.
@@ -647,15 +635,17 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
         iterable representing start times. These can be strings, or datetime objects.
     end_times: an array, Series or DataFrame
         iterable representing end times. These can be strings, or datetimes. These values can be None, or an empty string, which corresponds to censorship.
-    fill_date: datetime, optional (default=datetime.Today())
-        the date to use if end_times is a None or empty string. This corresponds to last date
+    fill_date: a datetime, array, Series or DataFrame, optional (default=datetime.Today())
+        the date to use if end_times is a missing or empty. This corresponds to last date
         of observation. Anything after this date is also censored.
     freq: string, optional (default='D')
         the units of time to use.  See Pandas 'freq'. Default 'D' for days.
     dayfirst: bool, optional (default=False)
-         convert assuming European-style dates, i.e. day/month/year.
+        see Pandas `to_datetime`
     na_values : list, optional
         list of values to recognize as NA/NaN. Ex: ['', 'NaT']
+    format:
+        see Pandas `to_datetime`
 
     Returns
     -------
@@ -678,17 +668,16 @@ def datetimes_to_durations(start_times, end_times, fill_date=datetime.today(), f
         E # array([ True, False,  True])
 
     """
-    fill_date = pd.to_datetime(fill_date)
+    fill_date_ = pd.Series(fill_date).squeeze()
     freq_string = "timedelta64[%s]" % freq
     start_times = pd.Series(start_times).copy()
     end_times = pd.Series(end_times).copy()
 
     C = ~(pd.isnull(end_times).values | end_times.isin(na_values or [""]))
-    end_times[~C] = fill_date
-    start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst)
-    end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce")
-
-    deaths_after_cutoff = end_times_ > fill_date
+    end_times[~C] = fill_date_
+    start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst, format=format)
+    end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce", format=format)
+    deaths_after_cutoff = end_times_ > pd.to_datetime(fill_date_)
     C[deaths_after_cutoff] = False
 
     T = (end_times_ - start_times_).values.astype(freq_string).astype(float)
@@ -726,22 +715,18 @@ def k_fold_cross_validation(
       a Pandas DataFrame with necessary columns `duration_col` and (optional) `event_col`, plus
       other covariates. `duration_col` refers to the lifetimes of the subjects. `event_col`
       refers to whether the 'death' events was observed: 1 if observed, 0 else (censored).
-    duration_col: (n,) array
-      the column in DataFrame that contains the subjects lifetimes.
-    event_col: (n,) array
-      the column in DataFrame that contains the subject's death observation. If left
-      as None, assumes all individuals are non-censored.
+    duration_col: string
+        the name of the column in DataFrame that contains the subjects'
+        lifetimes.
+    event_col: string, optional
+        the  name of the column in DataFrame that contains the subjects' death
+        observation. If left as None, assume all individuals are uncensored.
     k: int
       the number of folds to perform. n/k data will be withheld for testing on.
-    evaluation_measure: function
-      a function that accepts either (event_times, predicted_event_times),
-      or (event_times, predicted_event_times, event_observed).
-      Default: statistics.concordance_index: (C-index)
-    predictor: string
-      a string that matches a prediction method on the fitter instances.
-      For example, ``predict_expectation`` or ``predict_percentile``.
-      Default is "predict_expectation"
-      The interface for the method is: ``predict(self, data, **optional_kwargs)``
+    scoring_method: str
+        one of {'log_likelihood', 'concordance_index'}
+        log_likelihood: returns the average unpenalized partial log-likelihood.
+        concordance_index: returns the concordance-index
     fitter_kwargs:
       keyword args to pass into fitter.fit method.
 
@@ -865,6 +850,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     Called to compute the Kaplan Meier and Nelson-Aalen estimates.
 
     """
+
     if reverse:
         events = events.sort_index(ascending=False)
         at_risk = events["entrance"].sum() - events["removed"].cumsum().shift(1).fillna(0)
@@ -876,20 +862,23 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
     else:
         deaths = events["observed"]
 
-        # Why subtract entrants like this? see https://github.com/CamDavidsonPilon/lifelines/issues/497
-        # specifically, we kill people, compute the ratio, and then "add" the entrants. This means that
-        # the population should not have the late entrants. The only exception to this rule
-        # is the first period, where entrants happen _prior_ to deaths.
         entrances = events["entrance"].copy()
         entrances.iloc[0] = 0
+        # Why subtract entrants like this? see https://github.com/CamDavidsonPilon/lifelines/issues/497
+        # specifically, we kill people, compute the ratio, and then "add" the entrants.
+        # This can cause a problem if there are late entrants that enter but population=0, as
+        # then we have log(0 - 0). We later ffill to fix this.
+        # The only exception to this rule is the first period, where entrants happen _prior_ to deaths.
         population = events["at_risk"] - entrances
 
         estimate_ = np.cumsum(_additive_f(population, deaths))
         var_ = np.cumsum(_additive_var(population, deaths))
 
     timeline = sorted(timeline)
-    estimate_ = estimate_.reindex(timeline, method="pad").fillna(0)
-    var_ = var_.reindex(timeline, method="pad")
+    # we forward fill because there are situations where there are NaNs caused by lack of a population.
+    # see issue #
+    estimate_ = estimate_.reindex(timeline, method="pad").ffill()
+    var_ = var_.reindex(timeline, method="pad").ffill()
     var_.index.name = "timeline"
     estimate_.index.name = "timeline"
 
@@ -912,7 +901,7 @@ def _preprocess_inputs(durations, event_observed, timeline, entry, weights):
     if event_observed is None:
         event_observed = np.ones(n, dtype=int)
     else:
-        event_observed = np.asarray(event_observed).reshape((n,)).copy().astype(int)
+        event_observed = np.asarray(event_observed).reshape((n,)).astype(int)
 
     if entry is not None:
         entry = np.asarray(entry).reshape((n,))
@@ -967,6 +956,18 @@ def pass_for_numeric_dtypes_or_raise_array(x):
 
     except:
         raise ValueError("Values must be numeric: no strings, datetimes, objects, etc.")
+
+
+def check_scaling(df):
+    for col in df.columns:
+        if df[col].mean() > 1e4:
+            warning_text = dedent(
+                """Column {0} has a large mean, try centering this to a value closer to 0.
+            """.format(
+                    col
+                )
+            )
+            warnings.warn(warning_text, ConvergenceWarning)
 
 
 def check_dimensions(df):
@@ -1082,7 +1083,7 @@ def check_low_var(df, prescript="", postscript=""):
         cols = str(list(df.columns[low_var]))
         warning_text = (
             "%sColumn(s) %s have very low variance. \
-This may harm convergence. Try dropping this redundant column before fitting \
+This may harm convergence. 1) Are you using formula's? Did you mean to add '-1' to the end. 2) Try dropping this redundant column before fitting \
 if convergence fails.%s\n"
             % (prescript, cols, postscript)
         )
@@ -1114,9 +1115,12 @@ def pearson_correlation(x: np.ndarray, y: np.ndarray):
 
 
 def check_entry_times(T, entries):
-    count_invalid_rows = (entries > T).sum()
+    count_invalid_rows = (entries >= T).sum()
     if count_invalid_rows:
-        raise ValueError("""There exist %d rows where entry > duration.""" % count_invalid_rows)
+        raise ValueError(
+            """There exist %d row(s) where entry >= duration. Recommendation is to add a very small value to duration for these rows."""
+            % count_invalid_rows
+        )
 
 
 def check_complete_separation_close_to_perfect_correlation(df: pd.DataFrame, durations: pd.Series):
@@ -1144,7 +1148,7 @@ def check_complete_separation_close_to_perfect_correlation(df: pd.DataFrame, dur
                 warning_text = (
                     "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
     See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-separation-in-logistic-regression\n"
-                    % (col)
+                    % (str(col))
                 )
                 warnings.warn(dedent(warning_text), ConvergenceWarning)
 
@@ -1248,7 +1252,7 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1) ->
     # how many rows/cols do I need?
     n_dftv = int(np.ceil(df[stop_col]).sum())
 
-    # alocate temporary numpy array to insert into
+    # allocate temporary numpy array to insert into
     tv_array = np.empty((n_dftv, d_dftv), dtype=dtype_dftv)
 
     special_columns = [stop_col, start_col, event_col]
@@ -1516,7 +1520,7 @@ class StepSizer:
     """
 
     def __init__(self, initial_step_size: Optional[float]) -> None:
-        initial_step_size = initial_step_size or 0.95
+        initial_step_size = initial_step_size or 0.90
 
         self.initial_step_size = initial_step_size
         self.step_size = initial_step_size
@@ -1524,7 +1528,7 @@ class StepSizer:
         self.norm_of_deltas: List[float] = []
 
     def update(self, norm_of_delta: float) -> "StepSizer":
-        SCALE = 1.2
+        SCALE = 1.3
         LOOKBACK = 3
 
         self.norm_of_deltas.append(norm_of_delta)
@@ -1535,10 +1539,10 @@ class StepSizer:
 
         # Only allow small steps
         if norm_of_delta >= 15.0:
-            self.step_size *= 0.25
+            self.step_size *= 0.1
             self.temper_back_up = True
         elif 15.0 > norm_of_delta > 5.0:
-            self.step_size *= 0.75
+            self.step_size *= 0.25
             self.temper_back_up = True
 
         # recent non-monotonically decreasing is a concern
@@ -1637,7 +1641,8 @@ def interpolate_at_times_and_return_pandas(df_or_series, new_times) -> Union[pd.
     return pd.DataFrame(interpolate_at_times(df_or_series, new_times), index=new_times, columns=cols).squeeze()
 
 
-string_justify = lambda width: lambda s: s.rjust(width, " ")
+string_rjustify = lambda width: lambda s: s.rjust(width, " ")
+string_ljustify = lambda width: lambda s: s.ljust(width, " ")
 
 
 def safe_zip(first, second):
@@ -1649,33 +1654,54 @@ def safe_zip(first, second):
         yield from zip(first, second)
 
 
-class DataframeSliceDict:
-    def __init__(self, df: pd.DataFrame, mappings: Dict[str, List[str]]):
+class DataframeSlicer:
+    """
+    Changed in v0.25.0
+
+    The purpose of this is to wrap column (multi-) indexing to return a Numpy Array
+    instead of a Pandas DataFrame.
+    """
+
+    def __init__(self, df: pd.DataFrame):
         self.df = df
-        self.mappings = mappings
-        self.size = sum(len(v) for v in self.mappings.values())
 
     def __getitem__(self, key):
-        columns = self.mappings[key]
-        if columns == "*":
-            return self.df.values
-        else:
-            return self.df[columns].values
+        return self.df[key].values
 
-    def __iter__(self):
-        for k in self.mappings:
-            yield (k, self[k])
-
-    def filter(self, ix) -> "DataframeSliceDict":
+    def filter(self, ix) -> "DataframeSlicer":
         ix = _to_1d_array(ix)
-        return DataframeSliceDict(self.df[ix], self.mappings)
+        return DataframeSlicer(self.df[ix])
 
-    def iterdicts(self):
-        for _, x in self.df.iterrows():
-            yield DataframeSliceDict(x.to_frame().T, self.mappings)
+    def groupby(self, *args, **kwargs):
+        yield from ((name, DataframeSlicer(df_)) for (name, df_) in self.df.groupby(*args, **kwargs))
+
+    @property
+    def size(self):
+        return self.df.shape[0]
 
 
-def find_best_parametric_model(event_times, event_observed=None, scoring_method: str = "AIC", additional_models=None):
+def make_simpliest_hashable(ele):
+    if type(ele) == list:
+        if len(ele) == 1:
+            return str(ele[0])
+        else:
+            return tuple(ele)
+    return ele
+
+
+def find_best_parametric_model(
+    event_times,
+    event_observed=None,
+    scoring_method: str = "AIC",
+    additional_models=None,
+    censoring_type="right",
+    timeline=None,
+    alpha=None,
+    ci_labels=None,
+    entry=None,
+    weights=None,
+    show_progress=False,
+):
     """
     To quickly determine the best¹ univariate model, this function will iterate through each
     parametric model available in lifelines and select the one that minimizes a particular measure of fit.
@@ -1685,13 +1711,32 @@ def find_best_parametric_model(event_times, event_observed=None, scoring_method:
     Parameters
     -------------
     event_times: list, np.array, pd.Series
-        a (n,) array of observed survival times.
+        a (n,) array of observed survival times. If interval censoring, a tuple of (lower_bound, upper_bound).
     event_observed: list, np.array, pd.Series
         a (n,) array of censored flags, 1 if observed,  0 if not. Default None assumes all observed.
     scoring_method: string
         one of {"AIC", "BIC"}
     additional_models: list
         list of other parametric models that implement the lifelines API.
+    censoring_type: str
+        {"right", "left", "interval"}
+    timeline: list, optional
+        return the model at the values in timeline (positively increasing)
+    alpha: float, optional
+        the alpha value in the confidence intervals. Overrides the initializing
+       alpha for this call to fit only.
+    ci_labels: list, optional
+        add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
+    entry: an array, or pd.Series, of length n
+        relative time when a subject entered the study. This is useful for left-truncated (not left-censored) observations. If None, all members of the population
+        entered study when they were "born": time zero.
+    weights: an array, or pd.Series, of length n
+        integer weights per observation
+
+
+    Note
+    ----------
+    Due to instability, the GeneralizedGammaFitter is not tested here.
 
     Returns
     ----------
@@ -1711,20 +1756,37 @@ def find_best_parametric_model(event_times, event_observed=None, scoring_method:
     if additional_models is None:
         additional_models = []
 
+    censoring_type = CensoringType(censoring_type)
+
     evaluation_lookup = {
-        "AIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_,
-        "BIC": lambda model: 2 * len(model._fitted_parameter_names) - 2 * model.log_likelihood_ * np.log(event_times.shape[0]),
+        "AIC": lambda model: model.AIC_,
+        "BIC": lambda model: 2 * len(model._fitted_parameter_names)
+        - 2 * model.log_likelihood_ * np.log(model.event_observed.shape[0]),
     }
 
-    eval = evaluation_lookup[scoring_method]
+    eval_ = evaluation_lookup[scoring_method]
+
+    if censoring_type != CensoringType.INTERVAL:
+        event_times = (event_times,)
+
+    n = event_times[0].shape
 
     if event_observed is None:
-        event_observed = np.ones_like(event_times, dtype=bool)
+        if censoring_type == CensoringType.INTERVAL:
+            event_observed = event_times[0] == event_times[1]
+        else:
+            event_observed = np.ones(n, dtype=bool)
 
-    observed_T = event_times[event_observed.astype(bool)]
-    knots1 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 3))
-    knots2 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 4))
-    knots3 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 5))
+    try:
+        observed_T = event_times[0][event_observed.astype(bool)]
+        knots1 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 3))
+        knots2 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 4))
+        knots3 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 5))
+    except:
+        observed_T = event_times[0]
+        knots1 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 3))
+        knots2 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 4))
+        knots3 = np.percentile(observed_T, 100 * np.linspace(0.05, 0.95, 5))
 
     best_model = None
     best_score = np.inf
@@ -1737,7 +1799,6 @@ def find_best_parametric_model(event_times, event_observed=None, scoring_method:
         PiecewiseExponentialFitter(knots1[1:-1], label="PiecewiseExponentialFitter: 1 breakpoint"),
         PiecewiseExponentialFitter(knots2[1:-1], label="PiecewiseExponentialFitter: 2 breakpoint"),
         PiecewiseExponentialFitter(knots3[1:-1], label="PiecewiseExponentialFitter: 3 breakpoint"),
-        GeneralizedGammaFitter(),
         SplineFitter(knots1, label="SplineFitter: 1 internal knot"),
         SplineFitter(knots2, label="SplineFitter: 2 internal knot"),
         SplineFitter(knots3, label="SplineFitter: 3 internal knot"),
@@ -1745,9 +1806,19 @@ def find_best_parametric_model(event_times, event_observed=None, scoring_method:
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                model.fit(event_times, event_observed)
-            score_ = eval(model)
+                getattr(model, "fit_" + censoring_type.value + "_censoring")(
+                    *event_times,
+                    event_observed=event_observed,
+                    weights=weights,
+                    entry=entry,
+                    alpha=alpha,
+                    ci_labels=ci_labels,
+                    timeline=timeline
+                )
+            score_ = eval_(model)
 
+            if show_progress:
+                print(model._label, ", Score: %.2f" % score_)
             if score_ < best_score:
                 best_score = score_
                 best_model = model
@@ -1756,3 +1827,125 @@ def find_best_parametric_model(event_times, event_observed=None, scoring_method:
             continue
 
     return best_model, best_score
+
+
+def quiet_log2(p):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", r"divide by zero encountered in log2")
+        return np.log2(p)
+
+
+class CovariateParameterMappings:
+    """
+    This class controls the mapping, possible trivial, between covariates and parameters. User, or lifelines, create
+    a seed mapping, and this class takes over and creates logic and pieces to make the transformation simple.
+
+    Ideally all transformation of datasets to parameters handled by this class.
+
+    Parameters
+    -----------
+
+    seed_mapping: dict
+        a mapping of parameters to covariates, specified through a list of column names, or formula.
+    df: DataFrame
+        the training dataset
+    force_intercept:
+        True to always add an constant column.
+    force_no_intercept:
+        True to always remove an constant column.
+    """
+
+    INTERCEPT_COL = "Intercept"
+
+    def __init__(self, seed_mapping: Dict, df: pd.DataFrame, force_intercept: bool = False, force_no_intercept: bool = False):
+        self.mappings = {}
+        self.force_intercept = force_intercept
+        self.force_no_intercept = force_no_intercept
+
+        for param, seed_transform in seed_mapping.items():
+
+            if isinstance(seed_transform, str):
+                self.mappings[param] = self._string_seed_transform(seed_transform, df)
+
+            elif isinstance(seed_transform, list):
+                # user inputted a list of column names, as strings
+                self.mappings[param] = self._list_seed_transform(seed_transform)
+
+            elif isinstance(seed_transform, pd.DataFrame):
+                # use all the columns in df
+                self.mappings[param] = self._list_seed_transform(seed_transform.columns.tolist())
+
+            elif seed_transform is None:
+                # use all the columns in df
+                self.mappings[param] = self._list_seed_transform(df.columns.tolist())
+
+            elif isinstance(seed_transform, pd.Index):
+                # similar to providing a list
+                self.mappings[param] = self._list_seed_transform(seed_transform.tolist())
+
+            else:
+                raise ValueError("Unexpected transform.")
+
+    @classmethod
+    def add_intercept_col(cls, df):
+        df = df.copy()
+        df[cls.INTERCEPT_COL] = 1
+        return df
+
+    def transform_df(self, df: pd.DataFrame):
+
+        import formulaic
+
+        Xs = {}
+        for param_name, transform in self.mappings.items():
+            if isinstance(transform, formulaic.formula.Formula):
+                X = transform.get_model_matrix(df)
+            elif isinstance(transform, list):
+                if self.force_intercept:
+                    df = self.add_intercept_col(df)
+                X = df[transform]
+            else:
+                raise ValueError("Unexpected transform.")
+
+            # some parameters are constants (like in piecewise and splines) and so should
+            # not be dropped.
+            if self.force_no_intercept and X.shape[1] > 1:
+                try:
+                    X = X.drop(self.INTERCEPT_COL, axis=1)
+                except:
+                    pass
+
+            Xs[param_name] = X
+
+        # in pandas 0.23.4, the Xs as a dict is sorted differently from the Xs as a DataFrame's columns
+        # hence we need to reorder, see https://github.com/CamDavidsonPilon/lifelines/issues/931
+        Xs_df = pd.concat(Xs, axis=1, names=("param", "covariate")).astype(float)
+        Xs_df = Xs_df[list(self.mappings.keys())]
+
+        # we can't concat empty dataframes and return a column MultiIndex,
+        # so we create a "fake" dataframe (acts like a dataframe) to return.
+        # This should be removed because it's gross.
+        if Xs_df.size == 0:
+            return {p: pd.DataFrame(index=df.index) for p in self.mappings.keys()}
+        else:
+            return Xs_df
+
+    def keys(self):
+        yield from self.mappings.keys()
+
+    def _list_seed_transform(self, list_: List):
+        list_ = list_.copy()
+        if self.force_intercept:
+            list_.append(self.INTERCEPT_COL)
+        return list_
+
+    def _string_seed_transform(self, formula: str, df: pd.DataFrame):
+        # user input a formula, hopefully
+        import formulaic
+
+        if self.force_intercept:
+            formula += "+ 1"
+
+        design_info = formulaic.Formula(formula)
+
+        return design_info

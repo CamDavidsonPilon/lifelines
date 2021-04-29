@@ -10,6 +10,8 @@ from scipy.integrate import trapz
 
 from lifelines.fitters import RegressionFitter
 from lifelines.utils.printer import Printer
+from lifelines.exceptions import StatisticalWarning, ConvergenceWarning
+from lifelines import utils
 from lifelines.utils import (
     _get_index,
     inv_normal_cdf,
@@ -19,15 +21,13 @@ from lifelines.utils import (
     check_for_numeric_dtypes_or_raise,
     concordance_index,
     check_nans_or_infs,
-    ConvergenceWarning,
     normalize,
-    string_justify,
+    string_rjustify,
     _to_list,
     format_floats,
     format_p_value,
     format_exp_floats,
     survival_table_from_events,
-    StatisticalWarning,
     CensoringType,
 )
 
@@ -87,13 +87,11 @@ class AalenAdditiveFitter(RegressionFitter):
         self.coef_penalizer = coef_penalizer
         self.smoothing_penalizer = smoothing_penalizer
 
-        if not (0 < alpha <= 1.0):
-            raise ValueError("alpha parameter must be between 0 and 1.")
         if coef_penalizer < 0 or smoothing_penalizer < 0:
             raise ValueError("penalizer parameters must be >= 0.")
 
     @CensoringType.right_censoring
-    def fit(self, df, duration_col, event_col=None, weights_col=None, show_progress=False):
+    def fit(self, df, duration_col, event_col=None, weights_col=None, show_progress=False, formula: str = None):
         """
         Parameters
         ----------
@@ -127,6 +125,9 @@ class AalenAdditiveFitter(RegressionFitter):
         show_progress: bool, optional (default=False)
             Since the fitter is iterative, show iteration number.
 
+        formula: str
+            an R-like formula
+
 
         Returns
         -------
@@ -159,6 +160,7 @@ class AalenAdditiveFitter(RegressionFitter):
         self.duration_col = duration_col
         self.event_col = event_col
         self.weights_col = weights_col
+        self.formula = formula
 
         self._n_examples = df.shape[0]
 
@@ -172,7 +174,7 @@ class AalenAdditiveFitter(RegressionFitter):
 
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:
-            self._norm_std["_intercept"] = 1.0
+            self._norm_std["Intercept"] = 1.0
         else:
             # a _intercept was provided
             self._norm_std[self._norm_std < 1e-8] = 1.0
@@ -201,9 +203,7 @@ class AalenAdditiveFitter(RegressionFitter):
 
         hazards = pd.DataFrame(hazards_, columns=columns, index=index).iloc[:stop]
         cumulative_hazards_ = hazards.cumsum()
-        cumulative_variance_hazards_ = (
-            pd.DataFrame(variance_hazards_, columns=columns, index=index).iloc[:stop].cumsum()
-        )
+        cumulative_variance_hazards_ = pd.DataFrame(variance_hazards_, columns=columns, index=index).iloc[:stop].cumsum()
 
         return hazards, cumulative_hazards_, cumulative_variance_hazards_
 
@@ -290,19 +290,15 @@ It's important to know that the naive variance estimates of the coefficients are
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
-        X = df.astype(float)
+        self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_intercept=self.fit_intercept)
+        X = self.regressors.transform_df(df)["beta_"]
+
         T = T.astype(float)
 
         check_nans_or_infs(E)
         E = E.astype(bool)
 
         self._check_values(df, T, E)
-
-        if self.fit_intercept:
-            assert (
-                "_intercept" not in df.columns
-            ), "_intercept is an internal lifelines column, please rename your column first."
-            X["_intercept"] = 1.0
 
         return X, T, E, W
 
@@ -317,25 +313,17 @@ It's important to know that the naive variance estimates of the coefficients are
             same order as the training data.
 
         """
-        n = X.shape[0]
-        X = X.astype(float)
 
         cols = _get_index(X)
         if isinstance(X, pd.DataFrame):
-            order = self.cumulative_hazards_.columns
-            order = order.drop("_intercept") if self.fit_intercept else order
-            X_ = X[order].values
+            X = self.regressors.transform_df(X)["beta_"]
         elif isinstance(X, pd.Series):
-            return self.predict_cumulative_hazard(X.to_frame().T)
-        else:
-            X_ = X
+            return self.predict_cumulative_hazard(X.to_frame().T.infer_objects())
 
-        X_ = X_ if not self.fit_intercept else np.c_[X_, np.ones((n, 1))]
+        X = X.astype(float)
 
         timeline = self._index
-        individual_cumulative_hazards_ = pd.DataFrame(
-            np.dot(self.cumulative_hazards_, X_.T), index=timeline, columns=cols
-        )
+        individual_cumulative_hazards_ = pd.DataFrame(np.dot(self.cumulative_hazards_, X.T), index=timeline, columns=cols)
 
         return individual_cumulative_hazards_
 
@@ -490,7 +478,7 @@ It's important to know that the naive variance estimates of the coefficients are
         )
 
     @property
-    def score_(self):
+    def concordance_index_(self):
         """
         The concordance score (also known as the c-index) of the fit.  The c-index is a generalization of the ROC AUC
         to survival data, including censorships.
@@ -535,7 +523,7 @@ It's important to know that the naive variance estimates of the coefficients are
         df["se(slope(coef))"] = se
         return df
 
-    def print_summary(self, decimals=2, style=None, **kwargs):
+    def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -545,12 +533,14 @@ It's important to know that the naive variance estimates of the coefficients are
             specify the number of decimal places to show
         style: string
             {html, ascii, latex}
+        columns:
+            only display a subset of ``summary`` columns. Default all.
         kwargs:
             print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
 
         """
-        justify = string_justify(25)
+        justify = string_rjustify(25)
 
         headers = []
         headers.append(("duration col", "'%s'" % self.duration_col))
@@ -572,7 +562,8 @@ It's important to know that the naive variance estimates of the coefficients are
             ]
         )
 
-        p = Printer(self, headers, justify, decimals, kwargs)
+        footers = [("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals))]
+        p = Printer(self, headers, footers, justify, kwargs, decimals, columns)
 
         p.print(style=style)
 

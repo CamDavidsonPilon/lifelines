@@ -52,6 +52,7 @@ The wrapped classes can even be used in more complex scikit-learn functions (ex:
 
 .. code:: python
 
+    import numpy as np
     from lifelines import WeibullAFTFitter
     from sklearn.model_selection import cross_val_score
 
@@ -88,3 +89,21 @@ The wrapped classes can even be used in more complex scikit-learn functions (ex:
 
 
 .. note:: The :func:`lifelines.utils.sklearn_adapter` is currently only designed to work with right-censored data.
+
+Serialization
+---------------------
+
+A note on saving these models: saving can be done with any serialization library, but to load them in a different script / program, you may need to recreate the class (this is a consequence of the implementation). Ex:
+
+
+
+.. code:: python
+
+    # needed to reload
+    from lifelines.utils.sklearn_adapter import sklearn_adapter
+    from lifelines import CoxPHFitter
+    sklearn_adapter(CoxPHFitter, event_col='arrest')
+
+    from joblib import load
+
+    model = load(...)

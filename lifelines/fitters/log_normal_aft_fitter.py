@@ -10,7 +10,7 @@ from lifelines.utils.safe_exp import safe_exp
 
 from autograd.builtins import DictBox
 from autograd.numpy.numpy_boxes import ArrayBox
-from lifelines.utils import DataframeSliceDict
+from lifelines.utils import DataframeSlicer
 from numpy import ndarray
 from typing import Dict, List, Optional, Union
 
@@ -35,10 +35,12 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         the level in the confidence intervals.
 
     fit_intercept: bool, optional (default=True)
-        Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable.
+        Allow lifelines to add an intercept column of 1s to df, and ancillary if applicable.
 
-    penalizer: float, optional (default=0.0)
+    penalizer: float or array, optional (default=0.0)
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
+        Alternatively, penalizer is an array equal in size to the number of parameters, with penalty coefficients for specific variables. For
+        example, `penalizer=0.01 * np.ones(p)` is the same as `penalizer=0.01`
 
     l1_ratio: float, optional (default=0.0)
         how much of the penalizer should be attributed to an l1 penalty (otherwise an l2 penalty). The penalty function looks like
@@ -60,7 +62,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         The event_observed variable provided
     weights: Series
         The event_observed variable provided
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     standard_errors_: Series
         the standard errors of the estimates
@@ -74,7 +76,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         super(LogNormalAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
     def _cumulative_hazard(
-        self, params: Union[DictBox, Dict[str, ndarray]], T: Union[float, ndarray], Xs: DataframeSliceDict
+        self, params: Union[DictBox, Dict[str, ndarray]], T: Union[float, ndarray], Xs: DataframeSlicer
     ) -> Union[ndarray, ArrayBox]:
         mu_params = params["mu_"]
         mu_ = np.dot(Xs["mu_"], mu_params)
@@ -84,7 +86,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         Z = (np.log(T) - mu_) / sigma_
         return -norm.logsf(Z)
 
-    def _log_hazard(self, params: DictBox, T: Union[float, ndarray], Xs: DataframeSliceDict) -> ArrayBox:
+    def _log_hazard(self, params: DictBox, T: Union[float, ndarray], Xs: DataframeSlicer) -> ArrayBox:
         mu_params = params["mu_"]
         mu_ = np.dot(Xs["mu_"], mu_params)
 
@@ -111,7 +113,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         self,
         df: pd.DataFrame,
         *,
-        ancillary_df: Optional[pd.DataFrame] = None,
+        ancillary: Optional[pd.DataFrame] = None,
         p: float = 0.5,
         conditional_after: Optional[ndarray] = None
     ) -> pd.Series:
@@ -148,7 +150,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         predict_median
 
         """
-        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
 
         if conditional_after is None:
             return pd.Series(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p) - 1)), index=_get_index(df))
@@ -158,11 +160,10 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
             S = norm.sf(Z)
 
             return pd.Series(
-                exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p * S) - 1)) - conditional_after,
-                index=_get_index(df),
+                exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p * S) - 1)) - conditional_after, index=_get_index(df)
             )
 
-    def predict_expectation(self, df: pd.DataFrame, ancillary_df: Optional[pd.DataFrame] = None) -> pd.Series:
+    def predict_expectation(self, df: pd.DataFrame, ancillary: Optional[pd.DataFrame] = None) -> pd.Series:
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
@@ -188,5 +189,5 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         --------
         predict_median
         """
-        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
         return pd.Series(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(df))

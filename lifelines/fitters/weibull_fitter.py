@@ -14,7 +14,7 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
 
     .. math::  S(t) = \exp\left(-\left(\frac{t}{\lambda}\right)^\rho\right),   \lambda > 0, \rho > 0,
 
-    The :math:`\lambda` (scale) parameter has an applicable interpretation: it represent the time when 37% of the population has died.
+    The :math:`\lambda` (scale) parameter has an applicable interpretation: it represents the time when 63.2% of the population has died.
     The :math:`\rho` (shape) parameter controls if the cumulative hazard (see below) is convex or concave, representing accelerating or decelerating
     hazards.
 
@@ -36,11 +36,6 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
     -----------
     alpha: float, optional (default=0.05)
         the level in the confidence intervals.
-
-    Important
-    ----------
-    The parameterization of this model changed in lifelines 0.19.0. Previously, the cumulative hazard looked like
-    :math:`(\lambda t)^\rho`. The parameterization is now the reciprocal of :math:`\lambda`.
 
     Examples
     --------
@@ -64,10 +59,9 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
         The estimated survival function (with custom timeline if provided)
     cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
-    density: DataFrame
+    density_: DataFrame
         The estimated density function (PDF) (with custom timeline if provided)
-
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     median_survival_time_: float
         The median time to event

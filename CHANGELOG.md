@@ -1,5 +1,232 @@
 ## Changelog
 
+#### 0.25.11 - 2021-04-06
+
+##### Bug fixes
+ - Fix integer-valued categorical variables in regression model predictions.
+ - numpy > 1.20 is allowed.
+ - Bug fix in the elastic-net penalty for Cox models that wasn't weighting the terms correctly.
+
+
+#### 0.25.10 - 2021-03-03
+
+##### New features
+ - Better appearance when using a single row to show in `add_at_risk_table`.
+
+
+#### 0.25.9 - 2021-02-04
+
+Small bump in dependencies.
+
+
+#### 0.25.8 - 2021-01-22
+
+Important: we dropped Patsy as our formula framework, and adopted Formulaic. Will the latter is less mature than Patsy, we feel the core capabilities are satisfactory and it provides new opportunities.
+
+##### New features
+ - Parametric models with formulas are able to be serialized now.
+ - a `_scipy_callback` function is available to use in fitting algorithms.
+
+
+#### 0.25.7 - 2020-12-09
+
+##### API Changes
+ - Adding `cumulative_hazard_at_times` to NelsonAalenFitter
+
+
+##### Bug fixes
+ - Fixed error in `CoxPHFitter` when entry time == event time.
+ - Fixed formulas in AFT interval censoring regression.
+ - Fixed `concordance_index_` when no events observed
+ - Fixed label being overwritten in ParametricUnivariate models
+
+
+#### 0.25.6 - 2020-10-26
+
+##### New features
+ - Parametric Cox models can now handle left and interval censoring datasets.
+
+##### Bug fixes
+ - "improved" the output of `add_at_risk_counts` by removing a call to `plt.tight_layout()` - this works better when you are calling `add_at_risk_counts` on multiple axes, but it is recommended you call `plt.tight_layout()` at the very end of your script.
+ - Fix bug in `KaplanMeierFitter`'s interval censoring where max(lower bound) < min(upper bound).
+
+
+#### 0.25.5 - 2020-09-23
+
+##### API Changes
+ - `check_assumptions` now returns a list of list of axes that can be manipulated
+
+##### Bug fixes
+ - fixed error when using `plot_partial_effects` with categorical data in AFT models
+ - improved warning when Hessian matrix contains NaNs.
+ - fixed performance regression in interval censoring fitting in parametric models
+ - `weights` wasn't being applied properly in NPMLE
+
+#### 0.25.4 - 2020-08-26
+
+##### New features
+ - New baseline estimator for Cox models: ``piecewise``
+ - Performance improvements for parametric models `log_likelihood_ratio_test()` and `print_summary()`
+ - Better step-size defaults for Cox model -> more robust convergence.
+
+
+##### Bug fixes
+ - fix `check_assumptions` when using formulas.
+
+
+#### 0.25.3 - 2020-08-24
+
+##### New features
+ - `survival_difference_at_fixed_point_in_time_test` now accepts fitters instead of raw data, meaning that you can use this function on left, right or interval censored data.
+
+##### API Changes
+ - See note on `survival_difference_at_fixed_point_in_time_test` above.
+
+##### Bug fixes
+ - fix `StatisticalResult` printing in notebooks
+ - fix Python error when calling `plot_covariate_groups`
+ - fix dtype mismatches in `plot_partial_effects_on_outcome`.
+
+
+#### 0.25.2 - 2020-08-08
+
+##### New features
+ - Spline `CoxPHFitter` can now use `strata`.
+
+##### API Changes
+ - a small parameterization change of the spline `CoxPHFitter`. The linear term in the spline part was moved to a new `Intercept` term in the `beta_`.
+ - `n_baseline_knots` in the spline `CoxPHFitter` now refers to _all_ knots, and not just interior knots (this was confusing to me, the author.). So add 2 to `n_baseline_knots` to recover the identical model as previously.
+
+##### Bug fixes
+ - fix splines `CoxPHFitter` with  when `predict_hazard` was called.
+ - fix some exception imports I missed.
+ - fix log-likelihood p-value in splines `CoxPHFitter`
+
+
+#### 0.25.1 - 2020-08-01
+
+##### Bug fixes
+ - ok _actually_ ship the out-of-sample calibration code
+ - fix `labels=False` in `add_at_risk_counts`
+ - allow for specific rows to be shown in `add_at_risk_counts`
+ - put `patsy` as a proper dependency.
+ - suppress some Pandas 1.1 warnings.
+
+
+#### 0.25.0 - 2020-07-27
+
+##### New features
+ - Formulas! *lifelines* now supports R-like formulas in regression models. See docs [here](https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#fitting-the-regression).
+ - `plot_covariate_group` now can plot other y-values like hazards and cumulative hazards (default: survival function).
+ - `CoxPHFitter` now accepts late entries via `entry_col`.
+ - `calibration.survival_probability_calibration` now works with out-of-sample data.
+ - `print_summary` now accepts a `column` argument to filter down the displayed values. This helps with clutter in notebooks, latex, or on the terminal.
+ - `add_at_risk_counts` now follows the cool new KMunicate suggestions
+
+
+##### API Changes
+ - With the introduction of formulas, all models can be using formulas under the hood.
+    - For both custom regression models or non-AFT regression models, this means that you no longer need to add a constant column to your DataFrame (instead add a `1` as a formula string in the `regressors` dict). You may also need to remove the T and E columns from `regressors`. I've updated the models in the `\examples` folder with examples of this new model building.
+ - Unfortunately, if using formulas, your model will not be able to be pickled. This is a problem with an upstream library, and I hope to have it resolved in the near future.
+ - `plot_covariate_groups` has been deprecated in favour of `plot_partial_effects_on_outcome`.
+ - The baseline in `plot_covariate_groups` has changed from the *mean* observation (including dummy-encoded categorical variables) to *median* for ordinal (including continuous) and *mode* for categorical.
+ - Previously, *lifelines* used the label `"_intercept"` to when it added a constant column in regressions. To align with Patsy, we are now using `"Intercept"`.
+ - In AFT models, `ancillary_df` kwarg has been renamed to `ancillary`. This reflects the more general use of the kwarg (not always a DataFrame, but could be a boolean or string now, too).
+ - Some column names in datasets shipped with lifelines have changed.
+ - The never used "lifelines.metrics" is deleted.
+ - With the introduction of formulas, `plot_covariate_groups` (now called `plot_partial_effects_on_outcome`) behaves differently for transformed variables. Users no longer need to add "derivatives" features, and encoding is done implicitly. See docs [here](https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#plotting-the-effect-of-varying-a-covariate).
+ - all exceptions and warnings have moved to `lifelines.exceptions`
+
+##### Bug fixes
+ - The p-value of the log-likelihood ratio test for the CoxPHFitter with splines was returning the wrong result because the degrees of freedom was incorrect.
+ - better `print_summary` logic in IDEs and Jupyter exports. Previously it should not be displayed.
+ - p-values have been corrected in the `SplineFitter`. Previously, the "null hypothesis" was no coefficient=0, but coefficient=0.01. This is now set to the former.
+ - fixed NaN bug in `survival_table_from_events` with intervals when no events would occur in a interval.
+
+#### 0.24.16 - 2020-07-09
+
+##### New features
+ - improved algorithm choice for large DataFrames for Cox models. Should see a significant performance boost.
+
+##### Bug fixes
+- fixed `utils.median_survival_time` not accepting Pandas Series.
+
+#### 0.24.15 - 2020-07-07
+
+##### Bug fixes
+- fixed an edge case in `KaplanMeierFitter` where a really late entry would occur after all other population had died.
+- fixed `plot` in `BreslowFlemingtonHarrisFitter`
+- fixed bug where using `conditional_after` and `times` in `CoxPHFitter("spline")` prediction methods would be ignored.
+
+
+#### 0.24.14 - 2020-07-02
+
+##### Bug fixes
+- fixed a bug where using `conditional_after` and `times` in prediction methods would result in a shape error
+- fixed a bug where `score` was not able to be used in splined `CoxPHFitter`
+- fixed a bug where some columns would not be displayed in `print_summary`
+
+#### 0.24.13 - 2020-06-22
+
+##### Bug fixes
+- fixed a bug where `CoxPHFitter` would ignore inputed `alpha` levels for confidence intervals
+- fixed a bug where `CoxPHFitter` would fail with working with `sklearn_adapter`
+
+
+#### 0.24.12 - 2020-06-20
+
+##### New features
+ - improved convergence of `GeneralizedGamma(Regression)Fitter`.
+
+
+#### 0.24.11 - 2020-06-17
+
+##### New features
+ - new spline regression model `CRCSplineFitter` based on the paper "A flexible parametric accelerated failure time model" by Michael J. Crowther, Patrick Royston, Mark Clements.
+ - new survival probability calibration tool `lifelines.calibration.survival_probability_calibration` to help validate regression models. Based on “Graphical calibration curves and the integrated calibration index (ICI) for survival models” by P. Austin, F. Harrell, and D. van Klaveren.
+
+##### API Changes
+ - (and bug fix) scalar parameters in regression models were not being penalized by `penalizer` - we now penalizing everything except intercept terms in linear relationships.
+
+
+#### 0.24.10 - 2020-06-16
+
+##### New features
+ - New improvements when using splines model in CoxPHFitter - it should offer much better prediction and baseline-hazard estimation, including extrapolation and interpolation.
+
+##### API Changes
+ - Related to above: the fitted spline parameters are now available in the `.summary` and `.print_summary` methods.
+
+##### Bug fixes
+- fixed a bug in initialization of some interval-censoring models -> better convergence.
+
+
+#### 0.24.9 - 2020-06-05
+
+##### New features
+ - Faster NPMLE for interval censored data
+ - New weightings available in the `logrank_test`: `wilcoxon`, `tarone-ware`, `peto`, `fleming-harrington`. Thanks @sean-reed
+ - new interval censored dataset: `lifelines.datasets.load_mice`
+
+##### Bug fixes
+ - Cleared up some mislabeling in `plot_loglogs`. Thanks @sean-reed!
+ - tuples are now able to be used as input in univariate models.
+
+#### 0.24.8 - 2020-05-17
+
+##### New features
+ - Non parametric interval censoring is now available, _experimentally_. Not all edge cases are fully checked, and some features are missing. Try it under `KaplanMeierFitter.fit_interval_censoring`
+
+
+#### 0.24.7 - 2020-05-17
+
+##### New features
+ - `find_best_parametric_model` can handle left and interval censoring. Also allows for more fitting options.
+ - `AIC_` is a property on parametric models, and `AIC_partial_` is a property on Cox models.
+ - `penalizer` in all regression models can now be an array instead of a float. This enables new functionality and better
+ control over penalization. This is similar (but not identical) to `penalty.factors` in glmnet in R.
+ - some convergence tweaks which should help recent performance regressions.
+
 #### 0.24.6 - 2020-05-05
 
 ##### New features

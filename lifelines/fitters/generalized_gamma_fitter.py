@@ -81,10 +81,10 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         The estimated survival function (with custom timeline if provided)
     cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
-    density: DataFrame
+    density_: DataFrame
         The estimated density function (PDF) (with custom timeline if provided)
 
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     median_survival_time_: float
         The median time to event
@@ -104,6 +104,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         The entry array provided, or None
     """
 
+    _scipy_fit_method = "SLSQP"
     _fitted_parameter_names = ["mu_", "ln_sigma_", "lambda_"]
     _bounds = [(None, None), (None, None), (None, None)]
     _compare_to_values = np.array([0.0, 0.0, 1.0])
@@ -115,7 +116,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
             log_data = log(Ts[1])
         elif CensoringType.is_interval_censoring(self):
             # this fails if Ts[1] == Ts[0], so we add a some fudge factors.
-            log_data = log(Ts[1] - Ts[0] + 0.01)
+            log_data = log(Ts[1] - Ts[0] + 0.1)
         return np.array([log_data.mean(), log(log_data.std() + 0.01), 0.1])
 
     def _cumulative_hazard(self, params, times):
@@ -124,7 +125,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         sigma_ = safe_exp(ln_sigma_)
         Z = (log(times) - mu_) / sigma_
         ilambda_2 = 1 / lambda_ ** 2
-        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-15, 1e20)
+        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e20)
 
         if lambda_ > 0:
             v = -gammainccln(ilambda_2, clipped_exp)
@@ -132,14 +133,13 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
             v = -gammaincln(ilambda_2, clipped_exp)
         else:
             v = -norm.logsf(Z)
-
         return v
 
     def _log_hazard(self, params, times):
         mu_, ln_sigma_, lambda_ = params
         ilambda_2 = 1 / lambda_ ** 2
         Z = (log(times) - mu_) / safe_exp(ln_sigma_)
-        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-15, 1e20)
+        clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e20)
         if lambda_ > 0:
             v = (
                 log(lambda_)

@@ -8,6 +8,8 @@ from autograd import numpy as np
 from lifelines.datasets import load_lymph_node
 from lifelines.fitters import ParametricRegressionFitter
 from autograd.scipy.special import expit
+import pandas as pd
+from lifelines import CoxPHFitter
 
 
 class SplineFitter:
@@ -20,9 +22,7 @@ class SplineFitter:
 
     def basis(self, x, knot, min_knot, max_knot):
         lambda_ = (max_knot - knot) / (max_knot - min_knot)
-        return self.relu(x - knot) ** 3 - (
-            lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3
-        )
+        return self.relu(x - knot) ** 3 - (lambda_ * self.relu(x - min_knot) ** 3 + (1 - lambda_) * self.relu(x - max_knot) ** 3)
 
 
 class PHSplineFitter(SplineFitter, ParametricRegressionFitter):
@@ -34,17 +34,19 @@ class PHSplineFitter(SplineFitter, ParametricRegressionFitter):
     Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
     """
 
-    _fitted_parameter_names = ["beta_", "phi0_", "phi1_", "phi2_"]
+    _fitted_parameter_names = ["beta_", "phi1_", "phi2_"]
     _KNOWN_MODEL = True
 
     KNOTS = [0.1972, 1.769, 6.728]
+
+    def _create_initial_point(self, Ts, E, entries, weights, Xs):
+        return {"beta_": np.zeros(len(Xs["beta_"].columns)), "phi1_": np.array([0.1]), "phi2_": np.array([0.0])}
 
     def _cumulative_hazard(self, params, T, Xs):
         exp_Xbeta = np.exp(np.dot(Xs["beta_"], params["beta_"]))
         lT = np.log(T)
         return exp_Xbeta * np.exp(
-            params["phi0_"]
-            + params["phi1_"] * lT
+            params["phi1_"] * lT
             + params["phi2_"] * self.basis(lT, np.log(self.KNOTS[1]), np.log(self.KNOTS[0]), np.log(self.KNOTS[-1]))
         )
 
@@ -58,7 +60,7 @@ class POSplineFitter(SplineFitter, ParametricRegressionFitter):
     Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
     """
 
-    _fitted_parameter_names = ["beta_", "phi0_", "phi1_", "phi2_"]
+    _fitted_parameter_names = ["beta_", "phi1_", "phi2_"]
     _KNOWN_MODEL = True
 
     KNOTS = [0.1972, 1.769, 6.728]
@@ -71,10 +73,8 @@ class POSplineFitter(SplineFitter, ParametricRegressionFitter):
             np.exp(
                 Xbeta
                 + (
-                    params["phi0_"]
-                    + params["phi1_"] * lT
-                    + params["phi2_"]
-                    * self.basis(lT, np.log(self.KNOTS[1]), np.log(self.KNOTS[0]), np.log(self.KNOTS[-1]))
+                    params["phi1_"] * lT
+                    + params["phi2_"] * self.basis(lT, np.log(self.KNOTS[1]), np.log(self.KNOTS[0]), np.log(self.KNOTS[-1]))
                 )
             )
         )
@@ -87,22 +87,20 @@ class WeibullFitter(ParametricRegressionFitter):
 
     """
 
-    _fitted_parameter_names = ["beta_", "phi0_", "phi1_"]
+    _fitted_parameter_names = ["beta_", "phi1_"]
     _scipy_fit_method = "SLSQP"
     _KNOWN_MODEL = True
 
     def _cumulative_hazard(self, params, T, Xs):
         exp_Xbeta = np.exp(np.dot(Xs["beta_"], params["beta_"]))
         lT = np.log(T)
-        return exp_Xbeta * np.exp(params["phi0_"] + params["phi1_"] * lT)
+        return exp_Xbeta * np.exp(params["phi1_"] * lT)
 
 
 df = load_lymph_node()
 
 df["T"] = df["rectime"] / 365.0
 df["E"] = df["censrec"]
-
-df["constant"] = 1.0
 
 # see paper for where these come from
 df["linear_predictor"] = (
@@ -114,49 +112,34 @@ df["linear_predictor"] = (
     - 0.394 * df["hormone"]
 )
 df["binned_lp"] = pd.qcut(df["linear_predictor"], np.linspace(0, 1, 4))
-df = pd.get_dummies(df, columns=["binned_lp"], drop_first=True)
 
-columns_needed_for_fitting = ["binned_lp_(-8.257, -7.608]", "binned_lp_(-7.608, -3.793]"] + ["constant"] + ["T", "E"]
+columns_needed_for_fitting = ["binned_lp", "T", "E"]
 
 
 # these values look right. Differences could be due to handling ties vs Stata
-cph = CoxPHFitter().fit(df[columns_needed_for_fitting].drop("constant", axis=1), "T", "E").print_summary()
+cph = CoxPHFitter().fit(df[columns_needed_for_fitting], "T", "E").print_summary()
 
 
 # check PH(1) Weibull model (different parameterization from lifelines)
-regressors = {
-    "beta_": ["binned_lp_(-8.257, -7.608]", "binned_lp_(-7.608, -3.793]"],
-    "phi0_": ["constant"],
-    "phi1_": ["constant"],
-}
+regressors = {"beta_": ["binned_lp "], "phi1_": ["1"]}
 waf = WeibullFitter().fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_summary()
 
 
 # Check PH(2) model
-regressors = {
-    "beta_": ["binned_lp_(-8.257, -7.608]", "binned_lp_(-7.608, -3.793]"],
-    "phi0_": ["constant"],
-    "phi1_": ["constant"],
-    "phi2_": ["constant"],
-}
+regressors = {"beta_": ["binned_lp"], "phi1_": ["1"], "phi2_": ["1"]}
 phf = PHSplineFitter()
 phf.fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_summary()
 
 
 # Check PO(2) mode
-regressors = {
-    "beta_": ["binned_lp_(-8.257, -7.608]", "binned_lp_(-7.608, -3.793]"],
-    "phi0_": ["constant"],
-    "phi1_": ["constant"],
-    "phi2_": ["constant"],
-}
+regressors = {"beta_": ["binned_lp"], "phi1_": ["1"], "phi2_": ["1"]}
 pof = POSplineFitter()
 pof.fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_summary(5)
 
 # looks like figure 2 from paper.
+"""
 pof.predict_hazard(
-    pd.DataFrame(
-        {"binned_lp_(-8.257, -7.608]": [0, 0, 1], "binned_lp_(-7.608, -3.793]": [0, 1, 0], "constant": [1.0, 1, 1]}
-    )
+    pd.DataFrame({"binned_lp": [0, 0, 1]})
 ).plot()
 plt.show()
+"""

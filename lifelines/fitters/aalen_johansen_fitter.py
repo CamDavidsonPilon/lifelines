@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 import warnings
 
-from lifelines.fitters import UnivariateFitter
+from lifelines.fitters import NonParametricUnivariateFitter
 from lifelines.utils import _preprocess_inputs, inv_normal_cdf, CensoringType, coalesce
 from lifelines import KaplanMeierFitter
 
 
-class AalenJohansenFitter(UnivariateFitter):
+class AalenJohansenFitter(NonParametricUnivariateFitter):
     """Class for fitting the Aalen-Johansen estimate for the cumulative incidence function in a competing risks framework.
     Treating competing risks as censoring can result in over-estimated cumulative density functions. Using the Kaplan
     Meier estimator with competing risks as censored is akin to estimating the cumulative density if all competing risks
@@ -59,7 +59,7 @@ class AalenJohansenFitter(UnivariateFitter):
     """
 
     def __init__(self, jitter_level=0.0001, seed=None, alpha=0.05, calculate_variance=True, **kwargs):
-        UnivariateFitter.__init__(self, alpha=alpha, **kwargs)
+        NonParametricUnivariateFitter.__init__(self, alpha=alpha, **kwargs)
         self._jitter_level = jitter_level
         self._seed = seed  # Seed is for the jittering process
         self._calc_var = calculate_variance  # Optionally skips calculating variance to save time on bootstraps
@@ -116,10 +116,7 @@ class AalenJohansenFitter(UnivariateFitter):
                 Warning,
             )
             durations = self._jitter(
-                durations=pd.Series(durations),
-                event=pd.Series(event_observed),
-                jitter_level=self._jitter_level,
-                seed=self._seed,
+                durations=pd.Series(durations), event=pd.Series(event_observed), jitter_level=self._jitter_level, seed=self._seed
             )
 
         alpha = alpha if alpha else self.alpha
@@ -130,9 +127,7 @@ class AalenJohansenFitter(UnivariateFitter):
         self.label_cmprisk = "observed_" + str(event_of_interest)
 
         # Fitting Kaplan-Meier for either event of interest OR competing risk
-        km = KaplanMeierFitter().fit(
-            durations, event_observed=event_observed, timeline=timeline, entry=entry, weights=weights
-        )
+        km = KaplanMeierFitter().fit(durations, event_observed=event_observed, timeline=timeline, entry=entry, weights=weights)
         aj = km.event_table
         aj["overall_survival"] = km.survival_function_
         aj["lagged_overall_survival"] = aj["overall_survival"].shift()
@@ -155,15 +150,12 @@ class AalenJohansenFitter(UnivariateFitter):
         self._estimation_method = "cumulative_density_"
         self._estimate_name = "cumulative_density_"
         self.timeline = km.timeline
-        self._update_docstrings()
 
         self._label = coalesce(label, self._label, "AJ_estimate")
         self.cumulative_density_ = pd.DataFrame(aj[cmprisk_label])
 
         # Technically, cumulative incidence, but consistent with KaplanMeierFitter
-        self.event_table = aj[
-            ["removed", "observed", self.label_cmprisk, "censored", "entrance", "at_risk"]
-        ]  # Event table
+        self.event_table = aj[["removed", "observed", self.label_cmprisk, "censored", "entrance", "at_risk"]]  # Event table
 
         if self._calc_var:
             self.variance_, self.confidence_interval_ = self._bounds(
@@ -231,9 +223,7 @@ class AalenJohansenFitter(UnivariateFitter):
         for _, r in df.iterrows():
             sf = df.loc[df.index <= r.name].copy()
             F_t = float(r["Ft"])
-            first_term = np.sum(
-                (F_t - sf["Ft"]) ** 2 * sf["observed"] / sf["at_risk"] / (sf["at_risk"] - sf["observed"])
-            )
+            first_term = np.sum((F_t - sf["Ft"]) ** 2 * sf["observed"] / sf["at_risk"] / (sf["at_risk"] - sf["observed"]))
             second_term = np.sum(
                 sf["lagS"] ** 2
                 / sf["at_risk"]

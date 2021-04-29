@@ -4,7 +4,7 @@
 # installs lifelines as editable dependency in develop mode
 -e .
 
-pytest>=3.6
+pytest>=4.6
 pytest-icdiff
 coverage>=4.4
 pytest-cov
@@ -17,7 +17,7 @@ statsmodels
 flaky
 scikit-learn>=0.22.0
 
-# ex: `py.test` in the docs/ folder
+# ex: `py.test` in the docs/ folder. See conftest.py in docs/ first
 sybil
 
 # ex: mypy --config-file mypy.ini lifelines

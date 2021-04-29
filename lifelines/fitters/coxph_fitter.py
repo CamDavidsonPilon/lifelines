@@ -1,138 +1,47 @@
 # -*- coding: utf-8 -*-
-import time
+from typing import Callable, Iterator, List, Optional, Tuple, Union, Any, Iterable
+from textwrap import dedent, fill
 from datetime import datetime
 import warnings
-from textwrap import dedent, fill
-from typing import Callable, Iterator, List, Optional, Tuple, Union, Any, Iterable
+import time
 
-import numpy as np
 from numpy import dot, einsum, log, exp, zeros, arange, multiply, ndarray
+import numpy as np
 from scipy.linalg import solve as spsolve, LinAlgError, norm, inv
 from scipy.integrate import trapz
 from scipy import stats
-import pandas as pd
 from pandas import DataFrame, Series, Index
-from autograd import numpy as anp
+import pandas as pd
 from autograd import elementwise_grad
+from autograd import numpy as anp
 
-from lifelines.fitters import RegressionFitter, ParametricRegressionFitter
-from lifelines.fitters.mixins import SplineFitterMixin, ProportionalHazardMixin
-from lifelines.plotting import set_kwargs_drawstyle
-from lifelines.statistics import _chisq_test_p_value, StatisticalResult
-from lifelines.utils.printer import Printer
-from lifelines.utils.safe_exp import safe_exp
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio, concordance_index
-from lifelines.utils import (
-    _get_index,
-    _to_list,
-    _to_tuple,
-    _to_1d_array,
-    inv_normal_cdf,
-    normalize,
-    qth_survival_times,
-    coalesce,
-    check_for_numeric_dtypes_or_raise,
-    check_low_var,
-    check_complete_separation,
-    check_nans_or_infs,
-    StatError,
-    ConvergenceWarning,
-    StatisticalWarning,
-    StepSizer,
-    ConvergenceError,
-    string_justify,
-    interpolate_at_times_and_return_pandas,
-    CensoringType,
-    interpolate_at_times,
-    format_p_value,
-)
+from lifelines.fitters import RegressionFitter, SemiParametricRegressionFitter, ParametricRegressionFitter
+from lifelines.fitters.mixins import SplineFitterMixin, ProportionalHazardMixin
+from lifelines.statistics import _chisq_test_p_value, StatisticalResult
+from lifelines.plotting import set_kwargs_drawstyle
+from lifelines.utils.safe_exp import safe_exp
+from lifelines.utils.printer import Printer
+from lifelines import exceptions
+from lifelines import utils
 
 __all__ = ["CoxPHFitter"]
-
-CONVERGENCE_DOCS = "Please see the following tips in the lifelines documentation: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model"
-
-
-class _PHSplineFitter(ParametricRegressionFitter, SplineFitterMixin, ProportionalHazardMixin):
-    """
-    Proportional Hazard model with cubic splines.
-
-    References
-    ------------
-    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
-    """
-
-    _KNOWN_MODEL = True
-    _scipy_fit_method = "SLSQP"
-    _scipy_fit_options = {"maxiter": 1000, "iprint": 100}
-
-    def __init__(self, n_baseline_knots=1, *args, **kwargs):
-        self.n_baseline_knots = n_baseline_knots
-        self._fitted_parameter_names = ["beta_"] + ["phi%d_" % i for i in range(1, self.n_baseline_knots + 2)]
-        super(_PHSplineFitter, self).__init__(*args, **kwargs)
-
-    def set_knots(self, T, E):
-        self.knots = np.percentile(T[E.astype(bool).values], np.linspace(5, 95, self.n_baseline_knots + 2))
-        return
-
-    def _pre_fit_model(self, Ts, E, df):
-        self.set_knots(Ts[0], E)
-
-    def _create_initial_point(self, Ts, E, entries, weights, Xs):
-        return [
-            {
-                **{"beta_": np.zeros(len(Xs.mappings["beta_"])), "phi1_": np.array([0.05]), "phi2_": np.array([-0.05])},
-                **{"phi%d_" % i: np.array([0.0]) for i in range(3, self.n_baseline_knots + 2)},
-            }
-        ]
-
-    def _cumulative_hazard(self, params, T, Xs):
-        lT = anp.log(T)
-        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi1_"] * lT)
-
-        for i in range(2, self.n_baseline_knots + 2):
-            H *= safe_exp(
-                params["phi%d_" % i] * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
-            )
-        return H
-
-
-class _BatchVsSingle:
-
-    BATCH = "batch"
-    SINGLE = "single"
-
-    def decide(self, batch_mode: Optional[bool], n_unique: int, n_total: int, n_vars: int) -> str:
-        frac_dups = n_unique / n_total
-        if batch_mode or (
-            # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
-            # new values from from perf/batch_vs_single script.
-            (batch_mode is None)
-            and (
-                (
-                    6.153_952e-01
-                    + -3.927_241e-06 * n_total
-                    + 2.544_118e-11 * n_total ** 2
-                    + 2.071_377e00 * frac_dups
-                    + -9.724_922e-01 * frac_dups ** 2
-                    + 9.138_711e-06 * n_total * frac_dups
-                    + -5.617_844e-03 * n_vars
-                    + -4.402_736e-08 * n_vars * n_total
-                )
-                < 1
-            )
-        ):
-            return self.BATCH
-        return self.SINGLE
 
 
 class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
     r"""
-    This class implements fitting Cox's proportional hazard model using Efron's method for ties.
+    This class implements fitting Cox's proportional hazard model.
 
     .. math::  h(t|x) = h_0(t) \exp((x - \overline{x})' \beta)
 
-    The baseline hazard, :math:`h_0(t)` can be modeled non-parametrically (using Breslow's method) or parametrically (using cubic splines).
-    This is specified using the ``baseline_estimation_method`` parameter.
+    The baseline hazard, :math:`h_0(t)` can be modeled in two ways:
+
+    1. (default) non-parametrically, using Breslow's method. In this case, the entire model is the traditional semi-parametric Cox model. Ties are
+    handled using Efron's method.
+
+    2. parametrically, using a pre-specified number of cubic splines.
+
+    This is specified using the ``baseline_estimation_method`` parameter in the initialization (default = ``"breslow"``)
 
     Parameters
     ----------
@@ -141,13 +50,16 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         the level in the confidence intervals.
 
       baseline_estimation_method: string, optional
-        specify how the fitter should estimate the baseline. ``"breslow"`` or ``"spline"``
+        specify how the fitter should estimate the baseline. ``"breslow"``, ``"spline"``, or ``"piecewise"``
 
-      penalizer: float, optional (default=0.0)
+      penalizer: float or array, optional (default=0.0)
         Attach a penalty to the size of the coefficients during regression. This improves
         stability of the estimates and controls for high correlation between covariates.
         For example, this shrinks the magnitude value of :math:`\beta_i`. See ``l1_ratio`` below.
-        The penalty term is :math:`\frac{1}{2} \text{penalizer} \left( (1-\text{l1_ratio}) ||\beta||_2^2 + \text{l1_ratio}||\beta||_1\right)`.
+        The penalty term is :math:`\text{penalizer} \left( \frac{1-\text{l1_ratio}}{2} ||\beta||_2^2 + \text{l1_ratio}||\beta||_1\right)`.
+
+        Alternatively, penalizer is an array equal in size to the number of parameters, with penalty coefficients for specific variables. For
+        example, `penalizer=0.01 * np.ones(p)` is the same as `penalizer=0.01`
 
       l1_ratio: float, optional (default=0.0)
         Specify what ratio to assign to a L1 vs L2 penalty. Same as scikit-learn. See ``penalizer`` above.
@@ -159,7 +71,11 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         See http://courses.washington.edu/b515/l17.pdf.
 
       n_baseline_knots: int
-        Used when ``baseline_estimation_method`` is "spline". Set the number of interior knots in the baseline hazard.
+        Used when ``baseline_estimation_method="spline"`. Set the number of knots (interior & exterior) in the baseline hazard. Should be atleast 2. Royston et. al, the authors
+        of this model, suggest 4 to start, but any values between 2 and 8 are reasonable.
+
+      breakpoints: int
+        Used when ``baseline_estimation_method="piecewise"`. Set the positions of the baseline hazard breakpoints.
 
     Examples
     --------
@@ -186,15 +102,26 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         The event_observed variable provided
     weights: Series
         The event_observed variable provided
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     strata: list
         the strata provided
     standard_errors_: Series
         the standard errors of the estimates
+    log_likelihood_: float
+        the log-likelihood at the fitted coefficients
+    AIC_: float
+        the AIC at the fitted coefficients (if using splines for baseline hazard)
+    partial_AIC_: float
+        the AIC at the fitted coefficients (if using non-parametric inference for baseline hazard)
     baseline_hazard_: DataFrame
+        the baseline hazard evaluated at the observed times. Estimated using Breslow's method.
     baseline_cumulative_hazard_: DataFrame
+        the baseline cumulative hazard evaluated at the observed times. Estimated using Breslow's method.
     baseline_survival_: DataFrame
+        the baseline survival evaluated at the observed times. Estimated using Breslow's method.
+    summary: Dataframe
+        a Dataframe of the coefficients, p-values, CIs, etc. found in ``print_summary``
     """
 
     _KNOWN_MODEL = True
@@ -202,16 +129,16 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
     def __init__(
         self,
         baseline_estimation_method: str = "breslow",
-        penalizer: float = 0.0,
+        penalizer: Union[float, np.ndarray] = 0.0,
         strata: Optional[Union[List[str], str]] = None,
         l1_ratio: float = 0.0,
-        n_baseline_knots: int = 1,
+        n_baseline_knots: Optional[int] = None,
+        breakpoints: Optional[List] = None,
         **kwargs,
     ) -> None:
 
         super(CoxPHFitter, self).__init__(**kwargs)
-        if penalizer < 0:
-            raise ValueError("penalizer parameter must be >= 0.")
+
         if l1_ratio < 0 or l1_ratio > 1:
             raise ValueError("l1_ratio parameter must in [0, 1].")
 
@@ -220,8 +147,9 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         self.l1_ratio = l1_ratio
         self.baseline_estimation_method = baseline_estimation_method
         self.n_baseline_knots = n_baseline_knots
+        self.breakpoints = breakpoints
 
-    @CensoringType.right_censoring
+    @utils.CensoringType.right_censoring
     def fit(
         self,
         df: pd.DataFrame,
@@ -235,7 +163,937 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         cluster_col: Optional[str] = None,
         robust: bool = False,
         batch_mode: Optional[bool] = None,
+        timeline: Optional[Iterator] = None,
+        formula: str = None,
+        entry_col: str = None,
     ) -> "CoxPHFitter":
+        """
+        Fit the Cox proportional hazard model to a right-censored dataset. Alias of `fit_right_censoring`.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights, strata).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        duration_col: string
+            the name of the column in DataFrame that contains the subjects'
+            lifetimes.
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, assume all individuals are uncensored.
+
+        weights_col: string, optional
+            an optional column in the DataFrame, df, that denotes the weight per subject.
+            This column is expelled and not used as a covariate, but as a weight in the
+            final regression. Default weight is 1.
+            This can be used for case-weights. For example, a weight of 2 means there were two subjects with
+            identical observations.
+            This can be used for sampling weights. In that case, use ``robust=True`` to get more accurate standard errors.
+
+        cluster_col: string, optional
+            specifies what column has unique identifiers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
+            be used.
+
+        entry_col: str, optional
+            a column denoting when a subject entered the study, i.e. left-truncation.
+
+        strata: list or string, optional
+            specify a column or list of columns n to use in stratification. This is useful if a
+            categorical covariate does not obey the proportional hazard assumption. This
+            is used similar to the ``strata`` expression in R.
+            See http://courses.washington.edu/b515/l17.pdf.
+
+        robust: bool, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+            ties, so if there are high number of ties, results may significantly differ. See
+            "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
+
+        formula: str, optional
+            an Wilkinson formula, like in R and statsmodels, for the right-hand-side. If left as None, all columns not assigned as durations, weights, etc. are used.
+
+        batch_mode: bool, optional
+            enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
+
+        step_size: float, optional
+            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
+
+        show_progress: bool, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        Returns
+        -------
+        self: CoxPHFitter
+            self with additional new properties: ``print_summary``, ``hazards_``, ``confidence_intervals_``, ``baseline_survival_``, etc.
+
+
+        Examples
+        --------
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E')
+            cph.print_summary()
+            cph.predict_median(df)
+
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'weights': [1.1, 0.5, 2.0, 1.6, 1.2, 4.3, 1.4, 4.5, 3.0, 3.2, 0.4, 6.2],
+                'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E', strata=['month', 'age'], robust=True, weights_col='weights')
+            cph.print_summary()
+
+        """
+        self.strata = utils.coalesce(strata, self.strata)
+        self._model = self._fit_model(
+            df,
+            duration_col,
+            event_col=event_col,
+            show_progress=show_progress,
+            initial_point=initial_point,
+            strata=self.strata,
+            step_size=step_size,
+            weights_col=weights_col,
+            cluster_col=cluster_col,
+            robust=robust,
+            batch_mode=batch_mode,
+            timeline=timeline,
+            formula=formula,
+            entry_col=entry_col,
+        )
+        return self
+
+    @utils.CensoringType.interval_censoring
+    def fit_interval_censoring(
+        self,
+        df: pd.DataFrame,
+        lower_bound_col: str,
+        upper_bound_col: str,
+        event_col: Optional[str] = None,
+        show_progress: bool = False,
+        initial_point: Optional[ndarray] = None,
+        strata: Optional[Union[str, List[str]]] = None,
+        step_size: Optional[float] = None,
+        weights_col: Optional[str] = None,
+        cluster_col: Optional[str] = None,
+        robust: bool = False,
+        batch_mode: Optional[bool] = None,
+        timeline: Optional[Iterator] = None,
+        formula: str = None,
+        entry_col: str = None,
+    ) -> "CoxPHFitter":
+        """
+        Fit the Cox proportional hazard model to an interval censored dataset.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights, strata).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        lower_bound_col: string
+            the name of the column in DataFrame that contains the lower bounds of the intervals.
+
+        upper_bound_col: string
+            the name of the column in DataFrame that contains the upper bounds of the intervals.
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, this is inferred based on the upper and lower interval limits (equal
+            implies observed death.)
+
+        weights_col: string, optional
+            an optional column in the DataFrame, df, that denotes the weight per subject.
+            This column is expelled and not used as a covariate, but as a weight in the
+            final regression. Default weight is 1.
+            This can be used for case-weights. For example, a weight of 2 means there were two subjects with
+            identical observations.
+            This can be used for sampling weights. In that case, use ``robust=True`` to get more accurate standard errors.
+
+        cluster_col: string, optional
+            specifies what column has unique identifiers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
+            be used.
+
+        entry_col: str, optional
+            a column denoting when a subject entered the study, i.e. left-truncation.
+
+        strata: list or string, optional
+            specify a column or list of columns n to use in stratification. This is useful if a
+            categorical covariate does not obey the proportional hazard assumption. This
+            is used similar to the ``strata`` expression in R.
+            See http://courses.washington.edu/b515/l17.pdf.
+
+        robust: bool, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+            ties, so if there are high number of ties, results may significantly differ. See
+            "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
+
+        formula: str, optional
+            an Wilkinson formula, like in R and statsmodels, for the right-hand-side. If left as None, all columns not assigned as durations, weights, etc. are used.
+
+        batch_mode: bool, optional
+            enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
+
+        step_size: float, optional
+            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
+
+        show_progress: bool, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        Returns
+        -------
+        self: CoxPHFitter
+            self with additional new properties: ``print_summary``, ``hazards_``, ``confidence_intervals_``, ``baseline_survival_``, etc.
+
+
+        Examples
+        --------
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E')
+            cph.print_summary()
+            cph.predict_median(df)
+
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'weights': [1.1, 0.5, 2.0, 1.6, 1.2, 4.3, 1.4, 4.5, 3.0, 3.2, 0.4, 6.2],
+                'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E', strata=['month', 'age'], robust=True, weights_col='weights')
+            cph.print_summary()
+
+        """
+        self.strata = utils.coalesce(strata, self.strata)
+        self._model = self._fit_model(
+            df,
+            (lower_bound_col, upper_bound_col),
+            event_col=event_col,
+            show_progress=show_progress,
+            initial_point=initial_point,
+            strata=self.strata,
+            step_size=step_size,
+            weights_col=weights_col,
+            cluster_col=cluster_col,
+            robust=robust,
+            batch_mode=batch_mode,
+            timeline=timeline,
+            formula=formula,
+            entry_col=entry_col,
+        )
+        return self
+
+    @utils.CensoringType.left_censoring
+    def fit_left_censoring(
+        self,
+        df: pd.DataFrame,
+        duration_col: Optional[str] = None,
+        event_col: Optional[str] = None,
+        show_progress: bool = False,
+        initial_point: Optional[ndarray] = None,
+        strata: Optional[Union[str, List[str]]] = None,
+        step_size: Optional[float] = None,
+        weights_col: Optional[str] = None,
+        cluster_col: Optional[str] = None,
+        robust: bool = False,
+        batch_mode: Optional[bool] = None,
+        timeline: Optional[Iterator] = None,
+        formula: str = None,
+        entry_col: str = None,
+    ) -> "CoxPHFitter":
+        """
+        Fit the Cox proportional hazard model to a left censored dataset.
+
+        Parameters
+        ----------
+        df: DataFrame
+            a Pandas DataFrame with necessary columns `duration_col` and
+            `event_col` (see below), covariates columns, and special columns (weights, strata).
+            `duration_col` refers to
+            the lifetimes of the subjects. `event_col` refers to whether
+            the 'death' events was observed: 1 if observed, 0 else (censored).
+
+        duration_col: string
+            the name of the column in DataFrame that contains the subjects'
+            lifetimes.
+
+        event_col: string, optional
+            the  name of the column in DataFrame that contains the subjects' death
+            observation. If left as None, assume all individuals are uncensored.
+
+        weights_col: string, optional
+            an optional column in the DataFrame, df, that denotes the weight per subject.
+            This column is expelled and not used as a covariate, but as a weight in the
+            final regression. Default weight is 1.
+            This can be used for case-weights. For example, a weight of 2 means there were two subjects with
+            identical observations.
+            This can be used for sampling weights. In that case, use ``robust=True`` to get more accurate standard errors.
+
+        cluster_col: string, optional
+            specifies what column has unique identifiers for clustering covariances. Using this forces the sandwich estimator (robust variance estimator) to
+            be used.
+
+        entry_col: str, optional
+            a column denoting when a subject entered the study, i.e. left-truncation.
+
+        strata: list or string, optional
+            specify a column or list of columns n to use in stratification. This is useful if a
+            categorical covariate does not obey the proportional hazard assumption. This
+            is used similar to the ``strata`` expression in R.
+            See http://courses.washington.edu/b515/l17.pdf.
+
+        robust: bool, optional (default=False)
+            Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
+            ties, so if there are high number of ties, results may significantly differ. See
+            "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
+
+        formula: str, optional
+            an Wilkinson formula, like in R and statsmodels, for the right-hand-side. If left as None, all columns not assigned as durations, weights, etc. are used.
+
+        batch_mode: bool, optional
+            enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
+
+        step_size: float, optional
+            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
+
+        show_progress: bool, optional (default=False)
+            since the fitter is iterative, show convergence
+            diagnostics. Useful if convergence is failing.
+
+        initial_point: (d,) numpy array, optional
+            initialize the starting point of the iterative
+            algorithm. Default is the zero vector.
+
+        Returns
+        -------
+        self: CoxPHFitter
+            self with additional new properties: ``print_summary``, ``hazards_``, ``confidence_intervals_``, ``baseline_survival_``, etc.
+
+
+        Examples
+        --------
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E')
+            cph.print_summary()
+            cph.predict_median(df)
+
+        .. code:: python
+
+            from lifelines import CoxPHFitter
+
+            df = pd.DataFrame({
+                'T': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'E': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+                'var': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2],
+                'weights': [1.1, 0.5, 2.0, 1.6, 1.2, 4.3, 1.4, 4.5, 3.0, 3.2, 0.4, 6.2],
+                'month': [10, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+                'age': [4, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+            })
+
+            cph = CoxPHFitter()
+            cph.fit(df, 'T', 'E', strata=['month', 'age'], robust=True, weights_col='weights')
+            cph.print_summary()
+
+        """
+        self.strata = utils.coalesce(strata, self.strata)
+        self._model = self._fit_model(
+            df,
+            duration_col,
+            event_col=event_col,
+            show_progress=show_progress,
+            initial_point=initial_point,
+            strata=self.strata,
+            step_size=step_size,
+            weights_col=weights_col,
+            cluster_col=cluster_col,
+            robust=robust,
+            batch_mode=batch_mode,
+            timeline=timeline,
+            formula=formula,
+            entry_col=entry_col,
+        )
+        return self
+
+    def __getattr__(self, attr):
+        if attr == "_model":
+            raise AttributeError("Must call `fit` first.")
+
+        if hasattr(self._model, attr):
+            return getattr(self._model, attr)
+
+        raise AttributeError("%s has no attribute '%s'" % (self._class_name, attr))
+
+    def __dir__(self):
+        # pretty hacky - probably a better way
+        return self._model.__dir__() + ["print_summary", "baseline_estimation_method"]
+
+    def _fit_model(self, *args, **kwargs):
+        if self.baseline_estimation_method == "breslow":
+            return self._fit_model_breslow(*args, **kwargs)
+        elif self.baseline_estimation_method == "spline":
+            return self._fit_model_spline(*args, **kwargs)
+        elif self.baseline_estimation_method == "piecewise":
+            return self._fit_model_piecewise(*args, **kwargs)
+        else:
+            raise ValueError("Invalid model estimation.")
+
+    def _fit_model_breslow(self, *args, **kwargs):
+        model = SemiParametricPHFitter(
+            penalizer=self.penalizer, l1_ratio=self.l1_ratio, strata=self.strata, alpha=self.alpha, label=self._label
+        )
+        if utils.CensoringType.is_right_censoring(self):
+            model.fit(*args, **kwargs)
+            return model
+        else:
+            raise ValueError(
+                "Left or interval censoring is not supported for the semi-parametric Cox model. Try changing the baseline estimation method to something else, ex: `CoxPHFitter(baseline_estimation_method='spline').fit_...."
+            )
+
+    def _fit_model_piecewise(self, *args, **kwargs):
+        df = args[0].copy()
+        # handle if they provided a formula or not
+        formula = kwargs.pop("formula")
+
+        # handle cluster_col
+        if kwargs["cluster_col"] is not None:
+            raise ValueError("cluster_col is not available for this baseline estimation method")
+        assert self.breakpoints is not None, "breakpoints must be set in initialization."
+
+        # these are not needed, should be popped off.
+        kwargs.pop("cluster_col")
+        kwargs.pop("step_size")
+        kwargs.pop("batch_mode")
+
+        # handle strata
+        strata = kwargs.pop("strata")
+
+        if strata is None:
+            regressors = {**{"beta_": formula}, **{"log_lambda%d_" % i: "1" for i in range(2, len(self.breakpoints) + 2)}}
+            strata_values = None
+        elif isinstance(strata, (list, str)):
+            strata_namer = ParametricPiecewiseBaselinePHFitter._strata_labeler
+            strata = utils._to_list(strata)
+
+            df = df.set_index(strata).sort_index()
+
+            # how many unique strata values are there?
+            strata_values = df.groupby(strata).size().index.tolist()
+            regressors = {"beta_": formula}
+            for stratum in strata_values:
+                regressors.update({strata_namer(stratum, i): "1" for i in range(2, len(self.breakpoints) + 2)})
+        else:
+            raise ValueError("Wrong type for strata. String, None, or list of strings")
+
+        model = ParametricPiecewiseBaselinePHFitter(
+            strata=strata,
+            strata_values=strata_values,
+            penalizer=self.penalizer,
+            l1_ratio=self.l1_ratio,
+            breakpoints=self.breakpoints,
+            alpha=self.alpha,
+            label=self._label,
+        )
+        if utils.CensoringType.is_right_censoring(self):
+            model.fit_right_censoring(df, *args[1:], regressors=regressors, **kwargs)
+        elif utils.CensoringType.is_left_censoring(self):
+            model.fit_left_censoring(df, *args[1:], regressors=regressors, **kwargs)
+        elif utils.CensoringType.is_interval_censoring(self):
+            lb, ub = args[1]
+            model.fit_interval_censoring(df, lb, ub, *args[2:], regressors=regressors, **kwargs)
+        return model
+
+    def _fit_model_spline(self, *args, **kwargs):
+
+        df = args[0].copy()
+
+        # handle if they provided a formula or not
+        formula = kwargs.pop("formula")
+
+        # handle cluster_col
+        if kwargs["cluster_col"] is not None:
+            raise ValueError("cluster_col is not available for this baseline estimation method")
+        assert self.n_baseline_knots is not None, "n_baseline_knots must be set in initialization."
+
+        # these are not needed, should be popped off.
+        kwargs.pop("cluster_col")
+        kwargs.pop("step_size")
+        kwargs.pop("batch_mode")
+
+        # handle strata
+        strata = kwargs.pop("strata")
+
+        if strata is None:
+            regressors = {**{"beta_": formula}, **{"phi%d_" % i: "1" for i in range(1, self.n_baseline_knots + 1)}}
+            strata_values = None
+        elif isinstance(strata, (list, str)):
+            strata_namer = ParametricSplinePHFitter._strata_labeler
+            strata = utils._to_list(strata)
+
+            df = df.set_index(strata).sort_index()
+
+            # how many unique strata values are there?
+            strata_values = df.groupby(strata).size().index.tolist()
+            regressors = {"beta_": formula}
+            for stratum in strata_values:
+                regressors.update({strata_namer(stratum, i): "1" for i in range(1, self.n_baseline_knots + 1)})
+        else:
+            raise ValueError("Wrong type for strata. String, None, or list of strings")
+
+        model = ParametricSplinePHFitter(
+            strata=strata,
+            strata_values=strata_values,
+            penalizer=self.penalizer,
+            l1_ratio=self.l1_ratio,
+            n_baseline_knots=self.n_baseline_knots,
+            alpha=self.alpha,
+            label=self._label,
+        )
+        if utils.CensoringType.is_right_censoring(self):
+            model.fit_right_censoring(df, *args[1:], regressors=regressors, **kwargs)
+        elif utils.CensoringType.is_left_censoring(self):
+            model.fit_left_censoring(df, *args[1:], regressors=regressors, **kwargs)
+        elif utils.CensoringType.is_interval_censoring(self):
+            lb, ub = args[1]
+            model.fit_interval_censoring(df, lb, ub, *args[2:], regressors=regressors, **kwargs)
+        return model
+
+    def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
+        """
+        Print summary statistics describing the fit, the coefficients, and the error bounds.
+
+        Parameters
+        -----------
+        decimals: int, optional (default=2)
+            specify the number of decimal places to show
+        style: string
+            {html, ascii, latex}
+        columns:
+            only display a subset of ``summary`` columns. Default all.
+        kwargs:
+            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
+            multiple outputs.
+
+        """
+
+        # Print information about data first
+        justify = utils.string_rjustify(25)
+
+        headers = []
+
+        if utils.CensoringType.is_interval_censoring(self):
+            headers.append(("lower bound col", "'%s'" % self.lower_bound_col))
+            headers.append(("upper bound col", "'%s'" % self.upper_bound_col))
+        else:
+            headers.append(("duration col", "'%s'" % self.duration_col))
+
+        if self.event_col:
+            headers.append(("event col", "'%s'" % self.event_col))
+        if self.weights_col:
+            headers.append(("weights col", "'%s'" % self.weights_col))
+        if self.entry_col:
+            headers.append(("entry col", "'%s'" % self.entry_col))
+        if self.cluster_col:
+            headers.append(("cluster col", "'%s'" % self.cluster_col))
+        if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
+            headers.append(("penalizer", self.penalizer))
+            headers.append(("l1 ratio", self.l1_ratio))
+        if self.robust or self.cluster_col:
+            headers.append(("robust variance", True))
+        if self.strata:
+            headers.append(("strata", self.strata))
+        if self.baseline_estimation_method == "spline":
+            headers.append(("number of baseline knots", self.n_baseline_knots))
+        if self.baseline_estimation_method == "piecewise":
+            headers.append(("location of breaks", self.breakpoints))
+
+        headers.extend(
+            [
+                ("baseline estimation", self.baseline_estimation_method),
+                ("number of observations", "{:g}".format(self.weights.sum())),
+                ("number of events observed", "{:g}".format(self.weights[self.event_observed > 0].sum())),
+                (
+                    "partial log-likelihood" if self.baseline_estimation_method == "breslow" else "log-likelihood",
+                    "{:.{prec}f}".format(self.log_likelihood_, prec=decimals),
+                ),
+                ("time fit was run", self._time_fit_was_called),
+            ]
+        )
+
+        footers = []
+        sr = self.log_likelihood_ratio_test()
+
+        if self.baseline_estimation_method == "breslow":
+            footers.extend(
+                [
+                    ("Concordance", "{:.{prec}f}".format(self.concordance_index_, prec=decimals)),
+                    ("Partial AIC", "{:.{prec}f}".format(self.AIC_partial_, prec=decimals)),
+                ]
+            )
+        elif self.baseline_estimation_method in ["spline", "piecewise"]:
+            footers.append(("AIC", "{:.{prec}f}".format(self.AIC_, prec=decimals)))
+
+        footers.extend(
+            [
+                (
+                    "log-likelihood ratio test",
+                    "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
+                ),
+                ("-log2(p) of ll-ratio test", "{:.{prec}f}".format(-utils.quiet_log2(sr.p_value), prec=decimals)),
+            ]
+        )
+
+        p = Printer(self, headers, footers, justify, kwargs, decimals, columns)
+        p.print(style=style)
+
+    def compute_followup_hazard_ratios(self, training_df: DataFrame, followup_times: Iterable) -> DataFrame:
+        """
+        Recompute the hazard ratio at different follow-up times (lifelines handles accounting for updated censoring and updated durations).
+        This is useful because we need to remember that the hazard ratio is actually a weighted-average of period-specific hazard ratios.
+
+        Parameters
+        ----------
+
+        training_df: pd.DataFrame
+            The same dataframe used to train the model
+        followup_times: Iterable
+            a list/array of follow-up times to recompute the hazard ratio at.
+
+
+        """
+        results = {}
+        for t in sorted(followup_times):
+            assert t <= training_df[self.duration_col].max(), "all follow-up times must be less than max observed duration"
+            df = training_df.copy()
+            # if we "rollback" the df to time t, who is dead and who is censored
+            df[self.event_col] = (df[self.duration_col] <= t) & df[self.event_col]
+            df[self.duration_col] = np.minimum(df[self.duration_col], t)
+
+            model = self.__class__(
+                penalizer=self.penalizer,
+                l1_ratio=self.l1_ratio,
+                strata=self.strata,
+                baseline_estimation_method=self.baseline_estimation_method,
+                n_baseline_knots=self.n_baseline_knots,
+            ).fit(
+                df,
+                self.duration_col,
+                self.event_col,
+                weights_col=self.weights_col,
+                cluster_col=self.cluster_col,
+                entry_col=self.entry_col,
+            )
+            results[t] = model.hazard_ratios_
+        return DataFrame(results).T
+
+    def plot_partial_effects_on_outcome(self, covariates, values, plot_baseline=True, y="survival_function", **kwargs):
+        """
+        Produces a plot comparing the baseline curve of the model versus
+        what happens when a covariate(s) is varied over values in a group. This is useful to compare
+        subjects' survival as we vary covariate(s), all else being held equal.
+
+        The baseline curve is equal to the predicted curve at all average values (median for ordinal, and mode for categorical)
+        in the original dataset. This same logic is applied to the stratified datasets if ``strata`` was used in fitting.
+
+        Parameters
+        ----------
+        covariates: string or list
+            a string (or list of strings) of the covariate(s) in the original dataset that we wish to vary.
+        values: 1d or 2d iterable
+            an iterable of the specific values we wish the covariate(s) to take on.
+        plot_baseline: bool
+            also display the baseline survival, defined as the survival at the mean of the original dataset.
+        y: str
+            one of "survival_function", or "cumulative_hazard"
+        kwargs:
+            pass in additional plotting commands.
+
+        Returns
+        -------
+        ax: matplotlib axis, or list of axis'
+            the matplotlib axis that be edited.
+
+
+        Examples
+        ---------
+        .. code:: python
+
+            from lifelines import datasets, CoxPHFitter
+            rossi = datasets.load_rossi()
+
+            cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+            cph.plot_partial_effects_on_outcome('prio', values=arange(0, 15, 3), cmap='coolwarm')
+
+        .. image:: /images/plot_covariate_example1.png
+
+        .. code:: python
+
+            # multiple variables at once
+            cph.plot_partial_effects_on_outcome(['prio', 'paro'], values=[
+             [0,  0],
+             [5,  0],
+             [10, 0],
+             [0,  1],
+             [5,  1],
+             [10, 1]
+            ], cmap='coolwarm')
+
+        .. image:: /images/plot_covariate_example2.png
+
+        .. code:: python
+
+            # if you have categorical variables, you can do the following to see the
+            # effect of all the categories on one plot.
+            cph.plot_partial_effects_on_outcome('categorical_var', values=["A", "B", "C"])
+
+
+        """
+        from matplotlib import pyplot as plt
+
+        covariates = utils._to_list(covariates)
+        n_covariates = len(covariates)
+        values = np.asarray(values)
+        if len(values.shape) == 1:
+            values = values[None, :].T
+
+        if n_covariates != values.shape[1]:
+            raise ValueError("The number of covariates must equal to second dimension of the values array.")
+
+        for covariate in covariates:
+            if covariate not in self._central_values.columns:
+                raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
+
+        drawstyle = "steps-post" if isinstance(self._model, SemiParametricRegressionFitter) else None
+        set_kwargs_drawstyle(kwargs, drawstyle)
+
+        if self.strata is None:
+            axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
+            x_bar = self._central_values
+            X = pd.concat([x_bar] * values.shape[0])
+
+            if np.array_equal(np.eye(n_covariates), values) or np.array_equal(
+                np.append(np.eye(n_covariates), np.zeros((n_covariates, 1)), axis=1), values
+            ):
+                X.index = ["%s=1" % c for c in covariates]
+            else:
+                X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+            for covariate, value in zip(covariates, values.T):
+                X[covariate] = value
+
+            # if a column is typeA in the dataset, but the user gives us typeB, we want to cast it. This is
+            # most relevant for categoricals.
+            X = X.astype(self._central_values.dtypes)
+
+            getattr(self, "predict_%s" % y)(X).plot(ax=axes, **kwargs)
+
+            if plot_baseline:
+                getattr(self, "predict_%s" % y)(x_bar).plot(ax=axes, ls=":", color="k", drawstyle=drawstyle)
+
+        else:
+            axes = []
+            for stratum in self.baseline_survival_.columns:
+                ax = plt.figure().add_subplot(1, 1, 1)
+
+                # we turn this into a DF so stratum values that are ints are not converted to floats, etc.
+                x_bar = self._central_values.loc[stratum].rename("stratum %s baseline %s" % (str(stratum), y)).to_frame().T
+
+                for name, value in zip(utils._to_list(self.strata), utils._to_tuple(stratum)):
+                    x_bar[name] = value
+
+                X = pd.concat([x_bar] * values.shape[0])
+
+                if np.array_equal(np.eye(len(covariates)), values):
+                    X.index = ["%s=1" % c for c in covariates]
+                else:
+                    X.index = [", ".join("%s=%s" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
+
+                for covariate, value in zip(covariates, values.T):
+                    X[covariate] = value
+
+                # if a column is typeA in the dataset, but the user gives us typeB, we want to cast it. This is
+                # most relevant for categoricals.
+                X = X.astype(self._central_values.dtypes)
+
+                getattr(self, "predict_%s" % y)(X).plot(ax=ax, **kwargs)
+                if plot_baseline:
+                    getattr(self, "predict_%s" % y)(x_bar).plot(ax=ax, ls=":", drawstyle=drawstyle)
+                plt.legend()
+                axes.append(ax)
+        return axes
+
+
+class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFitter):
+    r"""
+    This class implements fitting Cox's proportional hazard model using Efron's method for ties.
+
+    .. math::  h(t|x) = h_0(t) \exp((x - \overline{x})' \beta)
+
+    The baseline hazard, :math:`h_0(t)` is modeled non-parametrically (using Breslow's method).
+
+    Note
+    -------
+    This is a "hidden" class that is invoked when using ``baseline_estimation_method="breslow"`` (the default). You probably want to use ``CoxPHFitter``, not this.
+
+    Parameters
+    ----------
+
+      alpha: float, optional (default=0.05)
+        the level in the confidence intervals.
+
+      penalizer: float or array, optional (default=0.0)
+        Attach a penalty to the size of the coefficients during regression. This improves
+        stability of the estimates and controls for high correlation between covariates.
+        For example, this shrinks the magnitude value of :math:`\beta_i`. See ``l1_ratio`` below.
+        The penalty term is :math:`\text{penalizer} \left( \frac{1-\text{l1_ratio}}{2} ||\beta||_2^2 + \text{l1_ratio}||\beta||_1\right)`.
+
+        Alternatively, penalizer is an array equal in size to the number of parameters, with penalty coefficients for specific variables. For
+        example, `penalizer=0.01 * np.ones(p)` is the same as `penalizer=0.01`
+
+      l1_ratio: float, optional (default=0.0)
+        Specify what ratio to assign to a L1 vs L2 penalty. Same as scikit-learn. See ``penalizer`` above.
+
+      strata: list, optional
+        specify a list of columns to use in stratification. This is useful if a
+        categorical covariate does not obey the proportional hazard assumption. This
+        is used similar to the `strata` expression in R.
+        See http://courses.washington.edu/b515/l17.pdf.
+
+    Examples
+    --------
+    .. code:: python
+
+        from lifelines.datasets import load_rossi
+        from lifelines import CoxPHFitter
+        rossi = load_rossi()
+        cph = CoxPHFitter()
+        cph.fit(rossi, 'week', 'arrest')
+        cph.print_summary()
+
+    Attributes
+    ----------
+    params_ : Series
+        The estimated coefficients. Changed in version 0.22.0: use to be ``.hazards_``
+    hazard_ratios_ : Series
+        The exp(coefficients)
+    confidence_intervals_ : DataFrame
+        The lower and upper confidence intervals for the hazard coefficients
+    durations: Series
+        The durations provided
+    event_observed: Series
+        The event_observed variable provided
+    weights: Series
+        The event_observed variable provided
+    variance_matrix_ : DataFrame
+        The variance matrix of the coefficients
+    strata: list
+        the strata provided
+    standard_errors_: Series
+        the standard errors of the estimates
+    baseline_hazard_: DataFrame
+    baseline_cumulative_hazard_: DataFrame
+    baseline_survival_: DataFrame
+    """
+    _KNOWN_MODEL = True
+
+    def __init__(
+        self,
+        penalizer: Union[float, np.ndarray] = 0.0,
+        strata: Optional[Union[List[str], str]] = None,
+        l1_ratio: float = 0.0,
+        **kwargs,
+    ) -> None:
+
+        super(SemiParametricPHFitter, self).__init__(**kwargs)
+
+        if l1_ratio < 0 or l1_ratio > 1:
+            raise ValueError("l1_ratio parameter must in [0, 1].")
+
+        self.penalizer = penalizer
+        self.strata = strata
+        self.l1_ratio = l1_ratio
+
+    @utils.CensoringType.right_censoring
+    def fit(
+        self,
+        df: pd.DataFrame,
+        duration_col: str = None,
+        event_col: Optional[str] = None,
+        show_progress: bool = False,
+        initial_point: Optional[ndarray] = None,
+        strata: Optional[Union[str, List[str]]] = None,
+        step_size: Optional[float] = None,
+        weights_col: Optional[str] = None,
+        cluster_col: Optional[str] = None,
+        robust: bool = False,
+        batch_mode: Optional[bool] = None,
+        timeline: Optional[Iterator] = None,
+        formula: str = None,
+        entry_col: str = None,
+    ) -> "SemiParametricPHFitter":
         """
         Fit the Cox proportional hazard model to a dataset.
 
@@ -341,9 +1199,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             cph.predict_median(df)
 
         """
-        if duration_col is None:
-            raise TypeError("duration_col cannot be None.")
-
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
@@ -352,43 +1207,59 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         self.weights_col = weights_col
         self._n_examples = df.shape[0]
         self._batch_mode = batch_mode
-        self.strata = coalesce(strata, self.strata)
+        self.strata = utils.coalesce(strata, self.strata)
+        self.formula = formula
+        self.entry_col = entry_col
 
-        X, T, E, weights, original_index, self._clusters = self._preprocess_dataframe(df)
+        X, T, E, weights, entries, original_index, self._clusters = self._preprocess_dataframe(df)
 
         self.durations = T.copy()
         self.event_observed = E.copy()
         self.weights = weights.copy()
+        self.entries = entries
 
         if self.strata is not None:
             self.durations.index = original_index
             self.event_observed.index = original_index
             self.weights.index = original_index
 
+        # TODO: doesn't handle weights, nor strata
+        self._central_values = self._compute_central_values_of_raw_training_data(df, self.strata)
+
         self._norm_mean = X.mean(0)
         self._norm_std = X.std(0)
 
         # this is surprisingly faster to do...
         X_norm = pd.DataFrame(
-            normalize(X.values, self._norm_mean.values, self._norm_std.values), index=X.index, columns=X.columns
+            utils.normalize(X.values, self._norm_mean.values, self._norm_std.values), index=X.index, columns=X.columns
         )
 
-        params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_ = self._fit_model(
-            X_norm, T, E, weights=weights, initial_point=initial_point, show_progress=show_progress, step_size=step_size
+        params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_, model = self._fit_model(
+            X_norm,
+            T,
+            E,
+            weights=weights,
+            entries=entries,
+            initial_point=initial_point,
+            show_progress=show_progress,
+            step_size=step_size,
         )
 
         self.log_likelihood_ = ll_
+        self.model = model
         self.variance_matrix_ = variance_matrix_
-        self.params_ = pd.Series(params_, index=X.columns, name="coef")
+        self.params_ = pd.Series(params_, index=pd.Index(X.columns, name="covariate"), name="coef")
         self.baseline_hazard_ = baseline_hazard_
         self.baseline_cumulative_hazard_ = baseline_cumulative_hazard_
+        self.timeline = utils.coalesce(timeline, self.baseline_cumulative_hazard_.index)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self._predicted_partial_hazards_ = (
-                self.predict_partial_hazard(X)
+                self.predict_partial_hazard(df)
                 .to_frame(name="P")
-                .assign(T=self.durations.values, E=self.event_observed.values, W=self.weights.values)
+                .reindex(original_index)
+                .assign(T=self.durations, E=self.event_observed, W=self.weights)
                 .set_index(X.index)
             )
 
@@ -401,13 +1272,17 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
         return self
 
-    def _preprocess_dataframe(self, df: DataFrame) -> Tuple[DataFrame, Series, Series, Series, Index, Optional[Series]]:
+    def _preprocess_dataframe(
+        self, df: DataFrame
+    ) -> Tuple[DataFrame, Series, Series, Series, Optional[Series], Index, Optional[Series]]:
         # this should be a pure function
 
         df = df.copy()
 
         if self.strata is not None:
-            sort_by = _to_list(self.strata) + ([self.duration_col, self.event_col] if self.event_col else [self.duration_col])
+            sort_by = utils._to_list(self.strata) + (
+                [self.duration_col, self.event_col] if self.event_col else [self.duration_col]
+            )
             df = df.sort_values(by=sort_by)
             original_index = df.index.copy()
             df = df.set_index(self.strata)
@@ -416,7 +1291,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             df = df.sort_values(by=sort_by)
             original_index = df.index.copy()
 
-        # Extract time and event
+        # Extract time, event and metadata
         T = df.pop(self.duration_col)
         E = (
             df.pop(self.event_col)
@@ -428,31 +1303,38 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             if (self.weights_col is not None)
             else pd.Series(np.ones((self._n_examples,)), index=df.index, name="weights")
         )
+        entries = df.pop(self.entry_col) if (self.entry_col is not None) else None
 
         _clusters = df.pop(self.cluster_col).values if self.cluster_col else None
 
-        X = df.astype(float)
+        self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True)
+        X = self.regressors.transform_df(df)["beta_"]
+
         T = T.astype(float)
 
         # we check nans here because converting to bools maps NaNs to True..
-        check_nans_or_infs(E)
+        utils.check_nans_or_infs(E)
         E = E.astype(bool)
 
-        self._check_values_pre_fitting(X, T, E, W)
+        self._check_values_pre_fitting(X, T, E, W, entries)
 
-        return X, T, E, W, original_index, _clusters
+        return X, T, E, W, entries, original_index, _clusters
 
     def _check_values_post_fitting(self, X, T, E, W):
         """
         Functions here check why a fit may have non-obviously failed
         """
-        check_complete_separation(X, E, T, self.event_col)
+        utils.check_dimensions(X)
+        utils.check_complete_separation(X, E, T, self.event_col)
 
-    def _check_values_pre_fitting(self, X, T, E, W):
-        check_low_var(X)
-        check_for_numeric_dtypes_or_raise(X)
-        check_nans_or_infs(T)
-        check_nans_or_infs(X)
+    def _check_values_pre_fitting(self, X, T, E, W, entries):
+        """
+        Some utilities to check for bad data coming in, like NaNs or complete separation.
+        """
+        utils.check_low_var(X)
+        utils.check_for_numeric_dtypes_or_raise(X)
+        utils.check_nans_or_infs(T)
+        utils.check_nans_or_infs(X)
         # check to make sure their weights are okay
         if self.weights_col:
             if (W.astype(int) != W).any() and not self.robust:
@@ -461,31 +1343,27 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 It's important to know that the naive variance estimates of the coefficients are biased. Instead a) set `robust=True` in the call to `fit`, or b) use Monte Carlo to
 estimate the variances. See paper "Variance estimation when using inverse probability of treatment weighting (IPTW) with survival analysis"
 """,
-                    StatisticalWarning,
+                    exceptions.StatisticalWarning,
                 )
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
-    def _fit_model(self, *args, **kwargs):
-        if self.baseline_estimation_method == "breslow":
-            return self._fit_model_breslow(*args, **kwargs)
-        elif self.baseline_estimation_method == "spline":
-            return self._fit_model_spline(*args, **kwargs)
-        else:
-            raise ValueError("Invalid baseline estimate supplied.")
+        if self.entry_col:
+            utils.check_entry_times(T, entries)
 
-    def _fit_model_breslow(
+    def _fit_model(
         self,
         X: DataFrame,
         T: Series,
         E: Series,
         weights: Series,
+        entries: Optional[Series],
         initial_point: Optional[ndarray] = None,
         step_size: Optional[float] = None,
         show_progress: bool = True,
     ):
         beta_, ll_, hessian_ = self._newton_rhapson_for_efron_model(
-            X, T, E, weights, initial_point=initial_point, step_size=step_size, show_progress=show_progress
+            X, T, E, weights, entries, initial_point=initial_point, step_size=step_size, show_progress=show_progress
         )
 
         # compute the baseline hazard here.
@@ -504,7 +1382,19 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         else:
             variance_matrix_ = pd.DataFrame(index=X.columns, columns=X.columns)
 
-        return params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_
+        return params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_, None
+
+    def _choose_gradient_calculator(self, T, X, entries):
+
+        if entries is not None:
+            from lifelines import CoxTimeVaryingFitter
+
+            return lambda X, T, E, weights, entries, beta: CoxTimeVaryingFitter._get_gradients(
+                X.values, E.values, entries.values, T.values, weights.values, beta
+            )
+
+        decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *X.shape)
+        return getattr(self, "_get_efron_values_%s" % decision)
 
     def _newton_rhapson_for_efron_model(
         self,
@@ -512,6 +1402,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         T: Series,
         E: Series,
         weights: Series,
+        entries: Optional[Series],
         initial_point: Optional[ndarray] = None,
         step_size: Optional[float] = None,
         precision: float = 1e-07,
@@ -548,22 +1439,24 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         -------
         beta: (1,d) numpy array.
         """
+        CONVERGENCE_DOCS = "Please see the following tips in the lifelines documentation: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model"
+
         n, d = X.shape
 
         # soft penalizer functions, from https://www.cs.ubc.ca/cgi-bin/tr/2009/TR-2009-19.pdf
         soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
-        penalizer = (
+        elastic_net_penalty = (
             lambda beta, a: n
-            * 0.5
             * self.penalizer
-            * (self.l1_ratio * soft_abs(beta, a).sum() + (1 - self.l1_ratio) * ((beta) ** 2).sum())
+            * (
+                self.l1_ratio * (soft_abs(beta, a)).sum()
+                + 0.5 * (1 - self.l1_ratio) * (beta ** 2).sum()
+            )
         )
-        d_penalizer = elementwise_grad(penalizer)
-        dd_penalizer = elementwise_grad(d_penalizer)
+        d_elastic_net_penalty = elementwise_grad(elastic_net_penalty)
+        dd_elastic_net_penalty = elementwise_grad(d_elastic_net_penalty)
 
-        decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *X.shape)
-        get_gradients = getattr(self, "_get_efron_values_%s" % decision)
-        self._batch_mode = decision == _BatchVsSingle.BATCH
+        get_gradients = self._choose_gradient_calculator(T, X, entries)
 
         # make sure betas are correct size.
         if initial_point is not None:
@@ -572,7 +1465,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         else:
             beta = zeros((d,))
 
-        step_sizer = StepSizer(step_size)
+        step_sizer = utils.StepSizer(step_size)
         step_size = step_sizer.next()
 
         delta = np.zeros_like(beta)
@@ -588,13 +1481,13 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             if self.strata is None:
 
-                h, g, ll_ = get_gradients(X.values, T.values, E.values, weights.values, beta)
+                h, g, ll_ = get_gradients(X, T, E, weights, entries, beta)
 
             else:
                 g = np.zeros_like(beta)
                 h = zeros((beta.shape[0], beta.shape[0]))
                 ll_ = 0
-                for _h, _g, _ll in self._partition_by_strata_and_apply(X, T, E, weights, get_gradients, beta):
+                for _h, _g, _ll in self._partition_by_strata_and_apply(X, T, E, weights, entries, get_gradients, beta):
                     g += _g
                     h += _h
                     ll_ += _ll
@@ -605,10 +1498,10 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 # if the user supplied a non-trivial initial point, we need to delay this.
                 self._ll_null_ = ll_
 
-            if self.penalizer > 0:
-                ll_ -= penalizer(beta, 1.3 ** i)
-                g -= d_penalizer(beta, 1.3 ** i)
-                h[np.diag_indices(d)] -= dd_penalizer(beta, 1.3 ** i)
+            if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
+                ll_ -= elastic_net_penalty(beta, 1.3 ** i)
+                g -= d_elastic_net_penalty(beta, 1.3 ** i)
+                h[np.diag_indices(d)] -= dd_elastic_net_penalty(beta, 1.3 ** i)
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
@@ -616,12 +1509,12 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             except (ValueError, LinAlgError) as e:
                 self._check_values_post_fitting(X, T, E, weights)
                 if "infs or NaNs" in str(e):
-                    raise ConvergenceError(
+                    raise exceptions.ConvergenceError(
                         """Hessian or gradient contains nan or inf value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS),
                         e,
                     )
                 elif isinstance(e, LinAlgError):
-                    raise ConvergenceError(
+                    raise exceptions.ConvergenceError(
                         """Convergence halted due to matrix inversion problems. Suspicion is high collinearity. {0}""".format(
                             CONVERGENCE_DOCS
                         ),
@@ -635,7 +1528,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
 
             if np.any(np.isnan(delta)):
                 self._check_values_post_fitting(X, T, E, weights)
-                raise ConvergenceError("""delta contains nan value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS))
+                raise exceptions.ConvergenceError(
+                    """delta contains nan value(s). Convergence halted. {0}""".format(CONVERGENCE_DOCS)
+                )
 
             # Save these as pending result
             hessian, gradient = h, g
@@ -672,7 +1567,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 warnings.warn(
                     "The log-likelihood is getting suspiciously close to 0 and the delta is still large. There may be complete separation in the dataset. This may result in incorrect inference of coefficients. \
 See https://stats.stackexchange.com/q/11109/11867 for more.\n",
-                    ConvergenceWarning,
+                    exceptions.ConvergenceWarning,
                 )
                 converging, success = False, False
 
@@ -690,55 +1585,18 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             warnings.warn(
                 "Newton-Rhaphson convergence completed successfully but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?\n"
                 % norm_delta,
-                ConvergenceWarning,
+                exceptions.ConvergenceWarning,
             )
         elif not success:
             self._check_values_post_fitting(X, T, E, weights)
-            warnings.warn("Newton-Rhaphson failed to converge sufficiently in %d steps.\n" % max_steps, ConvergenceWarning)
+            warnings.warn(
+                "Newton-Rhaphson failed to converge sufficiently. {0}".format(CONVERGENCE_DOCS), exceptions.ConvergenceWarning
+            )
 
         return beta, ll_, hessian
 
-    def _fit_model_spline(
-        self,
-        X: DataFrame,
-        T: Series,
-        E: Series,
-        weights: Series,
-        initial_point: Optional[ndarray] = None,
-        show_progress: bool = True,
-        **kwargs,
-    ):
-        if self.strata is not None:
-            raise NotImplementedError("Spline estimation cannot be used with strata yet.")
-
-        df = X.copy()
-        df["T"] = T
-        df["E"] = E
-        df["weights"] = weights
-        df["constant"] = 1.0
-
-        regressors = {
-            **{"beta_": df.columns.difference(["T", "E", "weights"]), "phi1_": ["constant"]},
-            **{"phi%d_" % i: ["constant"] for i in range(2, self.n_baseline_knots + 2)},
-        }
-
-        cph = _PHSplineFitter(n_baseline_knots=self.n_baseline_knots, penalizer=self.penalizer, l1_ratio=self.l1_ratio)
-        cph.fit(df, "T", "E", weights_col="weights", show_progress=show_progress, robust=self.robust, regressors=regressors)
-        self._ll_null_ = cph._ll_null
-        baseline_hazard_ = cph.predict_hazard(df.mean()).rename(columns={0: "baseline hazard"})
-        baseline_cumulative_hazard_ = cph.predict_cumulative_hazard(df.mean()).rename(columns={0: "baseline cumulative hazard"})
-
-        return (
-            cph.params_.loc["beta_"].drop("constant") / self._norm_std,
-            cph.log_likelihood_,
-            cph.variance_matrix_.loc["beta_", "beta_"].drop("constant").drop("constant", axis=1)
-            / np.outer(self._norm_std, self._norm_std),
-            baseline_hazard_,
-            baseline_cumulative_hazard_,
-        )
-
     def _get_efron_values_single(
-        self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray, beta: ndarray
+        self, X: DataFrame, T: Series, E: Series, weights: Series, entries: None, beta: ndarray
     ) -> Tuple[ndarray, ndarray, float]:
         """
         Calculates the first and second order vector differentials, with respect to beta.
@@ -776,6 +1634,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             (1, d) numpy array
         log_likelihood: float
         """
+
+        X = X.values
+        T = T.values
+        E = E.values
+        weights = weights.values
 
         n, d = X.shape
         hessian = zeros((d, d))
@@ -866,7 +1729,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         return hessian, gradient, log_lik
 
     def _get_efron_values_batch(
-        self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray, beta: ndarray
+        self, X: DataFrame, T: Series, E: Series, weights: Series, entries: None, beta: ndarray
     ) -> Tuple[ndarray, ndarray, float]:  # pylint: disable=too-many-locals
         """
         Assumes sorted on ascending on T
@@ -883,6 +1746,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         gradient: (1, d) numpy array
         log_likelihood: float
         """
+        X = X.values
+        T = T.values
+        E = E.values
+        weights = weights.values
 
         n, d = X.shape
         hessian = zeros((d, d))
@@ -975,17 +1842,22 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return hessian, gradient, log_lik
 
-    def _partition_by_strata(self, X: DataFrame, T: Series, E: Series, weights: Series, as_dataframes: bool = False):
+    def _partition_by_strata(self, X: DataFrame, T: Series, E: Series, entries: Optional[Series], weights: Series):
         for stratum, stratified_X in X.groupby(self.strata):
-            stratified_E, stratified_T, stratified_W = (E.loc[[stratum]], T.loc[[stratum]], weights.loc[[stratum]])
-            if not as_dataframes:
-                yield (stratified_X.values, stratified_T.values, stratified_E.values, stratified_W.values), stratum
+            if entries is None:
+                stratified_entries = None
             else:
-                yield (stratified_X, stratified_T, stratified_E, stratified_W), stratum
+                stratified_entries = entries.loc[[stratum]]
+            stratified_E, stratified_T, stratified_W = (E.loc[[stratum]], T.loc[[stratum]], weights.loc[[stratum]])
+            yield (stratified_X, stratified_T, stratified_E, stratified_W, stratified_entries), stratum
 
-    def _partition_by_strata_and_apply(self, X: DataFrame, T: Series, E: Series, weights: Series, function: Callable, *args):
-        for (stratified_X, stratified_T, stratified_E, stratified_W), _ in self._partition_by_strata(X, T, E, weights):
-            yield function(stratified_X, stratified_T, stratified_E, stratified_W, *args)
+    def _partition_by_strata_and_apply(
+        self, X: DataFrame, T: Series, E: Series, entries: Optional[Series], weights: Series, function: Callable, *args
+    ):
+        for (stratified_X, stratified_T, stratified_E, stratified_W, stratified_entries), _ in self._partition_by_strata(
+            X, T, E, weights, entries
+        ):
+            yield function(stratified_X, stratified_T, stratified_E, stratified_W, stratified_entries, *args)
 
     def _compute_martingale(
         self, X: DataFrame, T: Series, E: Series, _weights: Series, index: Optional[Index] = None
@@ -1059,23 +1931,29 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             schoenfeld_residuals = np.empty((0, d))
 
             for schoenfeld_residuals_in_strata in self._partition_by_strata_and_apply(
-                X, T, E, weights, self._compute_schoenfeld_within_strata
+                X, T, E, weights, None, self._compute_schoenfeld_within_strata
             ):
                 schoenfeld_residuals = np.append(schoenfeld_residuals, schoenfeld_residuals_in_strata, axis=0)
 
         else:
-            schoenfeld_residuals = self._compute_schoenfeld_within_strata(X.values, T.values, E.values, weights.values)
+            schoenfeld_residuals = self._compute_schoenfeld_within_strata(X, T, E, weights, None)
 
         # schoenfeld residuals are only defined for subjects with a non-zero event.
         df = pd.DataFrame(schoenfeld_residuals[E, :], columns=self.params_.index, index=index[E])
         return df
 
-    def _compute_schoenfeld_within_strata(self, X: ndarray, T: ndarray, E: ndarray, weights: ndarray) -> ndarray:
+    def _compute_schoenfeld_within_strata(self, X: DataFrame, T: Series, E: Series, weights: Series, entries: None) -> ndarray:
         """
         A positive value of the residual shows an X value that is higher than expected at that death time.
+
         """
         # TODO: the diff_against is gross
         # This uses Efron ties.
+
+        X = X.values
+        E = E.values
+        T = T.values
+        weights = weights.values
 
         n, d = X.shape
 
@@ -1182,22 +2060,28 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             score_residuals = np.empty((0, d))
 
             for score_residuals_in_strata in self._partition_by_strata_and_apply(
-                X, T, E, weights, self._compute_score_within_strata
+                X, T, E, weights, None, self._compute_score_within_strata
             ):
                 score_residuals = np.append(score_residuals, score_residuals_in_strata, axis=0)
 
         else:
-            score_residuals = self._compute_score_within_strata(X.values, T, E.values, weights.values)
+            score_residuals = self._compute_score_within_strata(X, T, E, weights, None)
 
         return pd.DataFrame(score_residuals, columns=self.params_.index, index=index)
 
-    def _compute_score_within_strata(self, X: ndarray, _T: Union[ndarray, Series], E: ndarray, weights: ndarray) -> ndarray:
+    def _compute_score_within_strata(
+        self, X: ndarray, _T: Union[ndarray, Series], E: ndarray, weights: ndarray, entries: None
+    ) -> ndarray:
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
         # Assumes X already sorted by T with strata
         # TODO: doesn't handle ties.
         # TODO: _T unused
+
+        X = X.values
+        E = E.values
+        weights = weights.values
 
         n, d = X.shape
 
@@ -1235,7 +2119,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
     def _compute_confidence_intervals(self) -> pd.DataFrame:
         ci = 100 * (1 - self.alpha)
-        z = inv_normal_cdf(1 - self.alpha / 2)
+        z = utils.inv_normal_cdf(1 - self.alpha / 2)
         se = self.standard_errors_
         hazards = self.params_.values
         return pd.DataFrame(
@@ -1280,7 +2164,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         df : DataFrame
         """
         ci = 100 * (1 - self.alpha)
-        z = inv_normal_cdf(1 - self.alpha / 2)
+        z = utils.inv_normal_cdf(1 - self.alpha / 2)
         with np.errstate(invalid="ignore", divide="ignore", over="ignore", under="ignore"):
             df = pd.DataFrame(index=self.params_.index)
             df["coef"] = self.params_
@@ -1292,67 +2176,16 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * exp(z * self.standard_errors_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
-            df["-log2(p)"] = -np.log2(df["p"])
+            df["-log2(p)"] = -utils.quiet_log2(df["p"])
             return df
-
-    def print_summary(self, decimals: int = 2, style: Optional[str] = None, **kwargs) -> None:
-        """
-        Print summary statistics describing the fit, the coefficients, and the error bounds.
-
-        Parameters
-        -----------
-        decimals: int, optional (default=2)
-            specify the number of decimal places to show
-        style: string
-            {html, ascii, latex}
-        kwargs:
-            print additional metadata in the output (useful to provide model names, dataset names, etc.) when comparing
-            multiple outputs.
-
-        """
-
-        # Print information about data first
-        justify = string_justify(25)
-
-        headers: List[Tuple[str, Any]] = []
-        headers.append(("duration col", "'%s'" % self.duration_col))
-
-        if self.event_col:
-            headers.append(("event col", "'%s'" % self.event_col))
-        if self.weights_col:
-            headers.append(("weights col", "'%s'" % self.weights_col))
-        if self.cluster_col:
-            headers.append(("cluster col", "'%s'" % self.cluster_col))
-        if self.penalizer > 0:
-            headers.append(("penalizer", self.penalizer))
-            headers.append(("l1 ratio", self.l1_ratio))
-        if self.robust or self.cluster_col:
-            headers.append(("robust variance", True))
-        if self.strata:
-            headers.append(("strata", self.strata))
-        if self.baseline_estimation_method == "spline":
-            headers.append(("number of baseline knots", self.n_baseline_knots))
-
-        headers.extend(
-            [
-                ("baseline estimation", self.baseline_estimation_method),
-                ("number of observations", "{:g}".format(self.weights.sum())),
-                ("number of events observed", "{:g}".format(self.weights[self.event_observed > 0].sum())),
-                (
-                    "partial log-likelihood" if self.baseline_estimation_method == "breslow" else "log-likelihood",
-                    "{:.{prec}f}".format(self.log_likelihood_, prec=decimals),
-                ),
-                ("time fit was run", self._time_fit_was_called),
-            ]
-        )
-
-        p = Printer(self, headers, justify, decimals, kwargs)
-
-        p.print(style=style)
 
     def _trivial_log_likelihood(self):
         df = pd.DataFrame({"T": self.durations, "E": self.event_observed, "W": self.weights})
-        trivial_model = self.__class__().fit(df, "E", weights_col="W", batch_mode=self.batch_mode)
+        if self.entry_col is not None:
+            df["entry"] = self.entries
+            trivial_model = self.__class__().fit_right_censoring(df, "E", weights_col="W", entry_col="entry")
+        else:
+            trivial_model = self.__class__().fit_right_censoring(df, "E", weights_col="W")
         return trivial_model.log_likelihood_
 
     def log_likelihood_ratio_test(self) -> StatisticalResult:
@@ -1420,24 +2253,22 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         hazard_names = self.params_.index
 
         if isinstance(X, pd.Series) and ((X.shape[0] == len(hazard_names) + 2) or (X.shape[0] == len(hazard_names))):
-            X = X.to_frame().T
+            X = X.to_frame().T.infer_objects()
             return self.predict_log_partial_hazard(X)
         elif isinstance(X, pd.Series):
             assert len(hazard_names) == 1, "Series not the correct argument"
-            X = X.to_frame().T
+            X = X.to_frame().T.infer_objects()
             return self.predict_log_partial_hazard(X)
 
-        index = _get_index(X)
+        index = utils._get_index(X)
 
         if isinstance(X, pd.DataFrame):
-            order = hazard_names
-            X = X.reindex(order, axis="columns")
-            X = X.astype(float)
+
+            X = self.regressors.transform_df(X)["beta_"]
             X = X.values
 
         X = X.astype(float)
-
-        X = normalize(X, self._norm_mean.values, 1)
+        X = utils.normalize(X, self._norm_mean.values, 1)
         return pd.Series(dot(X, self.params_), index=index)
 
     def predict_cumulative_hazard(
@@ -1460,20 +2291,24 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             points in time are not in the index.
         conditional_after: iterable, optional
             Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents :math:`s` in
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. reset back to starting at 0.
 
         """
         if isinstance(X, pd.Series):
-            return self.predict_cumulative_hazard(X.to_frame().T, times=times, conditional_after=conditional_after)
+            return self.predict_cumulative_hazard(
+                X.to_frame().T.infer_objects(), times=times, conditional_after=conditional_after
+            )
 
         n = X.shape[0]
 
         if times is not None:
             times = np.atleast_1d(times).astype(float)
+        else:
+            times = self.timeline
         if conditional_after is not None:
-            conditional_after = _to_1d_array(conditional_after).reshape(n, 1)
+            conditional_after = utils._to_1d_array(conditional_after).reshape(n, 1)
 
         if self.strata:
             X = X.copy()
@@ -1485,28 +2320,28 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                 try:
                     strata_c_0 = self.baseline_cumulative_hazard_[[stratum]]
                 except KeyError:
-                    raise StatError(
+                    raise exceptions.StatError(
                         dedent(
                             """The stratum %s was not found in the original training data. For example, try
                             the following on the original dataset, df: `df.groupby(%s).size()`. Expected is that %s is not present in the output."""
                             % (stratum, self.strata, stratum)
                         )
                     )
-                col = _get_index(stratified_X)
+                col = utils._get_index(stratified_X)
                 v = self.predict_partial_hazard(stratified_X)
-                times_ = coalesce(times, self.baseline_cumulative_hazard_.index)
+                times_ = times
                 n_ = stratified_X.shape[0]
                 if conditional_after is not None:
-                    conditional_after_ = stratified_X.pop("_conditional_after")[:, None]
+                    conditional_after_ = stratified_X.pop("_conditional_after").values[:, None]
                     times_to_evaluate_at = np.tile(times_, (n_, 1)) + conditional_after_
 
-                    c_0_ = interpolate_at_times(strata_c_0, times_to_evaluate_at)
-                    c_0_conditional_after = interpolate_at_times(strata_c_0, conditional_after_)
+                    c_0_ = utils.interpolate_at_times(strata_c_0, times_to_evaluate_at)
+                    c_0_conditional_after = utils.interpolate_at_times(strata_c_0, conditional_after_)
                     c_0_ = np.clip((c_0_ - c_0_conditional_after).T, 0, np.inf)
 
                 else:
                     times_to_evaluate_at = np.tile(times_, (n_, 1))
-                    c_0_ = interpolate_at_times(strata_c_0, times_to_evaluate_at).T
+                    c_0_ = utils.interpolate_at_times(strata_c_0, times_to_evaluate_at).T
 
                 cumulative_hazard_ = cumulative_hazard_.merge(
                     pd.DataFrame(c_0_ * v.values, columns=col, index=times_), how="outer", right_index=True, left_index=True
@@ -1514,19 +2349,19 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         else:
 
             v = self.predict_partial_hazard(X)
-            col = _get_index(v)
-            times_ = coalesce(times, self.baseline_cumulative_hazard_.index)
+            col = utils._get_index(v)
+            times_ = times
 
             if conditional_after is not None:
                 times_to_evaluate_at = np.tile(times_, (n, 1)) + conditional_after
 
-                c_0 = interpolate_at_times(self.baseline_cumulative_hazard_, times_to_evaluate_at)
-                c_0_conditional_after = interpolate_at_times(self.baseline_cumulative_hazard_, conditional_after)
+                c_0 = utils.interpolate_at_times(self.baseline_cumulative_hazard_, times_to_evaluate_at)
+                c_0_conditional_after = utils.interpolate_at_times(self.baseline_cumulative_hazard_, conditional_after)
                 c_0 = np.clip((c_0 - c_0_conditional_after).T, 0, np.inf)
 
             else:
                 times_to_evaluate_at = np.tile(times_, (n, 1))
-                c_0 = interpolate_at_times(self.baseline_cumulative_hazard_, times_to_evaluate_at).T
+                c_0 = utils.interpolate_at_times(self.baseline_cumulative_hazard_, times_to_evaluate_at).T
 
             cumulative_hazard_ = pd.DataFrame(c_0 * v.values, columns=col, index=times_)
 
@@ -1555,7 +2390,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             points in time are not in the index.
         conditional_after: iterable, optional
             Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents :math:`s` in
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
@@ -1578,7 +2413,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             the percentile, must be between 0 and 1.
         conditional_after: iterable, optional
             Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents :math:`s` in
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
@@ -1587,8 +2422,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         predict_median
 
         """
-        subjects = _get_index(X)
-        return qth_survival_times(p, self.predict_survival_function(X, conditional_after=conditional_after)[subjects]).T.squeeze()
+        subjects = utils._get_index(X)
+        return utils.qth_survival_times(
+            p, self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
+        ).T.squeeze()
 
     def predict_median(self, X: DataFrame, conditional_after: Optional[ndarray] = None) -> pd.Series:
         """
@@ -1603,7 +2440,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             same order as the training data.
         conditional_after: iterable, optional
             Must be equal is size to X.shape[0] (denoted ``n`` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents :math:`s` in
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
@@ -1618,7 +2455,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
     def predict_expectation(self, X: DataFrame, conditional_after: Optional[ndarray] = None) -> pd.Series:
         r"""
         Compute the expected lifetime, :math:`E[T]`, using covariates X. This algorithm to compute the expectation is
-        to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integral, we use the trapizoidal rule to approximate the integral.
+        to use the fact that :math:`E[T] = \int_0^\inf P(T > t) dt = \int_0^\inf S(t) dt`. To compute the integral, we use the trapezoidal rule to approximate the integral.
 
         Caution
         --------
@@ -1634,7 +2471,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             same order as the training data.
         conditional_after: iterable, optional
             Must be equal is size to X.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
-            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents :math:`s` in
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
@@ -1650,7 +2487,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         predict_percentile
 
         """
-        subjects = _get_index(X)
+        subjects = utils._get_index(X)
         v = self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
         return pd.Series(trapz(v.values.T, v.index), index=subjects)
 
@@ -1757,7 +2594,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         errorbar_kwargs.setdefault("elinewidth", 1.25)
         errorbar_kwargs.setdefault("capsize", 3)
 
-        z = inv_normal_cdf(1 - self.alpha / 2)
+        z = utils.inv_normal_cdf(1 - self.alpha / 2)
         user_supplied_columns = True
 
         if columns is None:
@@ -1786,7 +2623,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             ax.set_xlabel("log(HR) (%g%% CI)" % ((1 - self.alpha) * 100))
 
         best_ylim = ax.get_ylim()
-        ax.vlines(1 if hazard_ratios else 0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65)
+        ax.vlines(1 if hazard_ratios else 0, -2, len(columns) + 1, linestyles="dashed", linewidths=1, alpha=0.65, color="k")
         ax.set_ylim(best_ylim)
 
         tick_labels = [columns[i] for i in order]
@@ -1795,126 +2632,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         ax.set_yticklabels(tick_labels)
 
         return ax
-
-    def plot_covariate_groups(self, covariates, values, plot_baseline=True, **kwargs):
-        """
-        Produces a plot comparing the baseline survival curve of the model versus
-        what happens when a covariate(s) is varied over values in a group. This is useful to compare
-        subjects' survival as we vary covariate(s), all else being held equal. The baseline survival
-        curve is equal to the predicted survival curve at all average values in the original dataset.
-
-        Parameters
-        ----------
-        covariates: string or list
-            a string (or list of strings) of the covariate(s) in the original dataset that we wish to vary.
-        values: 1d or 2d iterable
-            an iterable of the specific values we wish the covariate(s) to take on.
-        plot_baseline: bool
-            also display the baseline survival, defined as the survival at the mean of the original dataset.
-        kwargs:
-            pass in additional plotting commands.
-
-        Returns
-        -------
-        ax: matplotlib axis, or list of axis'
-            the matplotlib axis that be edited.
-
-
-        Examples
-        ---------
-        .. code:: python
-
-            from lifelines import datasets, CoxPHFitter
-            rossi = datasets.load_rossi()
-
-            cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
-            cph.plot_covariate_groups('prio', values=arange(0, 15, 3), cmap='coolwarm')
-
-        .. image:: /images/plot_covariate_example1.png
-
-        .. code:: python
-
-            # multiple variables at once
-            cph.plot_covariate_groups(['prio', 'paro'], values=[
-             [0,  0],
-             [5,  0],
-             [10, 0],
-             [0,  1],
-             [5,  1],
-             [10, 1]
-            ], cmap='coolwarm')
-
-        .. image:: /images/plot_covariate_example2.png
-
-        .. code:: python
-
-            # if you have categorical variables, you can do the following to see the
-            # effect of all the categories on one plot.
-            cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=[[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-            # same as:
-            cph.plot_covariate_groups(['dummy1', 'dummy2', 'dummy3'], values=np.eye(3))
-
-
-        """
-        from matplotlib import pyplot as plt
-
-        covariates = _to_list(covariates)
-        n_covariates = len(covariates)
-        values = np.asarray(values)
-        if len(values.shape) == 1:
-            values = values[None, :].T
-
-        if n_covariates != values.shape[1]:
-            raise ValueError("The number of covariates must equal to second dimension of the values array.")
-
-        for covariate in covariates:
-            if covariate not in self.params_.index:
-                raise KeyError("covariate `%s` is not present in the original dataset" % covariate)
-
-        drawstyle = "steps-post" if self.baseline_estimation_method == "breslow" else "default"
-        set_kwargs_drawstyle(kwargs, drawstyle)
-
-        if self.strata is None:
-            axes = kwargs.pop("ax", None) or plt.figure().add_subplot(111)
-            x_bar = self._norm_mean.to_frame().T
-            X = pd.concat([x_bar] * values.shape[0])
-
-            if np.array_equal(np.eye(n_covariates), values):
-                X.index = ["%s=1" % c for c in covariates]
-            else:
-                X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
-            for covariate, value in zip(covariates, values.T):
-                X[covariate] = value
-
-            self.predict_survival_function(X).plot(ax=axes, **kwargs)
-            if plot_baseline:
-                self.baseline_survival_.plot(ax=axes, ls=":", color="k", drawstyle=drawstyle)
-
-        else:
-            axes = []
-            for stratum, baseline_survival_ in self.baseline_survival_.iteritems():
-                ax = plt.figure().add_subplot(1, 1, 1)
-                x_bar = self._norm_mean.to_frame().T
-
-                for name, value in zip(_to_list(self.strata), _to_tuple(stratum)):
-                    x_bar[name] = value
-
-                X = pd.concat([x_bar] * values.shape[0])
-                if np.array_equal(np.eye(len(covariates)), values):
-                    X.index = ["%s=1" % c for c in covariates]
-                else:
-                    X.index = [", ".join("%s=%g" % (c, v) for (c, v) in zip(covariates, row)) for row in values]
-                for covariate, value in zip(covariates, values.T):
-                    X[covariate] = value
-
-                self.predict_survival_function(X).plot(ax=ax, **kwargs)
-                if plot_baseline:
-                    baseline_survival_.plot(
-                        ax=ax, ls=":", label="stratum %s baseline survival" % str(stratum), drawstyle=drawstyle
-                    )
-                plt.legend()
-                axes.append(ax)
-        return axes
 
     def score(self, df: pd.DataFrame, scoring_method: str = "log_likelihood") -> float:
         """
@@ -1946,10 +2663,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             cph.score(rossi_test)
 
         """
-
-        if self.baseline_estimation_method != "breslow":
-            return NotImplementedError("Only breslow implemented atm.")
-
         df = df.copy()
 
         if self.strata:
@@ -1958,26 +2671,20 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         df = df.sort_values([self.duration_col, self.event_col])
         T = df.pop(self.duration_col).astype(float)
         E = df.pop(self.event_col).astype(bool)
-
-        if self.weights_col:
-            W = df.pop(self.weights_col)
-        else:
-            W = pd.Series(np.ones_like(E), index=T.index)
+        W = df.pop(self.weights_col) if self.weights_col else pd.Series(np.ones_like(E), index=T.index)
+        entries = df.pop(self.entry_col) if self.entry_col else None
 
         if scoring_method == "log_likelihood":
 
-            df = normalize(df, self._norm_mean.values, 1.0)
+            df = utils.normalize(df, self._norm_mean.values, 1.0)
 
-            decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *df.shape)
-            get_gradients = getattr(self, "_get_efron_values_%s" % decision)
+            get_gradients = self._choose_gradient_calculator(T, df, entries)
             optimal_beta = self.params_.values
 
             if self.strata is None:
-                *_, ll_ = get_gradients(df.values, T.values, E.values, W.values, optimal_beta)
+                *_, ll_ = get_gradients(df, T, E, W, entries, optimal_beta)
             else:
-                ll_ = 0
-                for *_, _ll in self._partition_by_strata_and_apply(df, T, E, W, get_gradients, optimal_beta):
-                    ll_ += _ll
+                ll_ = sum(r[-1] for r in self._partition_by_strata_and_apply(df, T, E, W, entries, get_gradients, optimal_beta))
             return ll_ / df.shape[0]
 
         elif scoring_method == "concordance_index":
@@ -2027,34 +2734,509 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             return self.concordance_index_
         return self._concordance_index_
 
-    def compute_followup_hazard_ratios(self, training_df: DataFrame, followup_times: Iterable) -> DataFrame:
+    @property
+    def AIC_(self):
+        raise exceptions.StatError(
+            "Since the model is semi-parametric (and not fully-parametric), the AIC does not exist. You probably want the `.AIC_partial_` property instead."
+        )
+
+
+class ParametricCoxModelFitter(ParametricRegressionFitter, ProportionalHazardMixin):
+
+    _KNOWN_MODEL = True
+    cluster_col = None
+
+    def _cumulative_hazard(self, params, T, Xs):
+        if self.strata is not None:
+            return self._cumulative_hazard_with_strata(params, T, Xs)
+        else:
+            return self._cumulative_hazard_sans_strata(params, T, Xs)
+
+    @property
+    def baseline_hazard_(self):
+        return self.baseline_hazard_at_times(self.timeline)
+
+    @property
+    def baseline_survival_(self):
+        return self.baseline_survival_at_times(self.timeline)
+
+    @property
+    def baseline_cumulative_hazard_(self):
+        return self.baseline_cumulative_hazard_at_times(self.timeline)
+
+    def baseline_hazard_at_times(self, times=None):
         """
-        Recompute the hazard ratio at different follow-up times (lifelines handles accounting for updated censoring and updated durations).
-        This is useful because we need to remember that the hazard ratio is actually a weighted-average of period-specific hazard ratios.
+        Predict the baseline hazard at times (Defaults to observed durations)
+        """
+        times = utils.coalesce(times, self.timeline)
+        if self.strata is not None:
+            v = self.predict_hazard(self._central_values.reset_index(), times=times)
+            v.columns = self._central_values.index.values
+        else:
+            v = self.predict_hazard(self._central_values, times=times)
+            v.columns = ["baseline hazard"]
+        return v
+
+    def baseline_survival_at_times(self, times=None):
+        """
+        Predict the baseline survival at times (Defaults to observed durations)
+        """
+        times = utils.coalesce(times, self.timeline)
+        if self.strata is not None:
+            v = self.predict_survival_function(self._central_values.reset_index(), times=times)
+            v.columns = self._central_values.index.values
+        else:
+            v = self.predict_survival_function(self._central_values, times=times)
+            v.columns = ["baseline survival"]
+        return v
+
+    def baseline_cumulative_hazard_at_times(self, times=None):
+        """
+        Predict the baseline cumulative hazard at times (Defaults to observed durations)
+        """
+        times = utils.coalesce(times, self.timeline)
+        if self.strata is not None:
+            v = self.predict_cumulative_hazard(self._central_values.reset_index(), times=times)
+            v.columns = self._central_values.index.values
+        else:
+            v = self.predict_cumulative_hazard(self._central_values, times=times)
+            v.columns = ["baseline cumulative hazard"]
+        return v
+
+    def predict_cumulative_hazard(self, df, *, times=None, conditional_after=None):
+        """
+        Predict the cumulative hazard for individuals, given their covariates.
 
         Parameters
         ----------
 
-        training_df: pd.DataFrame
-            The same dataframe used to train the model
-        followup_times: Iterable
-            a list/array of follow-up times to recompute the hazard ratio at.
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
+            can be in any order.
+        times: iterable, optional
+            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations in the training dataset (observed and unobserved).
+        conditional_after: iterable, optional
+            Must be equal is size to (df.shape[0],) (`n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
+            :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
+            The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
 
+        Returns
+        -------
+        DataFrame
+            the cumulative hazards of individuals over the timeline
 
         """
-        results = {}
-        for t in sorted(followup_times):
-            assert t <= training_df[self.duration_col].max(), "all follow-up times must be less than max observed duration"
-            df = training_df.copy()
-            # if we "rollback" the df to time t, who is dead and who is censored
-            df[self.event_col] = (df[self.duration_col] <= t) & df[self.event_col]
-            df[self.duration_col] = np.minimum(df[self.duration_col], t)
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T.infer_objects()
 
-            model = self.__class__(
-                penalizer=self.penalizer,
-                l1_ratio=self.l1_ratio,
-                strata=self.strata,
-                baseline_estimation_method=self.baseline_estimation_method,
-            ).fit(df, self.duration_col, self.event_col, weights_col=self.weights_col, cluster_col=self.cluster_col)
-            results[t] = model.hazard_ratios_
-        return DataFrame(results).T
+        df = df.copy()
+
+        if self.strata is not None:
+            df = df.reset_index().set_index(self.strata)
+
+            cumulative_hazard = pd.DataFrame()
+            if conditional_after is not None:
+                # need to pass this into the groupby
+                df["conditional_after_"] = conditional_after
+
+            for stratum, stratified_X in df.groupby(self.strata):
+
+                if conditional_after is not None:
+                    conditional_after_ = stratified_X.pop("conditional_after_")
+                else:
+                    conditional_after_ = None
+
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=UserWarning)
+                    cumulative_hazard_ = super(ParametricCoxModelFitter, self).predict_cumulative_hazard(
+                        stratified_X, times=times, conditional_after=conditional_after_
+                    )
+                cumulative_hazard_.columns = stratified_X["index"]
+                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
+
+            return cumulative_hazard
+
+        else:
+            return super(ParametricCoxModelFitter, self).predict_cumulative_hazard(
+                df, times=times, conditional_after=conditional_after
+            )
+
+    def predict_hazard(self, df, *, conditional_after=None, times=None):
+        """
+        Predict the hazard for individuals, given their covariates.
+
+        Parameters
+        ----------
+
+        df: DataFrame
+            a (n,d) DataFrame. If a DataFrame, columns
+            can be in any order.
+        times: iterable, optional
+            an iterable (array, list, series) of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations in the training dataset (observed and unobserved).
+        conditional_after:
+            Not implemented yet.
+
+        Returns
+        -------
+        DataFrame
+            the hazards of individuals over the timeline
+
+        """
+        if isinstance(df, pd.Series):
+            df = df.to_frame().T.infer_objects()
+
+        df = df.copy()
+
+        if self.strata is not None:
+            df = df.reset_index().set_index(self.strata)
+
+            cumulative_hazard = pd.DataFrame()
+            if conditional_after is not None:
+                # need to pass this into the groupby
+                df["conditional_after_"] = conditional_after
+
+            for stratum, stratified_X in df.groupby(self.strata):
+
+                if conditional_after is not None:
+                    conditional_after_ = stratified_X.pop("conditional_after_")
+                else:
+                    conditional_after_ = None
+
+                cumulative_hazard_ = super(ParametricCoxModelFitter, self).predict_hazard(
+                    stratified_X, times=times, conditional_after=conditional_after_
+                )
+                cumulative_hazard_.columns = stratified_X["index"]
+                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
+
+            return cumulative_hazard
+
+        else:
+            return super(ParametricCoxModelFitter, self).predict_hazard(df, times=times, conditional_after=conditional_after)
+
+    @property
+    def AIC_partial_(self):
+        raise exceptions.StatError(
+            "Since the spline model is fully parametric (and not semi-parametric), the partial AIC does not exist. You probably want the `.AIC_` property instead."
+        )
+
+
+class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
+    r"""
+    Proportional hazard model with cubic splines model for the baseline hazard.
+
+    .. math::  h(t|x) = h_0(t) \exp(x' \beta)
+
+    where
+
+    .. math:: h_0(t) = \exp{\left( \phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j(\log{t})\right)}
+
+    where :math:`v_j` are our cubic basis functions at predetermined knots. See references for exact definition.
+
+    References
+    ------------
+    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
+
+    Note
+    -------
+    This is a "hidden" class that is invoked when using ``baseline_estimation_method="spline"``. You probably want to use ``CoxPHFitter``, not this.
+    """
+
+    _scipy_fit_method = "SLSQP"
+    _scipy_fit_options = {"maxiter": 1000, "iprint": 100}
+
+    _FAST_MEDIAN_PREDICT = False
+    fit_intercept = True
+
+    def __init__(self, strata, strata_values, n_baseline_knots=1, *args, **kwargs):
+        self.strata = strata
+        self.strata_values = strata_values
+
+        assert (
+            n_baseline_knots is not None and n_baseline_knots > 1
+        ), "n_baseline_knots should be greater than 1. Set in class instantiation"
+
+        self.n_baseline_knots = n_baseline_knots
+        super(ParametricSplinePHFitter, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def _strata_labeler(stratum, i):
+        return "s%s_phi%d_" % (stratum, i)
+
+    @property
+    def _fitted_parameter_names(self):
+        if self.strata is not None:
+            names = ["beta_"]
+            for stratum in self.strata_values:
+                names += [self._strata_labeler(stratum, i) for i in range(1, self.n_baseline_knots + 1)]
+            return names
+        else:
+            return ["beta_"] + ["phi%d_" % i for i in range(1, self.n_baseline_knots + 1)]
+
+    def _set_knots(self, T, E):
+        self.knots = np.percentile(T[E.astype(bool).values], np.linspace(5, 95, self.n_baseline_knots + 1))
+        return
+
+    def _pre_fit_model(self, Ts, E, df):
+        if E.sum() > 4:
+            self._set_knots(utils.coalesce(*Ts), E)
+        else:
+            # very few observations
+            self._set_knots(utils.coalesce(*Ts), pd.Series(np.ones_like(E)))
+
+    def _create_initial_point(self, Ts, E, entries, weights, Xs):
+        #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
+        if self.strata is not None:
+            params = {"beta_": np.zeros(len(Xs["beta_"].columns))}
+            for stratum in self.strata_values:
+                params.update({self._strata_labeler(stratum, i): np.array([0.001]) for i in range(1, self.n_baseline_knots + 1)})
+
+            return params
+
+        else:
+            return {
+                **{"beta_": np.zeros(len(Xs["beta_"].columns))},
+                **{"phi%d_" % i: np.array([0.01]) for i in range(1, self.n_baseline_knots + 1)},
+            }
+
+    def _cumulative_hazard_with_strata(self, params, T, Xs):
+        lT = anp.log(T)
+        output = []
+
+        # hack for iterating over stratified T
+        start, stop = 0, 0
+
+        # I can assume Xs is sorted by strata values
+        for stratum, Xs_ in Xs.groupby(self.strata):
+            stop = stop + Xs_.size
+
+            if T.ndim > 1:
+                lT_ = lT[:, start:stop]
+            else:
+                lT_ = lT[start:stop]
+
+            H_ = safe_exp(anp.dot(Xs_["beta_"], params["beta_"]) + params[self._strata_labeler(stratum, 1)] * lT_)
+
+            for i in range(2, self.n_baseline_knots + 1):
+                H_ = H_ * safe_exp(
+                    params[self._strata_labeler(stratum, i)]
+                    * self.basis(lT_, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
+                )
+
+            output.append(H_)
+            start = stop
+
+        return anp.hstack(output) if output else anp.array([])
+
+    def _cumulative_hazard_sans_strata(self, params, T, Xs):
+        lT = anp.log(T)
+
+        H = safe_exp(anp.dot(Xs["beta_"], params["beta_"]) + params["phi1_"] * lT)
+
+        for i in range(2, self.n_baseline_knots + 1):
+            H = H * safe_exp(
+                params["phi%d_" % i] * self.basis(lT, anp.log(self.knots[i - 1]), anp.log(self.knots[0]), anp.log(self.knots[-1]))
+            )
+        return H
+
+
+class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, ProportionalHazardMixin):
+    r"""
+    Proportional hazard model with piecewise constant model for the baseline hazard.
+
+    .. math::  h(t|x) = h_0(t) \exp(x' \beta)
+
+    where
+
+    .. math::  h_0(t) = \begin{cases}
+                        exp{\beta \cdot \text{center}(x)}  & \text{if $t \le \tau_0$} \\
+                        exp{\beta \cdot \text{center}(x)} \cdot lambda_1 & \text{if $\tau_0 < t \le \tau_1$} \\
+                        exp{\beta \cdot \text{center}(x)} \cdot lambda_2 & \text{if $\tau_1 < t \le \tau_2$} \\
+                        ...
+                      \end{cases}
+
+    Note
+    -------
+    This is a "hidden" class that is invoked when using ``baseline_estimation_method="piecewise"``. You probably want to use ``CoxPHFitter``, not this.
+    """
+
+    _KNOWN_MODEL = True
+    _FAST_MEDIAN_PREDICT = False
+    fit_intercept = True
+
+    cluster_col = None
+
+    def __init__(self, strata, strata_values, breakpoints, *args, **kwargs):
+        self.strata = strata
+        self.strata_values = strata_values
+
+        assert (
+            breakpoints is not None and len(breakpoints) > 0
+        ), "breakpoints should be greater than 0. Set in class instantiation"
+
+        self.breakpoints = breakpoints
+        self.n_breakpoints = len(breakpoints)
+        super(ParametricPiecewiseBaselinePHFitter, self).__init__(*args, **kwargs)
+
+    @staticmethod
+    def _strata_labeler(stratum, i):
+        return "s%s_lambda%d_" % (stratum, i)
+
+    @property
+    def _fitted_parameter_names(self):
+        if self.strata is not None:
+            names = ["beta_"]
+            for stratum in self.strata_values:
+                names += [self._strata_labeler(stratum, i) for i in range(2, self.n_breakpoints + 2)]
+            return names
+        else:
+            return ["beta_"] + ["log_lambda%d_" % i for i in range(2, self.n_breakpoints + 2)]
+
+    def _create_initial_point(self, Ts, E, entries, weights, Xs):
+        #  Some non-zero initial points. This is important as it nudges the model slightly away from the degenerate all-zeros model. Try setting it to 0, and watch the model fail to converge.
+        if self.strata is not None:
+            params = {"beta_": np.zeros(len(Xs["beta_"].columns))}
+            for stratum in self.strata_values:
+                params.update({self._strata_labeler(stratum, i): np.array([0.001]) for i in range(2, self.n_breakpoints + 2)})
+
+            return params
+
+        else:
+            return {
+                **{"beta_": np.zeros(len(Xs["beta_"].columns))},
+                **{"log_lambda%d_" % i: np.array([0.001]) for i in range(2, self.n_breakpoints + 2)},
+            }
+
+    def _cumulative_hazard_with_strata(self, params, T, Xs):
+        output = []
+
+        # hack for iterating over stratified T
+        start, stop = 0, 0
+
+        # I can assume Xs is sorted by strata values
+        for stratum, Xs_ in Xs.groupby(self.strata):
+            stop = stop + Xs_.size
+
+            if T.ndim > 1:
+                T_ = T[:, start:stop]
+            else:
+                T_ = T[start:stop]
+
+            partial_hazard = safe_exp(anp.dot(Xs_["beta_"], params["beta_"]))
+            n = T_.shape[0]
+            T_ = T_.reshape((n, 1))
+            bps = anp.append(self.breakpoints, [anp.inf])
+            M = anp.minimum(anp.tile(bps, (n, 1)), T_)
+            M = anp.hstack([M[:, tuple([0])], anp.diff(M, axis=1)])
+            log_lambdas_ = anp.array(
+                [0] + [params[self._strata_labeler(stratum, i)][0] for i in range(2, self.n_breakpoints + 2)]
+            )
+            H_ = partial_hazard * (M * anp.exp(log_lambdas_).T).sum(1)
+
+            output.append(H_)
+            start = stop
+
+        return anp.hstack(output) if output else anp.array([])
+
+    def _cumulative_hazard_sans_strata(self, params, T, Xs):
+        partial_hazard = safe_exp(anp.dot(Xs["beta_"], params["beta_"]))
+        n = T.shape[0]
+        T = T.reshape((n, 1))
+        bps = anp.append(self.breakpoints, [anp.inf])
+        M = anp.minimum(anp.tile(bps, (n, 1)), T)
+        M = anp.hstack([M[:, tuple([0])], anp.diff(M, axis=1)])
+        log_lambdas_ = anp.array([0.0] + [params[param][0] for param in self._fitted_parameter_names if param != "beta_"])
+        return partial_hazard * (M * anp.exp(log_lambdas_).T).sum(1)
+
+    def predict_cumulative_hazard(self, df, times=None, conditional_after=None) -> pd.DataFrame:
+        """
+        Return the cumulative hazard rate of subjects in X at time points.
+
+        Parameters
+        ----------
+        X: numpy array or DataFrame
+            a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
+            can be in any order. If a numpy array, columns must be in the
+            same order as the training data.
+        times: iterable, optional
+            an iterable of increasing times to predict the cumulative hazard at. Default
+            is the set of all durations (observed and unobserved). Uses a linear interpolation if
+            points in time are not in the index.
+
+        Returns
+        -------
+        cumulative_hazard_ : DataFrame
+            the cumulative hazard of individuals over the timeline
+        """
+        df = df.copy()
+        if isinstance(df, pd.Series):
+            return self.predict_cumulative_hazard(df.to_frame().T)
+
+        if conditional_after is not None:
+            raise NotImplementedError()
+
+        times = np.atleast_1d(utils.coalesce(times, self.timeline)).astype(float)
+        n = times.shape[0]
+        times = times.reshape((n, 1))
+
+        bp = np.append(self.breakpoints, [np.inf])
+
+        M = np.minimum(np.tile(bp, (n, 1)), times)
+        M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
+
+        if self.strata is not None:
+            df = df.reset_index().set_index(self.strata)
+
+            cumulative_hazard = pd.DataFrame()
+
+            for stratum, stratified_X in df.groupby(self.strata):
+                log_lambdas_ = anp.array(
+                    [0] + [self.params_[self._strata_labeler(stratum, i)][0] for i in range(2, self.n_breakpoints + 2)]
+                )
+                lambdas_ = np.exp(log_lambdas_)
+
+                Xs_ = self.regressors.transform_df(stratified_X)
+                partial_hazard = np.exp(np.dot(Xs_["beta_"], self.params_["beta_"]))
+
+                cumulative_hazard_ = pd.DataFrame(np.outer(np.dot(M, lambdas_), partial_hazard), index=times[:, 0])
+                cumulative_hazard_.columns = stratified_X["index"]
+                cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
+
+            return cumulative_hazard
+
+        else:
+            log_lambdas_ = np.array([0] + [self.params_[param][0] for param in self._fitted_parameter_names if param != "beta_"])
+            lambdas_ = np.exp(log_lambdas_)
+
+            Xs = self.regressors.transform_df(df)
+            partial_hazard = np.exp(np.dot(Xs["beta_"], self.params_["beta_"]))
+            return pd.DataFrame(np.outer(np.dot(M, lambdas_), partial_hazard), columns=utils._get_index(df), index=times[:, 0])
+
+
+class _BatchVsSingle:
+
+    BATCH = "batch"
+    SINGLE = "single"
+
+    def decide(self, batch_mode: Optional[bool], n_unique: int, n_total: int, n_vars: int) -> str:
+        log_frac_dups = np.log(n_unique / n_total)
+        if batch_mode or (
+            # https://github.com/CamDavidsonPilon/lifelines/issues/591 for original issue.
+            # new values from from perf/batch_vs_single script.
+            (batch_mode is None)
+            and (
+                1.537_271e00
+                + n_total * 4.771_387e-06
+                + log_frac_dups * 2.610_877e-01
+                + n_total * log_frac_dups * -3.830_987e-11
+                + log_frac_dups ** 2 * 1.389_890e-02
+                + n_total ** 2 * 3.129_870e-14
+                + n_vars * 3.196_517e-03
+                + n_vars * n_total * -7.356_722e-07
+            )
+            < 1
+        ):
+            return self.BATCH
+        return self.SINGLE

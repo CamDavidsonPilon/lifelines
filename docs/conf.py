@@ -298,4 +298,4 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 
 
 def setup(app):
-    app.add_stylesheet("custom.css")
+    app.add_css_file("custom.css")

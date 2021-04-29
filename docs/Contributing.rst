@@ -6,8 +6,8 @@ Questions about survival analysis?
 
 If you are using lifelines for survival analysis and have a question
 about “how do I do X?” or “what does Y do?”, the best place to ask that
-is either in our `gitter
-channel <https://gitter.im/python-lifelines/Lobby>`__ or at
+is either in our `discussions
+channel <https://github.com/camdavidsonpilon/lifelines/discussions>`__ or at
 `stats.stackexchange.com <https://stats.stackexchange.com/>`__.
 
 Submitting bugs or other errors observed

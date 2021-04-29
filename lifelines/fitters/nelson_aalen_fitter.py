@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-
-
 import warnings
 import numpy as np
 import pandas as pd
 
 from lifelines.fitters import UnivariateFitter
 from lifelines.plotting import _plot_estimate
+from lifelines.exceptions import StatisticalWarning
 from lifelines.utils import (
     _preprocess_inputs,
     _additive_estimate,
     epanechnikov_kernel,
     inv_normal_cdf,
     check_nans_or_infs,
-    StatisticalWarning,
     CensoringType,
     coalesce,
+    _to_1d_array,
 )
 
 
@@ -59,8 +58,6 @@ class NelsonAalenFitter(UnivariateFitter):
 
     def __init__(self, alpha=0.05, nelson_aalen_smoothing=True, **kwargs):
         super(NelsonAalenFitter, self).__init__(alpha=alpha, **kwargs)
-        if not (0 < alpha <= 1.0):
-            raise ValueError("alpha parameter must be between 0 and 1.")
         self.alpha = alpha
         self.nelson_aalen_smoothing = nelson_aalen_smoothing
 
@@ -105,8 +102,10 @@ class NelsonAalenFitter(UnivariateFitter):
           self, with new properties like ``cumulative_hazard_``.
 
         """
+        durations = np.asarray(durations)
         check_nans_or_infs(durations)
         if event_observed is not None:
+            event_observed = np.asarray(event_observed)
             check_nans_or_infs(event_observed)
 
         if weights is not None:
@@ -131,14 +130,13 @@ class NelsonAalenFitter(UnivariateFitter):
         # estimates
         self._label = coalesce(label, self._label, "NA_estimate")
         self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[self._label])
-        self.confidence_interval_ = self._bounds(cumulative_sq_[:, None], alpha if alpha else self.alpha, ci_labels)
+        self.confidence_interval_ = self._bounds(cumulative_sq_.values[:, None], alpha if alpha else self.alpha, ci_labels)
         self.confidence_interval_cumulative_hazard_ = self.confidence_interval_
         self._cumulative_sq = cumulative_sq_
 
         # estimation methods
         self._estimation_method = "cumulative_hazard_"
         self._estimate_name = "cumulative_hazard_"
-        self._update_docstrings()
 
         # plotting
         self.plot_cumulative_hazard = self.plot
@@ -241,7 +239,23 @@ class NelsonAalenFitter(UnivariateFitter):
 
     @property
     def conditional_time_to_event_(self):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def percentile(self, p):
         raise NotImplementedError()
+
+    def cumulative_hazard_at_times(self, times, label=None) -> pd.Series:
+        """
+        Return a Pandas series of the predicted cumhaz value at specific times
+
+        Parameters
+        -----------
+        times: iterable or float
+
+        Returns
+        --------
+        pd.Series
+
+        """
+        label = coalesce(label, self._label)
+        return pd.Series(self.predict(times), index=_to_1d_array(times), name=label)

@@ -12,7 +12,7 @@ This section goes through some examples and recipes to help you use *lifelines*.
 Worked Examples
 ####################
 
-If you are looking for some full examples of *lifelines*, `there are full Jupyter notebooks and scripts here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_ and `examples and ideas on the development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>`_.
+If you are looking for some full examples of *lifelines*, there are `full Jupyter notebooks and scripts here <https://github.com/CamDavidsonPilon/lifelines/tree/master/examples>`_ and examples and ideas on the `development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>`_.
 
 
 Statistically compare two populations
@@ -93,6 +93,56 @@ hypothesis that all the populations have the same "death" generation process).
     ---
     """
 
+The logrank test statistic is calculated from the differences between the observed deaths for a group and expected
+deaths, under the null hypothesis that all groups share the same survival curve, summed across all ordered death times.
+It therefore weights differences between the survival curves equally at each death time, resulting in maximum power
+when the assumption of proportional hazards is true. To test for early or late differences in survival between
+groups, a weighted logrank test that are more sensitive to non-proportional hazards might be a better choice.
+
+Four types of weighted logrank test are currently available in lifelines through the ``weightings`` argument:
+the Wilcoxon (``weightings='wilcoxon'``), Tarone-Ware (``weightings='tarone-ware'``), Peto (``weightings='peto'``)
+and Fleming-Harrington (``weightings='fleming-harrington'``) tests.
+The following weightings are applied at the ith ordered failure time, :math:`t_{i}`:
+
+    .. math:: \text{Wilcoxon:}\quad n_i
+    .. math:: \text{Tarone-Ware:}\quad \sqrt{n_i}
+    .. math:: \text{Peto:}\quad \bar{S}(t_i)
+    .. math:: \text{Fleming-Harrington}\quad \hat{S}(t_i)^p \times (1 - \hat{S}(t_i))^q
+
+where :math:`n_i` is the number at risk just prior to time :math:`t_{i}`, :math:`\bar{S}(t_i)` is
+Peto-Peto's modified survival estimate and :math:`\hat{S}(t_i)` is the left-continuous
+Kaplan-Meier survival estimate at time :math:`t_{i}`.
+
+The Wilcoxon, Tarone-Ware and Peto tests apply more weight to earlier death times. The Peto test is more robust than
+the Wilcoxon or Tarone-Ware tests when many observations are censored. When p > q, the Fleming-Harrington
+applies more weight to earlier death times whilst when p < q, it is more sensitive to late differences (for p=q=0 it
+reduces to the unweighted logrank test). The choice of which test to perform should be made in advance and not
+retrospectively to avoid introducing bias.
+
+.. code-block:: python
+
+    import pandas as pd
+    from lifelines.statistics import multivariate_logrank_test
+
+    df = pd.DataFrame({
+        'durations': [5, 3, 9, 8, 7, 4, 4, 3, 2, 5, 6, 7],
+        'groups': [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2], # could be strings too
+        'events': [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+    })
+
+    results = multivariate_logrank_test(df['durations'], df['groups'], df['events'], weightings='peto')
+    results.print_summary()
+
+    """
+    t_0 = -1
+    null_distribution = chi squared
+    degrees_of_freedom = 2
+    test_name = multivariate_Peto_test
+    ---
+    test_statistic    p  -log2(p)
+              0.95 0.62      0.68
+    """
+
 Survival differences at a point in time
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -112,36 +162,12 @@ the log(-log) transformation implicitly and compares the survival-ness of popula
     T_exp, E_exp = df.loc[ix, 'T'], df.loc[ix, 'E']
     T_con, E_con = df.loc[~ix, 'T'], df.loc[~ix, 'E']
 
+    kmf_exp = KaplanMeierFitter(label="exp").fit(T_exp, E_exp)
+    kmf_con = KaplanMeierFitter(label="con").fit(T_con, E_con)
+
     point_in_time = 10.
-    results = survival_difference_at_fixed_point_in_time_test(point_in_time, T_exp, T_con, event_observed_A=E_exp, event_observed_B=E_con)
+    results = survival_difference_at_fixed_point_in_time_test(point_in_time, kmf_exp, kmf_con)
     results.print_summary()
-
-
-Subtraction and division between survival functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If you are interested in taking the difference between two survival functions, simply trying to
-subtract the ``survival_function_`` will likely fail if the DataFrame's indexes are not equal. Fortunately,
-the :class:`~lifelines.fitters.kaplan_meier_fitter.KaplanMeierFitter` and :class:`~lifelines.fitters.nelson_aalen_fitter.NelsonAalenFitter` have a built-in ``subtract`` method:
-
-.. code-block:: python
-
-    from lifelines.datasets import load_waltons
-    from lifelines import KaplanMeierFitter
-
-
-    df = load_waltons()
-    ix = df['group'] == 'miR-137'
-    T_exp, E_exp = df.loc[ix, 'T'], df.loc[ix, 'E']
-    T_con, E_con = df.loc[~ix, 'T'], df.loc[~ix, 'E']
-
-    kmf1 = KaplanMeierFitter().fit(T_exp, E_exp, label="exp")
-    kmf2 = KaplanMeierFitter().fit(T_con, E_con, label="con")
-
-
-    kmf1.subtract(kmf2)
-
-will produce the difference at every relevant time point. A similar function exists for division: ``divide``. However, for rigorous testing of differences, *lifelines* comes with a statistics library. See below.
 
 
 Restricted mean survival times (RMST)
@@ -152,7 +178,7 @@ Restricted mean survival times (RMST)
     .. math::  \text{RMST}(t) = \int_0^t S(\tau) d\tau
 
 
-This is a good metric for comparing two survival curves, as their difference represents the area between the curves (see figure below). The upper limit is often finite because the tail of the estimated survival curve has high variance and can strongly influence the integral.
+This is a good metric for comparing two survival curves, as their difference represents the area between the curves (see figure below) which is a measure of "time lost". The upper limit of the integral above is often finite because the tail of the estimated survival curve has high variance and can strongly influence the integral.
 
 .. code-block:: python
 
@@ -262,13 +288,16 @@ Selecting a parametric model using AIC
 ###############################################
 
 
-For univariate models (later to be extended to regression models), a natural way to compare different models is the AIC:
+A natural way to compare different models is the AIC:
 
 .. math::  \text{AIC}(\text{model}) = -2 \text{ll} + 2k
 
 where :math:`k` is the number of parameters (degrees-of-freedom) of the model and :math:`\text{ll}` is the maximum log-likelihood. The model with the lowest AIC is desirable, since it's a trade off between maximizing the log-likelihood with as few parameters as possible.
 
-*lifelines* has a built in function to automate AIC comparisons between univariate parametric models:
+All lifelines models have the `AIC_` property after fitting.
+
+
+Further more, *lifelines* has a built in function to automate AIC comparisons between univariate parametric models:
 
 .. code:: python
 
@@ -278,16 +307,16 @@ where :math:`k` is the number of parameters (degrees-of-freedom) of the model an
     T = load_lymph_node()['rectime']
     E = load_lymph_node()['censrec']
 
-    best_model, best_aic_ = find_best_parametric_model(T, E)
+    best_model, best_aic_ = find_best_parametric_model(T, E, scoring_method="AIC")
 
     print(best_model)
     # <lifelines.SplineFitter:"Spline_estimate", fitted with 686 total observations, 387 right-censored observations>
 
     best_model.plot_hazard()
 
-
 .. image:: images/best_parametric_model.png
-
+    :width: 500px
+    :align: center
 
 Plotting multiple figures on a plot
 ##############################################
@@ -297,10 +326,10 @@ When ``.plot`` is called, an ``axis`` object is returned which can be passed int
 .. code-block:: python
 
     kmf.fit(data1)
-    ax = kmf.plot()
+    ax = kmf.plot_survival_function()
 
     kmf.fit(data2)
-    ax = kmf.plot(ax=ax)
+    ax = kmf.plot_survival_function(ax=ax)
 
 
 If you have a pandas DataFrame with columns "T", "E", and some categorical variable, then something like the following would work:
@@ -318,7 +347,7 @@ If you have a pandas DataFrame with columns "T", "E", and some categorical varia
 
     for name, grouped_df in df.groupby('group'):
         kmf.fit(grouped_df["T"], grouped_df["E"], label=name)
-        kmf.plot(ax=ax)
+        kmf.plot_survival_function(ax=ax)
 
 
 Plotting interval censored data
@@ -362,8 +391,8 @@ Standard
 
 
     kmf = KaplanMeierFitter()
-    kmf.fit(T, E, label="kmf.plot()")
-    kmf.plot()
+    kmf.fit(T, E, label="kmf.plot_survival_function()")
+    kmf.plot_survival_function()
 
 .. image:: /images/normal_plot.png
     :width: 500px
@@ -374,8 +403,8 @@ Show censors and edit markers
 
 .. code-block:: python
 
-    kmf.fit(T, E, label="kmf.plot(show_censors=True, \ncensor_styles={'ms': 6, 'marker': 's'})")
-    kmf.plot(show_censors=True, censor_styles={'ms': 6, 'marker': 's'})
+    kmf.fit(T, E, label="kmf.plot_survival_function(show_censors=True, \ncensor_styles={'ms': 6, 'marker': 's'})")
+    kmf.plot_survival_function(show_censors=True, censor_styles={'ms': 6, 'marker': 's'})
 
 .. image:: images/flat_plot.png
     :width: 500px
@@ -387,8 +416,8 @@ Hide confidence intervals
 
 .. code-block:: python
 
-    kmf.fit(T, E, label="kmf.plot(ci_show=False)")
-    kmf.plot(ci_show=False)
+    kmf.fit(T, E, label="kmf.plot_survival_function(ci_show=False)")
+    kmf.plot_survival_function(ci_show=False)
 
 .. image:: /images/ci_show_plot.png
     :width: 500px
@@ -401,7 +430,10 @@ Displaying at-risk counts below plots
 .. code-block:: python
 
     kmf.fit(T, E, label="label name")
-    kmf.plot(at_risk_counts=True)
+    kmf.plot_survival_function(at_risk_counts=True)
+    plt.tight_layout()
+
+
 
 .. image:: /images/single_at_risk_plots.png
     :width: 500px
@@ -410,7 +442,7 @@ Displaying at-risk counts below plots
 Displaying multiple at-risk counts below plots
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The function :func:`lifelines.plotting.add_at_risk_counts` allows you to add At-Risk counts at the bottom of your figures. For example:
+The function :func:`lifelines.plotting.add_at_risk_counts` allows you to add counts at the bottom of your figures. For example:
 
 .. code-block:: python
 
@@ -423,14 +455,15 @@ The function :func:`lifelines.plotting.add_at_risk_counts` allows you to add At-
     ax = plt.subplot(111)
 
     kmf_control = KaplanMeierFitter()
-    ax = kmf_control.fit(waltons.loc[ix]['T'], waltons.loc[ix]['E'], label='control').plot(ax=ax)
+    ax = kmf_control.fit(waltons.loc[ix]['T'], waltons.loc[ix]['E'], label='control').plot_survival_function(ax=ax)
 
     kmf_exp = KaplanMeierFitter()
-    ax = kmf_exp.fit(waltons.loc[~ix]['T'], waltons.loc[~ix]['E'], label='exp').plot(ax=ax)
+    ax = kmf_exp.fit(waltons.loc[~ix]['T'], waltons.loc[~ix]['E'], label='exp').plot_survival_function(ax=ax)
 
 
     from lifelines.plotting import add_at_risk_counts
     add_at_risk_counts(kmf_exp, kmf_control, ax=ax)
+    plt.tight_layout()
 
 will display
 
@@ -926,12 +959,27 @@ When you want to save (and later load) a *lifelines* model to disk, you can use 
 
     s_cph = dumps(cph)
     cph_new = loads(s_cph)
-    cph.summary
+    cph_new.summary
 
 
     s_kmf = dumps(kmf)
     kmf_new = loads(s_kmf)
-    kmf.survival_function_
+    kmf_new.survival_function_
+    
+
+The codes above save the trained models as binary objects in memory. To serialize a *lifelines* model to a given path on disk:
+
+.. code-block:: python
+
+    import pickle
+
+    with open('/path/my.pickle', 'wb') as f:
+        pickle.dump(cph, f) # saving my trained cph model as my.pickle
+
+    with open('/path/my.pickle', 'rb') as f:
+        cph_new = pickle.load(f)
+
+    cph_new.summary # should produce the same output as cph.summary
 
 
 Produce a LaTex or HTML table
@@ -957,3 +1005,67 @@ New in version 0.23.1, *lifelines* models now have the ability to output a LaTeX
 
 
 In order to use the produced table summary in LaTeX, make sure you import the package ``booktabs`` in your preamble (``\usepackage{booktabs}``), since it is required to `display the table properly. <https://en.wikibooks.org/wiki/LaTeX/Tables#Using_booktabs>`_
+
+
+Filter a ``print_summary`` table
+##########################################
+
+The information provided by ``print_summary`` can be a lot, and even too much for some screens. You can filter to specific columns use the ``columns`` kwarg (default is to display all columns):
+
+.. code-block:: python
+
+    from lifelines.datasets import load_rossi
+    from lifelines import CoxPHFitter
+
+    rossi = load_rossi()
+
+    cph = CoxPHFitter().fit(rossi, 'week', 'arrest')
+
+    cph.print_summary(columns=["coef", "se(coef)", "p"])
+
+
+
+Fixing a ``FormulaSyntaxError``
+##############################################
+
+As a of *lifelines* v0.25.0, formulas can be used to model your dataframe. This may cause problems if your dataframe has column names with spaces, periods, or other characters. The cheapest way to fix this is to change your column names:
+
+
+.. code-block:: python
+
+    df = pd.DataFrame({
+        'T': [1, 2, 3, 4],
+        'column with spaces': [1.5, 1.0, 2.5, 1.0],
+        'column.with.periods': [2.5, -1.0, -2.5, 1.0],
+        'column': [2.0, 1.0, 3.0, 4.0]
+    })
+
+    cph = CoxPHFitter().fit(df, 'T')
+
+    """
+    FormulaSyntaxError:
+        ...
+    """
+
+    df.columns = df.columns.str.replace(' ', '')
+    df.columns = df.columns.str.replace('.', '')
+    cph = CoxPHFitter().fit(df, 'T')
+
+    """
+    👍
+    """
+
+
+Another option is to use the formula syntax to handle this:
+
+
+.. code-block:: python
+
+    df = pd.DataFrame({
+        'T': [1, 2, 3, 4],
+        'column with spaces': [1.5, 1.0, 2.5, 1.0],
+        'column.with.periods': [2.5, -1.0, -2.5, 1.0],
+        'column': [2.0, 1.0, 3.0, 4.0]
+    })
+
+    cph = CoxPHFitter().fit(df, 'T', formula="column + Q('column with spaces') + Q('column.with.periods')")

@@ -1,4 +1,4 @@
-NaCl %,pH,lower_bound_days,upper_bound_days
+NaCl_percent,pH,lower_bound_days,upper_bound_days
 0,7.0,0,1.0
 0,6.5,0,1.0
 0,6.0,0,1.0

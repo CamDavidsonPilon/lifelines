@@ -166,6 +166,8 @@ def load_dd(**kwargs):
 
 def load_kidney_transplant(**kwargs):
     """
+    D.3 from Klein and Moeschberger Statistics for Biology and Health, 1997.
+
     ::
 
         Size: (863,6)
@@ -187,7 +189,7 @@ def load_larynx(**kwargs):
 
         Size: (89,6)
         Example:
-            time  age  death  Stage II  Stage III  Stage IV
+            time  age  death  Stage_II  Stage_III  Stage_IV
              0.6   77      1         0          0         0
              1.3   53      1         0          0         0
              2.4   45      1         0          0         0
@@ -200,8 +202,13 @@ def load_larynx(**kwargs):
 
 def load_lung(**kwargs):
     """
-    Survival in patients with advanced lung cancer from the North Central Cancer Treatment Group. Performance scores rate how well the patient can perform usual daily activities.::
+    Survival in patients with advanced lung cancer from the North Central Cancer Treatment Group. Performance scores rate how well the patient can perform usual daily activities.
 
+    Note
+    ---------
+    Be mindful of the ``status`` column, as lifelines will treat _any_ non-zero entry as censored.
+
+    ::
         Size: (288,10)
         Example:
          inst  time  status  age  sex  ph.ecog  ph.karno  pat.karno  meal.cal  wt.loss
@@ -557,3 +564,14 @@ def load_c_botulinum_lag_phase(**kwargs):
 
     """
     return _load_dataset("c_botulinum_lag_phase.csv", **kwargs)
+
+
+def load_mice(**kwargs):
+    """
+    A dataset of interval-censored observations of mice tumors in two different environments.
+
+    References
+    -----------
+    Hoel D. and Walburg, H.,(1972), Statistical analysis of survival experiments, The Annals of Statistics, 18, 1259-1294
+    """
+    return _load_dataset("mice.csv", **kwargs)

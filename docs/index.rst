@@ -11,19 +11,45 @@
 lifelines
 =====================================
 
-*lifelines* is an implementation of survival analysis in Python. What
-benefits does *lifelines* offer over other survival analysis
-implementations?
+*lifelines* is a complete survival analysis library, written in pure Python. What
+benefits does *lifelines* have?
 
--  built on top of Pandas
--  internal plotting methods
--  simple and intuitive API
--  only focus is survival analysis
--  handles right, left and interval censored data
+- easy installation
+- internal plotting methods
+- simple and intuitive API
+- handles right, left and interval censored data
+- contains the most popular parametric, semi-parametric and non-parametric models
+
+Installation
+------------------------------
 
 
-Contents:
-============
+.. code-block:: console
+
+    pip install lifelines
+
+or
+
+.. code-block:: console
+
+    conda install -c conda-forge lifelines
+
+
+Source code and issue tracker
+------------------------------
+
+Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_.
+Please report bugs, issues and feature extensions there. We also have `discussion channel <https://github.com/camdavidsonpilon/lifelines/discussions>`_ available to discuss survival analysis and *lifelines*:
+
+Citing *lifelines*
+------------------------------
+
+The following link will bring you to a page where you can find the latest citation for *lifelines*: `Citation for lifelines <https://doi.org/10.5281/zenodo.805993>`_
+
+
+Documentation
+------------------------------
+
 
 .. toctree::
   :maxdepth: 1
@@ -54,8 +80,8 @@ Contents:
   :maxdepth: 1
   :caption: Additional documentation
 
-  Examples
   References
+  Examples
 
 .. toctree::
   :maxdepth: 1
@@ -69,7 +95,7 @@ Contents:
   :maxdepth: 1
   :caption: Questions? Suggestions?
 
-  Gitter channel <https://gitter.im/python-lifelines/Lobby>
+  Discussion forum <https://github.com/camdavidsonpilon/lifelines/discussions>
   Create a GitHub issue <https://github.com/camdavidsonpilon/lifelines/issues>
 
 .. toctree::
@@ -77,41 +103,3 @@ Contents:
   :caption: Developer Documentation
 
   Contributing
-
-
-Installation
-------------------------------
-
-
-.. code-block:: console
-
-    pip install lifelines
-
-or
-
-.. code-block:: console
-
-    conda install -c conda-forge lifelines
-
-
-
-Source code and issue tracker
-------------------------------
-
-Available on Github, `CamDavidsonPilon/lifelines <https://github.com/CamDavidsonPilon/lifelines/>`_.
-Please report bugs, issues and feature extensions there. We also have `Gitter channel <https://gitter.im/python-lifelines/Lobby>`_ available to discuss survival analysis and *lifelines*:
-
-Citing *lifelines*
-------------------------------
-
-The following link will bring you to a page where you can find the latest citation for *lifelines*:
-
-`Citation for lifelines <https://doi.org/10.5281/zenodo.805993>`_
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

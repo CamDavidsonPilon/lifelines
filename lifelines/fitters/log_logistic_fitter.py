@@ -57,9 +57,9 @@ class LogLogisticFitter(KnownModelParametricUnivariateFitter):
         The estimated survival function (with custom timeline if provided)
     cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
-    density: DataFrame
+    density_: DataFrame
         The estimated density function (PDF) (with custom timeline if provided)
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     median_survival_time_: float
         The median time to event
@@ -91,9 +91,15 @@ class LogLogisticFitter(KnownModelParametricUnivariateFitter):
         if CensoringType.is_right_censoring(self):
             T = Ts[0]
         elif CensoringType.is_left_censoring(self):
-            T = Ts[1]
+            T = np.clip(0.0001, np.inf, Ts[1])
         elif CensoringType.is_interval_censoring(self):
-            T = Ts[1] - Ts[0]
+            if E.sum() > 0:
+                # Ts[1] can contain infs, so ignore this data
+                okay_data = Ts[1] < 1e10
+                T = Ts[1]
+                T = T[okay_data]
+            else:
+                T = np.array([1.0])
         return np.array([np.median(T), 1.0])
 
     @property

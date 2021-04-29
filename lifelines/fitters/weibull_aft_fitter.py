@@ -10,7 +10,7 @@ from lifelines.utils import _get_index
 from lifelines.fitters import ParametericAFTRegressionFitter
 from lifelines.fitters.mixins import ProportionalHazardMixin
 from lifelines.utils.safe_exp import safe_exp
-from lifelines.utils import DataframeSliceDict
+from lifelines.utils import DataframeSlicer
 from lifelines.statistics import proportional_hazard_test
 
 
@@ -41,10 +41,12 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         the level in the confidence intervals.
 
     fit_intercept: boolean, optional (default=True)
-        Allow lifelines to add an intercept column of 1s to df, and ancillary_df if applicable.
+        Allow lifelines to add an intercept column of 1s to df, and ancillary if applicable.
 
-    penalizer: float, optional (default=0.0)
+    penalizer: float or array, optional (default=0.0)
         the penalizer coefficient to the size of the coefficients. See `l1_ratio`. Must be equal to or greater than 0.
+        Alternatively, penalizer is an array equal in size to the number of parameters, with penalty coefficients for specific variables. For
+        example, `penalizer=0.01 * np.ones(p)` is the same as `penalizer=0.01`
 
     l1_ratio: float, optional (default=0.0)
         how much of the penalizer should be attributed to an l1 penalty (otherwise an l2 penalty). The penalty function looks like
@@ -66,7 +68,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         The event_observed variable provided
     weights: Series
         The event_observed variable provided
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     standard_errors_: Series
         the standard errors of the estimates
@@ -91,7 +93,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         super(WeibullAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
     def _cumulative_hazard(
-        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSliceDict
+        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSlicer
     ) -> Union[np.array, ArrayBox]:
         lambda_params = params["lambda_"]
         log_lambda_ = Xs["lambda_"] @ lambda_params
@@ -102,13 +104,13 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         return safe_exp(rho_ * (np.log(np.clip(T, 1e-100, np.inf)) - log_lambda_))
 
     def _survival_function(
-        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSliceDict
+        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSlicer
     ) -> Union[np.array, ArrayBox]:
         ch = self._cumulative_hazard(params, T, Xs)
         return safe_exp(-ch)
 
     def _log_hazard(
-        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSliceDict
+        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSlicer
     ) -> Union[np.array, ArrayBox]:
         lambda_params = params["lambda_"]
         log_lambda_ = Xs["lambda_"] @ lambda_params
@@ -122,7 +124,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         self,
         df: pd.DataFrame,
         *,
-        ancillary_df: Optional[pd.DataFrame] = None,
+        ancillary: Optional[pd.DataFrame] = None,
         p: float = 0.5,
         conditional_after: Optional[np.array] = None
     ) -> pd.Series:
@@ -137,7 +139,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
             a (n,d)  DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_df: DataFrame, optional
+        ancillary: DataFrame, optional
             a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
@@ -150,11 +152,11 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
 
         See Also
         --------
-        predict_median
+        predict_median, predict_expectation
 
         """
 
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
 
         if conditional_after is None and len(df.shape) == 2:
             conditional_after = np.zeros(df.shape[0])
@@ -166,7 +168,7 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
             index=_get_index(df),
         )
 
-    def predict_expectation(self, df: pd.DataFrame, ancillary_df: Optional[pd.DataFrame] = None) -> pd.Series:
+    def predict_expectation(self, df: pd.DataFrame, ancillary: Optional[pd.DataFrame] = None) -> pd.Series:
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
@@ -176,21 +178,20 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
             a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
-        ancillary_df:  DataFrame, optional
+        ancillary:  DataFrame, optional
             a (n,d) DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
 
         Returns
         -------
-        percentiles: DataFrame
-            the median lifetimes for the individuals. If the survival curve of an
-            individual does not cross 0.5, then the result is infinity.
+        DataFrame
+            the expected lifetimes for the individuals.
 
 
         See Also
         --------
-        predict_median
+        predict_median, predict_percentile
         """
-        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary_df)
+        lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
         return pd.Series((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(df))

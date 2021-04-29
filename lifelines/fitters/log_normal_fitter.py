@@ -38,10 +38,10 @@ class LogNormalFitter(KnownModelParametricUnivariateFitter):
         The estimated survival function (with custom timeline if provided)
     cumulative_density_ : DataFrame
         The estimated cumulative density function (with custom timeline if provided)
-    density: DataFrame
+    density_: DataFrame
         The estimated density function (PDF) (with custom timeline if provided)
 
-    variance_matrix_ : numpy array
+    variance_matrix_ : DataFrame
         The variance matrix of the coefficients
     median_survival_time_: float
         The median time to event
@@ -63,7 +63,7 @@ class LogNormalFitter(KnownModelParametricUnivariateFitter):
     sigma_: float
     _fitted_parameter_names = ["mu_", "sigma_"]
     _bounds = [(None, None), (0, None)]
-    _compare_to_values = np.array([1.0, 1.0])
+    _compare_to_values = np.array([0.0, 1.0])
 
     def _create_initial_point(self, Ts, E, *args):
         if CensoringType.is_right_censoring(self):
@@ -71,7 +71,10 @@ class LogNormalFitter(KnownModelParametricUnivariateFitter):
         elif CensoringType.is_left_censoring(self):
             log_T = np.log(Ts[1])
         elif CensoringType.is_interval_censoring(self):
-            log_T = np.log(Ts[1])
+            if E.sum() > 0:
+                log_T = np.log(Ts[1][E.astype(bool)])
+            else:
+                log_T = np.array([0])
         return np.array([np.median(log_T), 1.0])
 
     @property
