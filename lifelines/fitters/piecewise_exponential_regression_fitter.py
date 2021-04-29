@@ -73,12 +73,14 @@ class PiecewiseExponentialRegressionFitter(ParametricRegressionFitter):
 
     def _cumulative_hazard(self, params, T, Xs):
         n = T.shape[0]
+        if T.ndim == 2:
+            T = T[:, 0]
         T = T.reshape((n, 1))
         bps = np.append(self.breakpoints, [np.inf])
         M = np.minimum(np.tile(bps, (n, 1)), T)
         M = np.hstack([M[:, tuple([0])], np.diff(M, axis=1)])
         lambdas_ = np.array([safe_exp(-np.dot(Xs[param], params[param])) for param in self._fitted_parameter_names])
-        return (M * lambdas_.T).sum(1)
+        return np.dot(M, lambdas_)
 
     def _prep_inputs_for_prediction_and_return_parameters(self, X):
         X = X.copy()

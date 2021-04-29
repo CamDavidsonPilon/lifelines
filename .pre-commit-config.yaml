@@ -9,8 +9,3 @@ repos:
     -   id: fix-encoding-pragma
     -   id: mixed-line-ending
     -   id: trailing-whitespace
--   repo: https://github.com/ambv/black
-    rev: stable
-    hooks:
-    - id: black
-      args: ["--line-length", "130"]
