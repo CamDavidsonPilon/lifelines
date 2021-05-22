@@ -691,7 +691,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 ),
             ],
             [("AIC", "{:.{prec}f}".format(self.AIC_, prec=decimals))],
-            [("BIC", "{:.{prec}f}".format(self.BIC_, prec=decimals))],
             justify,
             kwargs,
             decimals,
@@ -2249,7 +2248,6 @@ class ParametricRegressionFitter(RegressionFitter):
         footers.extend(
             [
                 ("AIC", "{:.{prec}f}".format(self.AIC_, prec=decimals)),
-                ("BIC", "{:.{prec}f}".format(self.BIC_, prec=decimals)),
                 (
                     "log-likelihood ratio test",
                     "{:.{prec}f} on {} df".format(sr.test_statistic, sr.degrees_freedom, prec=decimals),
