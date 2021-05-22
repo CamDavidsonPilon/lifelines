@@ -1760,8 +1760,7 @@ def find_best_parametric_model(
 
     evaluation_lookup = {
         "AIC": lambda model: model.AIC_,
-        "BIC": lambda model: 2 * len(model._fitted_parameter_names)
-        - 2 * model.log_likelihood_ * np.log(model.event_observed.shape[0]),
+        "BIC": lambda model: model.BIC_,
     }
 
     eval_ = evaluation_lookup[scoring_method]
