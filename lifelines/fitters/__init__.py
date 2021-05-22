@@ -309,6 +309,10 @@ class ParametricUnivariateFitter(UnivariateFitter):
     def AIC_(self) -> float:
         return -2 * self.log_likelihood_ + 2 * self._fitted_parameters_.shape[0]
 
+    @property
+    def BIC_(self) -> float:
+        return -2 * self.log_likelihood_ +  len(self._fitted_parameter_names) * np.log(self.event_observed.shape[0])
+
     def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
         class_name = self._class_name
 
@@ -2650,7 +2654,10 @@ class ParametricRegressionFitter(RegressionFitter):
     @property
     def AIC_(self) -> float:
         return -2 * self.log_likelihood_ + 2 * self.params_.shape[0]
-
+    
+    @property
+    def BIC_(self) -> float:
+        return -2 * self.log_likelihood_ +  len(self._fitted_parameter_names) * np.log(self.event_observed.shape[0])
 
 class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
