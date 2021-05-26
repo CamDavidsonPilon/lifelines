@@ -27,3 +27,6 @@ docs/_build/
 
 # asv builds
 \.asv/
+
+# Pycharm
+\.idea/
