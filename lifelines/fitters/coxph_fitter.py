@@ -133,6 +133,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         strata: Optional[Union[List[str], str]] = None,
         l1_ratio: float = 0.0,
         n_baseline_knots: Optional[int] = None,
+        knots: Optional[List] = None,
         breakpoints: Optional[List] = None,
         **kwargs,
     ) -> None:
@@ -146,7 +147,14 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         self.strata = strata
         self.l1_ratio = l1_ratio
         self.baseline_estimation_method = baseline_estimation_method
-        self.n_baseline_knots = n_baseline_knots
+        if knots is not None:
+            if n_baseline_knots is not None:
+                raise ValueError("knots and n_baseline_knots are mutually exclusive.")
+            self.knots = knots
+            self.n_baseline_knots = len(knots)
+        else:
+            self.n_baseline_knots = n_baseline_knots
+            self.knots = None
         self.breakpoints = breakpoints
 
     @utils.CensoringType.right_censoring
@@ -710,6 +718,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             penalizer=self.penalizer,
             l1_ratio=self.l1_ratio,
             n_baseline_knots=self.n_baseline_knots,
+            knots=self.knots,
             alpha=self.alpha,
             label=self._label,
         )
@@ -2950,7 +2959,7 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
     _FAST_MEDIAN_PREDICT = False
     fit_intercept = True
 
-    def __init__(self, strata, strata_values, n_baseline_knots=1, *args, **kwargs):
+    def __init__(self, strata, strata_values, n_baseline_knots=1, knots=None, *args, **kwargs):
         self.strata = strata
         self.strata_values = strata_values
 
@@ -2959,6 +2968,7 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
         ), "n_baseline_knots should be greater than 1. Set in class instantiation"
 
         self.n_baseline_knots = n_baseline_knots
+        self.knots = knots
         super(ParametricSplinePHFitter, self).__init__(*args, **kwargs)
 
     @staticmethod
@@ -2980,6 +2990,8 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
         return
 
     def _pre_fit_model(self, Ts, E, df):
+        if self.knots is not None:
+            return
         if E.sum() > 4:
             self._set_knots(utils.coalesce(*Ts), E)
         else:
