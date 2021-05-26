@@ -1,5 +1,17 @@
 ## Changelog
 
+#### 0.25.11 - 2021-05-26
+
+##### New features
+ - `.BIC_` is now present on fitted models.
+ - `CoxPHFitter` with spline baseline can accept pre-computed knot locations.
+
+
+##### Bug fixes
+ - Fixed an annoying bug where at_risk-table label's were not aligning properly when data spanned large ranges. See merging PR for details.
+ - Fixed a bug in `find_best_parametric_model` where the wrong BIC value was being computed.
+
+
 #### 0.25.11 - 2021-04-06
 
 ##### Bug fixes
