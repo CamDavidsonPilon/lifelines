@@ -71,8 +71,13 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         See http://courses.washington.edu/b515/l17.pdf.
 
       n_baseline_knots: int
-        Used when ``baseline_estimation_method="spline"`. Set the number of knots (interior & exterior) in the baseline hazard. Should be atleast 2. Royston et. al, the authors
-        of this model, suggest 4 to start, but any values between 2 and 8 are reasonable.
+        Used when ``baseline_estimation_method="spline"`. Set the number of knots (interior & exterior) in the baseline hazard, which will be placed evenly along the time axis.
+        Should be at least 2. Royston et. al, the authors of this model, suggest 4 to start, but any values between 2 and 8 are reasonable.
+        If you need to customize the timestamps used to calculate the curve, use the ``knots`` parameter instead.
+
+      knots: list, optional
+        When ``baseline_estimation_method="spline"`, this allows customizing the points in the time axis for the baseline hazard curve.
+        To use evenly-spaced points in time, the ``n_baseline_knots`` parameter can be employed instead.
 
       breakpoints: int
         Used when ``baseline_estimation_method="piecewise"`. Set the positions of the baseline hazard breakpoints.
