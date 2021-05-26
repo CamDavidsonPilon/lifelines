@@ -448,6 +448,11 @@ def add_at_risk_counts(
 
     if rows_to_show is None:
         rows_to_show = ["At risk", "Censored", "Events"]
+    else:
+        assert all(
+            row in ["At risk", "Censored", "Events"] for row in rows_to_show
+        ), 'must be one of ["At risk", "Censored", "Events"]'
+
     n_rows = len(rows_to_show)
 
     # Create another axes where we can put size ticks
@@ -504,8 +509,7 @@ def add_at_risk_counts(
                             lbl += ("\n" if i > 0 else "") + r"%s" % labels[int(i / n_rows)] + "\n"
 
                     l = rows_to_show[i % n_rows]
-                    l = {"At risk": "  At risk", "Censored": "Censored  ", "Events": " Events  "}.get(l)
-                    s = "{}   ".format(l.rjust(10, " ")) + "{{:>{}d}}\n".format(max_length)
+                    s = "{}".format(l.rjust(10, " ")) + (" " * (max_length - len(str(c)) + 3)) + "{{:>{}d}}\n".format(max_length)
 
                     lbl += s.format(c)
 
@@ -526,7 +530,11 @@ def add_at_risk_counts(
                 lbl += rows_to_show[0] + "\n"
 
                 for i, c in enumerate(counts):
-                    s = "{}   ".format(labels[i].rjust(10, " ")) + "{{:>{}d}}\n".format(max_length)
+                    s = (
+                        "{}".format(labels[i].rjust(10, " "))
+                        + (" " * (max_length - len(str(c)) + 3))
+                        + "{{:>{}d}}\n".format(max_length)
+                    )
                     lbl += s.format(c)
 
             else:
