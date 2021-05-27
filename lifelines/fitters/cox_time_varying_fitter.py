@@ -347,11 +347,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
         penalizer = (
             lambda beta, a: n
-            * self.penalizer
-            * (
-                self.l1_ratio * (soft_abs(beta, a)).sum()
-                + 0.5 * (1 - self.l1_ratio) * (beta ** 2).sum()
-            )
+            * (self.penalizer * (self.l1_ratio * (soft_abs(beta, a)) + 0.5 * (1 - self.l1_ratio) * (beta ** 2))).sum()
         )
         d_penalizer = elementwise_grad(penalizer)
         dd_penalizer = elementwise_grad(d_penalizer)

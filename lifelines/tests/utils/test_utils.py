@@ -1001,6 +1001,16 @@ def test_rmst_works_at_kaplan_meier_edge_case():
     assert abs((utils.restricted_mean_survival_time(kmf, t=4 + 0.1) - (1.0 + 0.8 + 0.6 + 0.4 + 0.2 * 0.1))) < 0.0001
 
 
+def test_rmst_works_at_kaplan_meier_with_left_censoring():
+
+    T = [5]
+    kmf = KaplanMeierFitter().fit_left_censoring(T)
+
+    results = utils.restricted_mean_survival_time(kmf, t=10, return_variance=True)
+    assert abs(results[0] - 5) < 0.0001
+    assert abs(results[1] - 0) < 0.0001
+
+
 def test_rmst_exactely_with_known_solution():
     T = np.random.exponential(2, 100)
     exp = ExponentialFitter().fit(T)

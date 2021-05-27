@@ -1461,11 +1461,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
         elastic_net_penalty = (
             lambda beta, a: n
-            * self.penalizer
-            * (
-                self.l1_ratio * (soft_abs(beta, a)).sum()
-                + 0.5 * (1 - self.l1_ratio) * (beta ** 2).sum()
-            )
+            * (self.penalizer * (self.l1_ratio * (soft_abs(beta, a)) + 0.5 * (1 - self.l1_ratio) * (beta ** 2))).sum()
         )
         d_elastic_net_penalty = elementwise_grad(elastic_net_penalty)
         dd_elastic_net_penalty = elementwise_grad(d_elastic_net_penalty)

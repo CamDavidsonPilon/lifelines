@@ -316,7 +316,7 @@ def _expected_value_of_survival_squared_up_to_t(
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
         # lifelines model
         model = model_or_survival_function
-        return 2 * quad(lambda tau: (tau * model.predict(tau)), 0, t)[0]
+        return 2 * quad(lambda tau: (tau * model.predict(tau)), 0, t, epsabs=1.49e-10, epsrel=1e-10)[0]
     else:
         raise ValueError("Can't compute value for object %s" % model_or_survival_function)
 
@@ -1758,10 +1758,7 @@ def find_best_parametric_model(
 
     censoring_type = CensoringType(censoring_type)
 
-    evaluation_lookup = {
-        "AIC": lambda model: model.AIC_,
-        "BIC": lambda model: model.BIC_,
-    }
+    evaluation_lookup = {"AIC": lambda model: model.AIC_, "BIC": lambda model: model.BIC_}
 
     eval_ = evaluation_lookup[scoring_method]
 

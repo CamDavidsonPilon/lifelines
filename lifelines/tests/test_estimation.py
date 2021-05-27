@@ -1351,7 +1351,7 @@ class TestKaplanMeierFitter:
         assert hasattr(kmf, "cumulative_density_")
         assert hasattr(kmf, "plot_cumulative_density")
         assert hasattr(kmf, "confidence_interval_cumulative_density_")
-        assert_frame_equal(kmf.confidence_interval_cumulative_density_, kmf.confidence_interval_)
+        assert_frame_equal(kmf.confidence_interval_survival_function_, kmf.confidence_interval_)
 
     def test_late_entry_with_tied_entry_and_death(self):
         np.random.seed(101)
