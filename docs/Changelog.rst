@@ -1,8 +1,8 @@
 Changelog
 =========
 
-0.25.11 - 2021-05-26
---------------------
+0.26.0 - 2021-05-26
+-------------------
 
 New features
 ~~~~~~~~~~~~
@@ -10,6 +10,12 @@ New features
 -  ``.BIC_`` is now present on fitted models.
 -  ``CoxPHFitter`` with spline baseline can accept pre-computed knot
    locations.
+-  Left censoring fitting in KaplanMeierFitter is now “expected”. That
+   is, ``predict`` *always* predicts the survival function (as does
+   every other model), ``confidence_interval_`` is *always* the CI for
+   the survival function (as does every other model), and so on. In
+   summary: the API for estimates doesn’t change depending on what your
+   censoring your dataset is.
 
 Bug fixes
 ~~~~~~~~~
@@ -18,6 +24,8 @@ Bug fixes
    properly when data spanned large ranges. See merging PR for details.
 -  Fixed a bug in ``find_best_parametric_model`` where the wrong BIC
    value was being computed.
+-  Fixed regression bug when using an array as a penalizer in Cox
+   models.
 
 .. _section-1:
 
