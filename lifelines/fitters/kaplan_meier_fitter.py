@@ -315,10 +315,10 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         else:
             weights = np.ones_like(durations, dtype=float)
 
-        # if the user is interested in left-censorship, we return the cumulative_density_, no survival_function_,
+        # if the user is interested in left-censorship, we return estimate the cumulative density, not survival function
         is_left_censoring = CensoringType.is_left_censoring(self)
-        primary_estimate_name = "survival_function_" if not is_left_censoring else "cumulative_density_"
-        secondary_estimate_name = "cumulative_density_" if not is_left_censoring else "survival_function_"
+        primary_estimate_name = "survival_function_"
+        secondary_estimate_name = "cumulative_density_"
 
         (self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights) = _preprocess_inputs(
             durations, event_observed, timeline, entry, weights
@@ -343,20 +343,24 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
                 )
 
         # estimation
-        setattr(self, primary_estimate_name, pd.DataFrame(np.exp(log_estimate), columns=[self._label]))
-        setattr(self, secondary_estimate_name, pd.DataFrame(1 - np.exp(log_estimate), columns=[self._label]))
+        if is_left_censoring:
+            self.cumulative_density_ = pd.DataFrame(np.exp(log_estimate), columns=[self._label])
+            self.survival_function_ = 1 - self.cumulative_density_
+            self.confidence_interval_ = 1 - self._bounds(self.cumulative_density_, cumulative_sq_, alpha, ci_labels)
 
-        self.__estimate = getattr(self, primary_estimate_name)
-        self.confidence_interval_ = self._bounds(cumulative_sq_.values[:, None], alpha, ci_labels)
+        else:
+            self.survival_function_ = pd.DataFrame(np.exp(log_estimate), columns=[self._label])
+            self.cumulative_density_ = 1 - self.survival_function_
+            self.confidence_interval_ = self._bounds(self.survival_function_, cumulative_sq_, alpha, ci_labels)
+
+        self.confidence_interval_survival_function_ = self.confidence_interval_
+        self.confidence_interval_cumulative_density_ = 1 - self.confidence_interval_
         self._median = median_survival_times(self.survival_function_)
         self._cumulative_sq_ = cumulative_sq_
 
-        setattr(self, "confidence_interval_" + primary_estimate_name, self.confidence_interval_)
-        setattr(self, "confidence_interval_" + secondary_estimate_name, 1 - self.confidence_interval_)
-
         # estimation methods
-        self._estimation_method = primary_estimate_name
-        self._estimate_name = primary_estimate_name
+        self._estimation_method = "survival_function_"
+        self._estimate_name = "survival_function_"
 
         return self
 
@@ -474,19 +478,19 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
             color = coalesce(kwargs.get("c"), kwargs.get("color"), "k")
             self.cumulative_density_.plot(drawstyle="steps", color=color, **kwargs)
 
-    def _bounds(self, cumulative_sq_, alpha, ci_labels):
+    def _bounds(self, estimate_, cumulative_sq_, alpha, ci_labels):
         # This method calculates confidence intervals using the exponential Greenwood formula.
         # See https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf
         z = inv_normal_cdf(1 - alpha / 2)
         df = pd.DataFrame(index=self.timeline)
-        v = np.log(self.__estimate.values)
+        v = np.log(estimate_.values)
 
         if ci_labels is None:
             ci_labels = ["%s_lower_%g" % (self._label, 1 - alpha), "%s_upper_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) - z * np.sqrt(cumulative_sq_) / v))
-        df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) + z * np.sqrt(cumulative_sq_) / v))
+        df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) - z * np.sqrt(cumulative_sq_.values[:, None]) / v))
+        df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) + z * np.sqrt(cumulative_sq_.values[:, None]) / v))
         return df.fillna(1.0)
 
     def _additive_f(self, population, deaths):

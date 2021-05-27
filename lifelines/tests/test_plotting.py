@@ -863,3 +863,55 @@ class TestPlotting:
         survival_probability_calibration(cph, rossi.loc[300:], 25)
         self.plt.title("test_survival_probability_calibration_on_out_of_sample_data")
         self.plt.show(block=block)
+
+    def test_at_risk_looks_right_when_scales_are_magnitudes_of_order_larger(self, block):
+
+        T1 = list(map(lambda v: v.right, pd.cut(np.arange(32000), 100, retbins=False)))
+        T2 = list(map(lambda v: v.right, pd.cut(np.arange(9000), 100, retbins=False)))
+        T3 = list(map(lambda v: v.right, pd.cut(np.arange(900), 100, retbins=False)))
+        T4 = list(map(lambda v: v.right, pd.cut(np.arange(90), 100, retbins=False)))
+        T5 = list(map(lambda v: v.right, pd.cut(np.arange(9), 100, retbins=False)))
+
+        kmf1 = KaplanMeierFitter().fit(T1, label="Category A")
+        kmf2 = KaplanMeierFitter().fit(T2, label="Category")
+        kmf3 = KaplanMeierFitter().fit(T3, label="CatB")
+        kmf4 = KaplanMeierFitter().fit(T4, label="Categ")
+        kmf5 = KaplanMeierFitter().fit(T5, label="Categowdary B")
+
+        ax = kmf1.plot()
+        ax = kmf2.plot(ax=ax)
+        ax = kmf3.plot(ax=ax)
+        ax = kmf4.plot(ax=ax)
+        ax = kmf5.plot(ax=ax)
+
+        add_at_risk_counts(kmf1, kmf2, kmf3, kmf5, ax=ax)
+
+        self.plt.title("test_at_risk_looks_right_when_scales_are_magnitudes_of_order_larger")
+        self.plt.tight_layout()
+        self.plt.show(block=block)
+
+    def test_at_risk_looks_right_when_scales_are_magnitudes_of_order_larger_single_attribute(self, block):
+
+        T1 = list(map(lambda v: v.right, pd.cut(np.arange(32000), 100, retbins=False)))
+        T2 = list(map(lambda v: v.right, pd.cut(np.arange(9000), 100, retbins=False)))
+        T3 = list(map(lambda v: v.right, pd.cut(np.arange(900), 100, retbins=False)))
+        T4 = list(map(lambda v: v.right, pd.cut(np.arange(90), 100, retbins=False)))
+        T5 = list(map(lambda v: v.right, pd.cut(np.arange(9), 100, retbins=False)))
+
+        kmf1 = KaplanMeierFitter().fit(T1, label="Category A")
+        kmf2 = KaplanMeierFitter().fit(T2, label="Category")
+        kmf3 = KaplanMeierFitter().fit(T3, label="CatB")
+        kmf4 = KaplanMeierFitter().fit(T4, label="Categ")
+        kmf5 = KaplanMeierFitter().fit(T5, label="Categowdary B")
+
+        ax = kmf1.plot()
+        ax = kmf2.plot(ax=ax)
+        ax = kmf3.plot(ax=ax)
+        ax = kmf4.plot(ax=ax)
+        ax = kmf5.plot(ax=ax)
+
+        add_at_risk_counts(kmf1, kmf2, kmf3, kmf4, kmf5, ax=ax, rows_to_show=["At risk"])
+
+        self.plt.title("test_at_risk_looks_right_when_scales_are_magnitudes_of_order_larger")
+        self.plt.tight_layout()
+        self.plt.show(block=block)
