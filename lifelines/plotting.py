@@ -617,8 +617,8 @@ def plot_interval_censored_lifetimes(
         ix = np.argsort(lower_bound, 0)
         upper_bound = _iloc(upper_bound, ix)
         lower_bound = _iloc(lower_bound, ix)
-        if entry:
-            entry = _iloc(lower_bound, ix)
+        if entry is not None:
+            entry = _iloc(entry, ix)
 
     if entry is None:
         entry = np.zeros(N)
