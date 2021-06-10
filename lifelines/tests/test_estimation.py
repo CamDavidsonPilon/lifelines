@@ -2873,7 +2873,7 @@ class TestCoxPHFitter_SemiParametric:
         assert np.abs(newton(X, T, E, W, entries)[0] - -0.0335) < 0.0001
 
 
-class TestCoxPHFitterPeices:
+class TestCoxPHFitterPieces:
     @pytest.fixture
     def cph(self):
         return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
@@ -2903,6 +2903,80 @@ class TestCoxPHFitterPeices:
     def test_trivial_model_doesnt_fail(self, cph, rossi):
         cph.fit(rossi[["week", "arrest"]], "week", "arrest")
         cph.baseline_hazard_
+
+    def test_predict_hazard_sans_strata(self, cph, rossi):
+        cph = cph.fit(rossi, "week", "arrest", formula='fin')
+        samples = rossi[["week", "arrest", "fin"]].head(5)
+        hazards = cph.predict_hazard(samples)
+        npt.assert_equal(hazards.isnull().sum().sum(), 0)
+        assert (hazards >= 0).all().all()
+        print(hazards)
+        hazard_last = cph.predict_hazard(samples.iloc[4:5])
+        print(hazard_last)
+
+        cumulative_hazard_last = cph.predict_cumulative_hazard(samples.iloc[4:5])
+        print(cumulative_hazard_last)
+
+        npt.assert_array_equal(hazard_last[4].values, hazards[4].values)
+
+    def test_predict_hazard_with_strata(self, cph, rossi):
+        cph = cph.fit(rossi, "week", "arrest", formula="fin", strata=["mar"])
+        samples = rossi[["week", "arrest", "fin", "mar"]].head(5)
+        hazards = cph.predict_hazard(samples)
+        npt.assert_equal(hazards.isnull().sum().sum(), 0)
+        assert (hazards >= 0).all().all()
+
+    def test_predict_cumulative_hazard_sans_strata(self, cph, rossi):
+        cph = cph.fit(rossi, "week", "arrest", formula='fin')
+        samples = rossi[["week", "arrest", "fin"]].head(5)
+        cumulative_hazards = cph.predict_cumulative_hazard(samples)
+        npt.assert_equal(cumulative_hazards.isnull().sum().sum(), 0)
+        assert (cumulative_hazards >= 0).all().all()
+
+    def test_predict_cumulative_hazard_with_strata(self, cph, rossi):
+        cph = cph.fit(rossi, "week", "arrest", formula='fin', strata=["mar"])
+        samples = rossi[["week", "arrest", "fin", "mar"]].head(5)
+        cumulative_hazards = cph.predict_cumulative_hazard(samples)
+        npt.assert_equal(cumulative_hazards.isnull().sum().sum(), 0)
+        assert (cumulative_hazards >= 0).all().all()
+
+
+class TestCoxPHFitterSpline:
+    @pytest.fixture
+    def cph(self):
+        return CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2)
+
+    def test_predict_hazard_sans_strata(self, cph, rossi):
+        cph = cph.fit(rossi, "week", "arrest", formula='fin')
+        samples = rossi[["week", "arrest", "fin"]].head(5)
+        hazards = cph.predict_hazard(samples)
+        npt.assert_equal(hazards.isnull().sum().sum(), 0)
+        assert (hazards >= 0).all().all()
+        print(hazards)
+        hazard_last = cph.predict_hazard(samples.iloc[4:5])
+        print(hazard_last)
+
+    def test_predict_hazard_with_strata(self, cph, rossi):
+        cph = cph.fit(rossi, "week", "arrest", formula="fin", strata=["mar"])
+        samples = rossi[["week", "arrest", "fin", "mar"]].head(5)
+        hazards = cph.predict_hazard(samples)
+        npt.assert_equal(hazards.isnull().sum().sum(), 0)
+        assert (hazards >= 0).all().all()
+
+    def test_predict_cumulative_hazard_sans_strata(self, cph, rossi):
+        cph = cph.fit(rossi, "week", "arrest", formula='fin')
+        samples = rossi[["week", "arrest", "fin"]].head(5)
+        cumulative_hazards = cph.predict_cumulative_hazard(samples)
+        npt.assert_equal(cumulative_hazards.isnull().sum().sum(), 0)
+        assert (cumulative_hazards >= 0).all().all()
+
+    def test_predict_cumulative_hazard_with_strata(self, cph, rossi):
+        cph = cph.fit(rossi, "week", "arrest", formula='fin', strata=["mar"])
+        samples = rossi[["week", "arrest", "fin", "mar"]].head(5)
+        cumulative_hazards = cph.predict_cumulative_hazard(samples)
+        npt.assert_equal(cumulative_hazards.isnull().sum().sum(), 0)
+        assert (cumulative_hazards >= 0).all().all()
+
 
 
 class TestCoxPHFitter:

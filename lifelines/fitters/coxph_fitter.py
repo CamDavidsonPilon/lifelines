@@ -3139,14 +3139,21 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
 
             partial_hazard = safe_exp(anp.dot(Xs_["beta_"], params["beta_"]))
             n = T_.shape[0]
-            T_ = T_.reshape((n, 1))
+            if T.ndim == 2:
+                T_ = T_[:, 0]
+            if T_.ndim == 1:
+                T_ = T_.reshape((n, 1))
             bps = anp.append(self.breakpoints, [anp.inf])
             M = anp.minimum(anp.tile(bps, (n, 1)), T_)
             M = anp.hstack([M[:, tuple([0])], anp.diff(M, axis=1)])
             log_lambdas_ = anp.array(
                 [0] + [params[self._strata_labeler(stratum, i)][0] for i in range(2, self.n_breakpoints + 2)]
             )
-            H_ = partial_hazard * (M * anp.exp(log_lambdas_).T).sum(1)
+            lambdas_ = anp.exp(log_lambdas_)
+            if T.ndim == 1:
+                H_ = partial_hazard * (M * lambdas_.T).sum(1)
+            else:
+                H_ = anp.outer(anp.dot(M, lambdas_), partial_hazard)
 
             output.append(H_)
             start = stop
@@ -3156,12 +3163,15 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
     def _cumulative_hazard_sans_strata(self, params, T, Xs):
         partial_hazard = safe_exp(anp.dot(Xs["beta_"], params["beta_"]))
         n = T.shape[0]
+        if T.ndim == 2:
+            T = T[:, 0]
         T = T.reshape((n, 1))
         bps = anp.append(self.breakpoints, [anp.inf])
         M = anp.minimum(anp.tile(bps, (n, 1)), T)
         M = anp.hstack([M[:, tuple([0])], anp.diff(M, axis=1)])
         log_lambdas_ = anp.array([0.0] + [params[param][0] for param in self._fitted_parameter_names if param != "beta_"])
-        return partial_hazard * (M * anp.exp(log_lambdas_).T).sum(1)
+        lambdas_ = anp.exp(log_lambdas_)
+        return anp.outer(anp.dot(M, lambdas_), partial_hazard)
 
     def predict_cumulative_hazard(self, df, times=None, conditional_after=None) -> pd.DataFrame:
         """
