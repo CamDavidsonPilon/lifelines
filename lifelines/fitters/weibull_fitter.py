@@ -18,7 +18,7 @@ class WeibullFitter(KnownModelParametricUnivariateFitter):
     The :math:`\rho` (shape) parameter controls if the cumulative hazard (see below) is convex or concave, representing accelerating or decelerating
     hazards.
 
-    .. image:: images/weibull_parameters.png
+    .. image:: /images/weibull_parameters.png
 
     The cumulative hazard rate is
 

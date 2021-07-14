@@ -76,7 +76,7 @@ class BaseFitter:
 
     @utils.CensoringType.right_censoring
     def fit_right_censoring(self, *args, **kwargs):
-        """ Alias for ``fit``
+        """Alias for ``fit``
 
         See Also
         ---------
@@ -311,7 +311,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
     @property
     def BIC_(self) -> float:
-        return -2 * self.log_likelihood_ +  len(self._fitted_parameter_names) * np.log(self.event_observed.shape[0])
+        return -2 * self.log_likelihood_ + len(self._fitted_parameter_names) * np.log(self.event_observed.shape[0])
 
     def _check_cumulative_hazard_is_monotone_and_positive(self, durations, values):
         class_name = self._class_name
@@ -2586,7 +2586,7 @@ class ParametricRegressionFitter(RegressionFitter):
             wf = WeibullAFTFitter().fit(rossi, 'week', 'arrest')
             wf.plot_partial_effects_on_outcome('prio', values=np.arange(0, 15, 3), cmap='coolwarm')
 
-        .. image:: images/plot_covariate_example3.png
+        .. image:: /images/plot_covariate_example3.png
 
         .. code:: python
 
@@ -2654,10 +2654,11 @@ class ParametricRegressionFitter(RegressionFitter):
     @property
     def AIC_(self) -> float:
         return -2 * self.log_likelihood_ + 2 * self.params_.shape[0]
-    
+
     @property
     def BIC_(self) -> float:
-        return -2 * self.log_likelihood_ +  len(self._fitted_parameter_names) * np.log(self.event_observed.shape[0])
+        return -2 * self.log_likelihood_ + len(self._fitted_parameter_names) * np.log(self.event_observed.shape[0])
+
 
 class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 

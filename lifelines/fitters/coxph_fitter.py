@@ -38,7 +38,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
     1. (default) non-parametrically, using Breslow's method. In this case, the entire model is the traditional semi-parametric Cox model. Ties are
     handled using Efron's method.
-
     2. parametrically, using a pre-specified number of cubic splines.
 
     This is specified using the ``baseline_estimation_method`` parameter in the initialization (default = ``"breslow"``)
@@ -71,16 +70,16 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         See http://courses.washington.edu/b515/l17.pdf.
 
       n_baseline_knots: int
-        Used when ``baseline_estimation_method="spline"`. Set the number of knots (interior & exterior) in the baseline hazard, which will be placed evenly along the time axis.
+        Used when ``baseline_estimation_method="spline"``. Set the number of knots (interior & exterior) in the baseline hazard, which will be placed evenly along the time axis.
         Should be at least 2. Royston et. al, the authors of this model, suggest 4 to start, but any values between 2 and 8 are reasonable.
         If you need to customize the timestamps used to calculate the curve, use the ``knots`` parameter instead.
 
       knots: list, optional
-        When ``baseline_estimation_method="spline"`, this allows customizing the points in the time axis for the baseline hazard curve.
+        When ``baseline_estimation_method="spline"``, this allows customizing the points in the time axis for the baseline hazard curve.
         To use evenly-spaced points in time, the ``n_baseline_knots`` parameter can be employed instead.
 
       breakpoints: int
-        Used when ``baseline_estimation_method="piecewise"`. Set the positions of the baseline hazard breakpoints.
+        Used when ``baseline_estimation_method="piecewise"``. Set the positions of the baseline hazard breakpoints.
 
     Examples
     --------
@@ -2947,7 +2946,7 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
 
     References
     ------------
-    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
+    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203
 
     Note
     -------

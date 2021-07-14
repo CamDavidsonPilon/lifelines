@@ -16,7 +16,7 @@ class LogLogisticFitter(KnownModelParametricUnivariateFitter):
     The :math:`\alpha` (scale) parameter has an interpretation as being equal to the *median* lifetime of the population. The
     :math:`\beta` parameter influences the shape of the hazard. See figure below:
 
-    .. image:: images/log_normal_alpha.png
+    .. image:: /images/log_normal_alpha.png
 
     The hazard rate is:
 
