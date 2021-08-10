@@ -679,6 +679,8 @@ def datetimes_to_durations(
     end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce", format=format)
     deaths_after_cutoff = end_times_ > pd.to_datetime(fill_date_)
     C[deaths_after_cutoff] = False
+    # Avoid duration info leaking from beyond fill date
+    end_times_[deaths_after_cutoff] = pd.to_datetime(fill_date_)
 
     T = (end_times_ - start_times_).values.astype(freq_string).astype(float)
     if (T < 0).sum():

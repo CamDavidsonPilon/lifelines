@@ -203,8 +203,9 @@ def test_datetimes_to_durations_with_different_frequencies():
 def test_datetimes_to_durations_will_handle_dates_above_fill_date():
     start_date = ["2013-10-08", "2013-10-09", "2013-10-10"]
     end_date = ["2013-10-10", "2013-10-12", "2013-10-15"]
-    T, C = utils.datetimes_to_durations(start_date, end_date, freq="Y", fill_date="2013-10-12")
+    T, C = utils.datetimes_to_durations(start_date, end_date, freq="D", fill_date="2013-10-12")
     npt.assert_almost_equal(C, np.array([1, 1, 0], dtype=bool))
+    npt.assert_almost_equal(T, np.array([2, 3, 2]))
 
 
 def test_datetimes_to_durations_will_handle_dates_above_multi_fill_date():
@@ -218,7 +219,7 @@ def test_datetimes_to_durations_will_handle_dates_above_multi_fill_date():
 
 def test_datetimes_to_durations_will_handle_dates_above_multi_fill_date():
     start_date = ["2013-10-08", "2013-10-09", "2013-10-10"]
-    end_date = ["2013-10-10", None, None]
+    end_date = ["2013-10-10", None, "2013-10-20"]
     last_observation = ["2013-10-10", "2013-10-12", "2013-10-14"]
     T, E = utils.datetimes_to_durations(start_date, end_date, freq="D", fill_date=last_observation)
     npt.assert_almost_equal(E, np.array([1, 0, 0], dtype=bool))
