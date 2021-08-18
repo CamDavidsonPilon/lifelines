@@ -89,7 +89,7 @@ Documentation
 
   Changelog
   Development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>
-  Citing lifelines <https://doi.org/10.5281/zenodo.805993>
+  Citing lifelines <Citing lifelines>
 
 .. toctree::
   :maxdepth: 1

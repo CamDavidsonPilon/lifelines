@@ -34,9 +34,3 @@ You can find the roadmap for lifelines [here](https://www.notion.so/camdp/6e2965
 ## Development
 
 See our [Contributing](https://github.com/CamDavidsonPilon/lifelines/blob/master/.github/CONTRIBUTING.md) guidelines.
-
-## Citing lifelines
-
-You can use this badge below to generate a DOI and reference text for the latest related version of lifelines:
-
- [![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
