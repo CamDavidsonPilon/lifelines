@@ -8,12 +8,12 @@ Citing lifelines
 
 *lifelines* is published in JOSS (August 2019):
 
-.. code-block::
+.. code-block:: python
 
     Davidson-Pilon, (2019). lifelines: survival analysis in Python. Journal of Open Source Software, 4(40), 1317, https://doi.org/10.21105/joss.01317
 
 
-.. code-block::
+.. code-block:: python
 
     @article{Davidson-Pilon2019,
       doi = {10.21105/joss.01317},
