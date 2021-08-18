@@ -10,6 +10,5 @@ doi: "https://doi.org/10.21105/joss.01317"
 license: MIT
 message: "If you use this software, please cite it using these metadata."
 repository-code: "https://github.com/camDavidsonPilon/lifelines"
-title: lifelines: survival analysis in Python
-version: 0.26.0
+title: lifelines\: survival analysis in Python
 ...
