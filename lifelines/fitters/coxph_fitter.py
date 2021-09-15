@@ -2683,6 +2683,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         W = df.pop(self.weights_col) if self.weights_col else pd.Series(np.ones_like(E), index=T.index)
         entries = df.pop(self.entry_col) if self.entry_col else None
 
+        df = self.regressors.transform_df(df)["beta_"]
+
         if scoring_method == "log_likelihood":
 
             df = utils.normalize(df, self._norm_mean.values, 1.0)

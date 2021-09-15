@@ -365,11 +365,15 @@ class TestUnivariateFitters:
         for f in univariate_fitters:
             f = f()
             f.fit(T, E)
-            assert f.__repr__() == """<lifelines.%s:"%s", fitted with %d total observations, %d right-censored observations>""" % (
-                f._class_name,
-                f._label,
-                E.shape[0],
-                E.shape[0] - E.sum(),
+            assert (
+                f.__repr__()
+                == """<lifelines.%s:"%s", fitted with %d total observations, %d right-censored observations>"""
+                % (
+                    f._class_name,
+                    f._label,
+                    E.shape[0],
+                    E.shape[0] - E.sum(),
+                )
             )
 
     def test_allow_dataframes(self, univariate_fitters):
@@ -2917,6 +2921,17 @@ class TestCoxPHFitter:
     @pytest.fixture
     def cph_pieces(self):
         return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
+
+    def test_score_function_works_with_formulas(self, cph):
+        rossi = load_rossi()
+        cph = CoxPHFitter()
+        cph.fit(
+            rossi,
+            "week",
+            "arrest",
+            formula=f"bs(age, df=3, lower_bound={rossi.age.min()}, upper_bound={rossi.age.max()}) + race + wexp + mar + paro +prio",
+        )
+        cph.score(rossi)
 
     def test_parametric_models_can_do_interval_censoring(self, cph_spline, cph_pieces):
         df = load_diabetes()
