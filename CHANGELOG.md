@@ -1,5 +1,9 @@
 ## Changelog
 
+#### 0.26.2 - 2021-09-15
+
+Error in v0.26.1 deployment/
+
 #### 0.26.1 - 2021-09-15
 
 ##### API Changes
