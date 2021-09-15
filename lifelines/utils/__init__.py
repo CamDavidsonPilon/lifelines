@@ -700,7 +700,7 @@ def inv_normal_cdf(p) -> float:
 
 
 def k_fold_cross_validation(
-    fitters, df, duration_col, event_col=None, k=5, scoring_method="log_likelihood", fitter_kwargs={}
+    fitters, df, duration_col, event_col=None, k=5, scoring_method="log_likelihood", fitter_kwargs={}, seed=None
 ):  # pylint: disable=dangerous-default-value,too-many-arguments,too-many-locals
     """
     Perform cross validation on a dataset. If multiple models are provided,
@@ -731,6 +731,7 @@ def k_fold_cross_validation(
         concordance_index: returns the concordance-index
     fitter_kwargs:
       keyword args to pass into fitter.fit method.
+    seed: fix a seed in np.random.seed
 
     Returns
     -------
@@ -750,6 +751,9 @@ def k_fold_cross_validation(
 
     n, _ = df.shape
     df = df.copy()
+
+    if seed is not None:
+        np.random.seed(seed)
 
     if event_col is None:
         event_col = "E"

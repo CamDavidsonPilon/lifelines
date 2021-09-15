@@ -199,7 +199,9 @@ class StatisticalResult:
     def ascii_print(self, decimals=2, **kwargs):
         print(self.to_ascii(decimals, **kwargs))
 
-    def _repr_latex_(self,):
+    def _repr_latex_(
+        self,
+    ):
         return self.to_latex()
 
     def _repr_html_(self):
@@ -495,7 +497,8 @@ def logrank_test(
         Default assumes all observed.
 
     t_0: float, optional (default=-1)
-        the final time period under observation, -1 for all time.
+        The final time period under observation, and subjects who experience the event after this time are set to be censored.
+        Specify -1 to use all time.
 
     weightings: str, optional
         apply a weighted logrank test: options are "wilcoxon" for Wilcoxon (also known as Breslow), "tarone-ware"
@@ -577,7 +580,8 @@ def pairwise_logrank_test(
         a (n,) list-like of event_observed events: 1 if observed death, 0 if censored. Defaults to all observed.
 
     t_0: float, optional (default=-1)
-        the period under observation, -1 for all time.
+        The final time period under observation, and subjects who experience the event after this time are set to be censored.
+        Specify -1 to use all time.
 
     weightings: str, optional
         apply a weighted logrank test: options are "wilcoxon" for Wilcoxon (also known as Breslow), "tarone-ware"
@@ -677,7 +681,8 @@ def multivariate_logrank_test(
         a (n,) list-like of event_observed events: 1 if observed death, 0 if censored. Defaults to all observed.
 
     t_0: float, optional (default=-1)
-        the period under observation, -1 for all time.
+        The final time period under observation, and subjects who experience the event after this time are set to be censored.
+        Specify -1 to use all time.
 
     weightings: str, optional
         apply a weighted logrank test: options are "wilcoxon" for Wilcoxon (also known as Breslow), "tarone-ware"
@@ -737,6 +742,7 @@ def multivariate_logrank_test(
     kwargs.setdefault("test_name", "multivariate_logrank_test")
 
     event_durations, groups = np.asarray(event_durations), np.asarray(groups)
+
     if event_observed is None:
         event_observed = np.ones((event_durations.shape[0], 1))
     else:
@@ -748,7 +754,11 @@ def multivariate_logrank_test(
         lambda x: pd.Series(np.asarray(x).reshape(n)), [groups, event_durations, event_observed]
     )
 
-    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed, limit=t_0)
+    # censor all subjects that are beyond the specified t_0, see #1300
+    if int(t_0) != -1:
+        event_observed[event_durations > t_0] = 0
+
+    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed)
     n_groups = unique_groups.shape[0]
 
     # compute the factors needed

@@ -189,7 +189,7 @@ class AalenAdditiveFitter(RegressionFitter):
 
         self._index = self.hazards_.index
 
-        self._predicted_hazards_ = self.predict_cumulative_hazard(X).iloc[-1].values.ravel()
+        self._predicted_hazards_ = self.predict_cumulative_hazard(df).iloc[-1].values.ravel()
         return self
 
     def _fit_model(self, X, T, E, weights, show_progress):
@@ -298,7 +298,7 @@ It's important to know that the naive variance estimates of the coefficients are
         check_nans_or_infs(E)
         E = E.astype(bool)
 
-        self._check_values(df, T, E)
+        self._check_values(X, T, E)
 
         return X, T, E, W
 
@@ -409,7 +409,7 @@ It's important to know that the naive variance estimates of the coefficients are
         )
 
     def plot(self, columns=None, loc=None, iloc=None, ax=None, **kwargs):
-        """"
+        """ "
         A wrapper around plotting. Matplotlib plot arguments can be passed in, plus:
 
         Parameters

@@ -365,11 +365,15 @@ class TestUnivariateFitters:
         for f in univariate_fitters:
             f = f()
             f.fit(T, E)
-            assert f.__repr__() == """<lifelines.%s:"%s", fitted with %d total observations, %d right-censored observations>""" % (
-                f._class_name,
-                f._label,
-                E.shape[0],
-                E.shape[0] - E.sum(),
+            assert (
+                f.__repr__()
+                == """<lifelines.%s:"%s", fitted with %d total observations, %d right-censored observations>"""
+                % (
+                    f._class_name,
+                    f._label,
+                    E.shape[0],
+                    E.shape[0] - E.sum(),
+                )
             )
 
     def test_allow_dataframes(self, univariate_fitters):
@@ -2918,6 +2922,17 @@ class TestCoxPHFitter:
     def cph_pieces(self):
         return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
 
+    def test_score_function_works_with_formulas(self, cph):
+        rossi = load_rossi()
+        cph = CoxPHFitter()
+        cph.fit(
+            rossi,
+            "week",
+            "arrest",
+            formula=f"bs(age, df=3, lower_bound={rossi.age.min()}, upper_bound={rossi.age.max()}) + race + wexp + mar + paro +prio",
+        )
+        cph.score(rossi)
+
     def test_parametric_models_can_do_interval_censoring(self, cph_spline, cph_pieces):
         df = load_diabetes()
         df["gender"] = df["gender"] == "male"
@@ -4756,6 +4771,17 @@ class TestAalenAdditiveFitter:
     @pytest.fixture()
     def aaf(self):
         return AalenAdditiveFitter()
+
+    def test_can_accept_formula2(self):
+        # https://github.com/CamDavidsonPilon/lifelines/issues/1314
+        from lifelines.datasets import load_dd
+
+        data = load_dd()
+        data.head()
+
+        aaf = AalenAdditiveFitter(coef_penalizer=1.0, fit_intercept=False)
+
+        aaf.fit(data, "duration", event_col="observed", formula="un_continent_name + regime + start_year")
 
     def test_can_accept_formula(self, aaf, regression_dataset):
         aaf.fit(regression_dataset, "T", "E", formula="var1 * var2 + var3")

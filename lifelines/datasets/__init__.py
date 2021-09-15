@@ -204,19 +204,16 @@ def load_lung(**kwargs):
     """
     Survival in patients with advanced lung cancer from the North Central Cancer Treatment Group. Performance scores rate how well the patient can perform usual daily activities.
 
-    Note
-    ---------
-    Be mindful of the ``status`` column, as lifelines will treat _any_ non-zero entry as censored.
 
     ::
         Size: (288,10)
         Example:
          inst  time  status  age  sex  ph.ecog  ph.karno  pat.karno  meal.cal  wt.loss
-          3.0   306       2   74    1      1.0      90.0      100.0    1175.0      NaN
-          3.0   455       2   68    1      0.0      90.0       90.0    1225.0     15.0
-          3.0  1010       1   56    1      0.0      90.0       90.0       NaN     15.0
-          5.0   210       2   57    1      1.0      90.0       60.0    1150.0     11.0
-          1.0   883       2   60    1      0.0     100.0       90.0       NaN      0.0
+          3.0   306       1   74    1      1.0      90.0      100.0    1175.0      NaN
+          3.0   455       1   68    1      0.0      90.0       90.0    1225.0     15.0
+          3.0  1010       0   56    1      0.0      90.0       90.0       NaN     15.0
+          5.0   210       1   57    1      1.0      90.0       60.0    1150.0     11.0
+          1.0   883       1   60    1      0.0     100.0       90.0       NaN      0.0
 
     References
     -----------

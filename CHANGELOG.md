@@ -1,5 +1,16 @@
 ## Changelog
 
+#### 0.26.1 - 2021-09-15
+
+##### API Changes
+ - `t_0` in `logrank_test` now will not remove data, but will instead censor all subjects that experience the event afterwards.
+ - update `status` column in `lifelines.datasets.load_lung` to be more standard coding: 0 is censored, 1 is event.
+
+##### Bug fixes
+ - Fix using formulas with `AalenAdditiveFitter.predict_cumulative_hazard`
+ - Fix using formulas with `CoxPHFitter.score`
+
+
 #### 0.26.0 - 2021-05-26
 
 ##### New features
