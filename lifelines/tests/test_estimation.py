@@ -4772,6 +4772,17 @@ class TestAalenAdditiveFitter:
     def aaf(self):
         return AalenAdditiveFitter()
 
+    def test_can_accept_formula2(self):
+        # https://github.com/CamDavidsonPilon/lifelines/issues/1314
+        from lifelines.datasets import load_dd
+
+        data = load_dd()
+        data.head()
+
+        aaf = AalenAdditiveFitter(coef_penalizer=1.0, fit_intercept=False)
+
+        aaf.fit(data, "duration", event_col="observed", formula="un_continent_name + regime + start_year")
+
     def test_can_accept_formula(self, aaf, regression_dataset):
         aaf.fit(regression_dataset, "T", "E", formula="var1 * var2 + var3")
         assert aaf.summary.shape[0] == 5
