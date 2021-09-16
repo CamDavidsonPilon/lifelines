@@ -2932,6 +2932,7 @@ class TestCoxPHFitter:
             formula=f"bs(age, df=3, lower_bound={rossi.age.min()}, upper_bound={rossi.age.max()}) + race + wexp + mar + paro +prio",
         )
         cph.score(rossi)
+        cph.score(rossi, scoring_method="concordance_index")
 
     def test_parametric_models_can_do_interval_censoring(self, cph_spline, cph_pieces):
         df = load_diabetes()
