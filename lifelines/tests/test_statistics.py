@@ -4,6 +4,7 @@ import pandas as pd
 import numpy.testing as npt
 import pytest
 
+from pandas.testing import assert_frame_equal
 from lifelines import statistics as stats
 from lifelines import CoxPHFitter, KaplanMeierFitter, WeibullFitter
 from lifelines.exceptions import StatisticalWarning
@@ -196,6 +197,26 @@ def test_log_rank_test_on_waltons_dataset():
     waltonT2 = df.loc[~ix]["T"]
     result = stats.logrank_test(waltonT1, waltonT2)
     assert result.p_value < 0.05
+
+
+def test_log_rank_test_on_waltons_dataset_with_case_weights():
+    df = load_waltons()
+    ix = df["group"] == "miR-137"
+    waltonT1 = df.loc[ix]["T"]
+    waltonT2 = df.loc[~ix]["T"]
+    result = stats.logrank_test(waltonT1, waltonT2)
+    print(result)
+
+    dfw = df.groupby(["T", "E", "group"]).size().reset_index().rename(columns={0: "weights"})
+    ixw = dfw["group"] == "miR-137"
+    waltonT1w = dfw.loc[ixw]["T"]
+    waltonT2w = dfw.loc[~ixw]["T"]
+
+    weightsA = dfw.loc[ixw]["weights"]
+    weightsB = dfw.loc[~ixw]["weights"]
+
+    resultw = stats.logrank_test(waltonT1w, waltonT2w, weights_A=weightsA, weights_B=weightsB)
+    assert_frame_equal(resultw.summary, result.summary)
 
 
 def test_logrank_test_is_symmetric():
