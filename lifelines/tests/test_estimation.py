@@ -2922,6 +2922,17 @@ class TestCoxPHFitter:
     def cph_pieces(self):
         return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
 
+    @pytest.mark.xfail
+    def test_has_c_index(self, cph_spline, cph_pieces, cph):
+        rossi = load_rossi()
+        cph.fit(rossi, "week", "arrest")
+        cph_pieces.fit(rossi, "week", "arrest")
+        cph_spline.fit(rossi, "week", "arrest")
+
+        assert cph.concordance_index_
+        assert cph_pieces.concordance_index_
+        assert cph_spline.concordance_index_
+
     def test_score_function_works_with_formulas(self, cph):
         rossi = load_rossi()
         cph = CoxPHFitter()
