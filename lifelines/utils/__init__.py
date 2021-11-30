@@ -17,6 +17,8 @@ from scipy import stats
 
 import pandas as pd
 
+import formulaic
+
 from lifelines.utils.concordance import concordance_index
 from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError
 
@@ -322,7 +324,7 @@ def _expected_value_of_survival_squared_up_to_t(
 
 
 def group_survival_table_from_events(
-    groups, durations, event_observed, birth_times=None, limit=-1
+    groups, durations, event_observed, birth_times=None, weights=None, limit=-1
 ) -> Tuple[ndarray, pd.DataFrame, pd.DataFrame, pd.DataFrame]:  # pylint: disable=too-many-locals
     """
     Joins multiple event series together into DataFrames. A generalization of
@@ -399,6 +401,10 @@ def group_survival_table_from_events(
         birth_times = np.zeros(np.max(durations.shape))
         birth_times[:] = np.min(durations)
 
+    if weights is None:
+        # Create some trivial weights
+        weights = np.ones_like(durations)
+
     assert n == np.max(birth_times.shape), "inputs must be of the same length."
 
     groups, durations, event_observed, birth_times = [
@@ -411,12 +417,13 @@ def group_survival_table_from_events(
         T = durations[ix]
         C = event_observed[ix]
         B = birth_times[ix]
+        W = weights[ix]
         group_name = str(group)
         columns = [event_name + ":" + group_name for event_name in ["removed", "observed", "censored", "entrance", "at_risk"]]
         if i == 0:
-            survival_table = survival_table_from_events(T, C, B, columns=columns)
+            survival_table = survival_table_from_events(T, C, B, columns=columns, weights=W)
         else:
-            survival_table = survival_table.join(survival_table_from_events(T, C, B, columns=columns), how="outer")
+            survival_table = survival_table.join(survival_table_from_events(T, C, B, columns=columns, weights=W), how="outer")
 
     survival_table = survival_table.fillna(0)
     # hmmm pandas its too bad I can't do data.loc[:limit] and leave out the if.
@@ -1896,8 +1903,6 @@ class CovariateParameterMappings:
 
     def transform_df(self, df: pd.DataFrame):
 
-        import formulaic
-
         Xs = {}
         for param_name, transform in self.mappings.items():
             if isinstance(transform, formulaic.formula.Formula):
@@ -1943,8 +1948,6 @@ class CovariateParameterMappings:
 
     def _string_seed_transform(self, formula: str, df: pd.DataFrame):
         # user input a formula, hopefully
-        import formulaic
-
         if self.force_intercept:
             formula += "+ 1"
 

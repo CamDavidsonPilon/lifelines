@@ -3050,6 +3050,14 @@ class TestCoxPHFitter:
         npt.assert_allclose(cph.summary.loc["AIDSY", "se(coef)"], 0.24630, rtol=3)
         npt.assert_allclose(cph.log_likelihood_, -95.15478, rtol=2)
 
+    def test_formulas_can_have_np_and_custom_functions(self, rossi, cph):
+        def custom_func(x):
+            return x + 1
+
+        cph.fit(rossi, "week", "arrest", formula="np.log10(age) + custom_func(age)")
+        cph.print_summary()
+        assert False
+
     def test_formulas_can_be_used_for_inference(self, rossi, cph, cph_spline, cph_pieces):
         cph.fit(rossi, "week", "arrest", formula="age + race")
         assert cph.summary.index.tolist() == ["age", "race"]
@@ -3363,7 +3371,7 @@ class TestCoxPHFitter:
         cph.check_assumptions(rossi, columns=[])
         cph.check_assumptions(rossi, columns=["age", "fin"])
 
-    def test_check_assumptions_with_formuals(self, cph, rossi):
+    def test_check_assumptions_with_formulas(self, cph, rossi):
         cph.fit(rossi, "week", "arrest", formula="bs(age, df=3) + fin * wexp")
         cph.check_assumptions(rossi)
 

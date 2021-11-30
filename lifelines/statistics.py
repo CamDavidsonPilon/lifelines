@@ -440,7 +440,15 @@ def survival_difference_at_fixed_point_in_time_test(point_in_time, fitterA, fitt
 
 
 def logrank_test(
-    durations_A, durations_B, event_observed_A=None, event_observed_B=None, t_0=-1, weightings=None, **kwargs
+    durations_A,
+    durations_B,
+    event_observed_A=None,
+    event_observed_B=None,
+    t_0=-1,
+    weights_A=None,
+    weights_B=None,
+    weightings=None,
+    **kwargs
 ) -> StatisticalResult:
     r"""
     Measures and reports on whether two intensity processes are different. That is, given two
@@ -496,6 +504,12 @@ def logrank_test(
         a (n,) list-like of censorship flags, (1 if observed, 0 if not), for the second population.
         Default assumes all observed.
 
+    weights_A: iterable, optional
+        case weights
+
+    weights_B: iterable, optional
+        case weights
+
     t_0: float, optional (default=-1)
         The final time period under observation, and subjects who experience the event after this time are set to be censored.
         Specify -1 to use all time.
@@ -515,6 +529,7 @@ def logrank_test(
             where :math:`n_i` is the number at risk just prior to time :math:`t_{i}`, :math:`\bar{S}(t_i)` is
             Peto-Peto's modified survival estimate and :math:`\hat{S}(t_i)` is the left-continuous
             Kaplan-Meier survival estimate at time :math:`t_{i}`.
+
     Returns
     -------
 
@@ -551,12 +566,17 @@ def logrank_test(
         event_observed_A = np.ones(event_times_A.shape[0])
     if event_observed_B is None:
         event_observed_B = np.ones(event_times_B.shape[0])
+    if weights_A is None:
+        weights_A = np.ones(event_times_A.shape[0])
+    if weights_B is None:
+        weights_B = np.ones(event_times_B.shape[0])
 
     event_times = np.r_[event_times_A, event_times_B]
     groups = np.r_[np.zeros(event_times_A.shape[0], dtype=int), np.ones(event_times_B.shape[0], dtype=int)]
     event_observed = np.r_[event_observed_A, event_observed_B]
+    weights = np.r_[weights_A, weights_B]
     return multivariate_logrank_test(
-        event_times, groups, event_observed, t_0=t_0, test_name="logrank_test", weightings=weightings, **kwargs
+        event_times, groups, event_observed, t_0=t_0, weights=weights, test_name="logrank_test", weightings=weightings, **kwargs
     )
 
 
@@ -655,7 +675,7 @@ def difference_of_restricted_mean_survival_time_test(model1, model2, t):
 
 
 def multivariate_logrank_test(
-    event_durations, groups, event_observed=None, t_0=-1, weightings=None, **kwargs
+    event_durations, groups, event_observed=None, weights=None, t_0=-1, weightings=None, **kwargs
 ) -> StatisticalResult:  # pylint: disable=too-many-locals
     r"""
     This test is a generalization of the logrank_test: it can deal with n>2 populations (and should
@@ -679,6 +699,9 @@ def multivariate_logrank_test(
 
     event_observed: iterable, optional
         a (n,) list-like of event_observed events: 1 if observed death, 0 if censored. Defaults to all observed.
+
+    weights: iterable, optional
+        case-weights
 
     t_0: float, optional (default=-1)
         The final time period under observation, and subjects who experience the event after this time are set to be censored.
@@ -758,7 +781,7 @@ def multivariate_logrank_test(
     if int(t_0) != -1:
         event_observed[event_durations > t_0] = 0
 
-    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed)
+    unique_groups, rm, obs, _ = group_survival_table_from_events(groups, event_durations, event_observed, weights=weights)
     n_groups = unique_groups.shape[0]
 
     # compute the factors needed
