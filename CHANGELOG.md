@@ -1,5 +1,11 @@
 ## Changelog
 
+#### 0.26.4 - 2021-11-30
+
+##### New features
+ - adding `weights` to log rank functions
+
+
 #### 0.26.3 - 2021-09-16
 
 ##### Bug fixes
