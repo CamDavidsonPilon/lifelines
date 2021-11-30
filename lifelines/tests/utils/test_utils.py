@@ -270,12 +270,30 @@ def test_survival_table_from_events_with_non_trivial_censorship_column():
 
 def test_group_survival_table_from_events_on_waltons_data():
     df = load_waltons()
-    first_obs = np.zeros(df.shape[0])
-    g, removed, observed, censored = utils.group_survival_table_from_events(df["group"], df["T"], df["E"], first_obs)
+    g, removed, observed, censored = utils.group_survival_table_from_events(df["group"], df["T"], df["E"])
     assert len(g) == 2
     assert all(removed.columns == ["removed:miR-137", "removed:control"])
     assert all(removed.index == observed.index)
     assert all(removed.index == censored.index)
+
+
+def test_group_survival_table_with_weights():
+    df = load_waltons()
+
+    dfw = df.groupby(["T", "E", "group"]).size().reset_index().rename(columns={0: "weights"})
+    gw, removedw, observedw, censoredw = utils.group_survival_table_from_events(
+        dfw["group"], dfw["T"], dfw["E"], weights=dfw["weights"]
+    )
+    assert len(gw) == 2
+    assert all(removedw.columns == ["removed:miR-137", "removed:control"])
+    assert all(removedw.index == observedw.index)
+    assert all(removedw.index == censoredw.index)
+
+    g, removed, observed, censored = utils.group_survival_table_from_events(df["group"], df["T"], df["E"])
+
+    assert_frame_equal(removedw, removed)
+    assert_frame_equal(observedw, observed)
+    assert_frame_equal(censoredw, censored)
 
 
 def test_survival_table_from_events_binned_with_empty_bin():

@@ -2160,6 +2160,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         return self.params_ / self.standard_errors_
 
     def _compute_p_values(self) -> ndarray:
+        #  Survival Analysis by John P. Klein and Melvin L. Moeschberger, Second Edition, page 256
         U = self._compute_z_values() ** 2
         return stats.chi2.sf(U, 1)
 
@@ -2937,13 +2938,13 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
     r"""
     Proportional hazard model with cubic splines model for the baseline hazard.
 
-    .. math::  h(t|x) = h_0(t) \exp(x' \beta)
+    .. math::  H(t|x) = H_0(t) \exp(x' \beta)
 
     where
 
-    .. math:: h_0(t) = \exp{\left( \phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j(\log{t})\right)}
+    .. math:: H_0(t) = \exp{\left( \phi_0 + \phi_1\log{t} + \sum_{j=2}^N \phi_j v_j(\log{t})\right)}
 
-    where :math:`v_j` are our cubic basis functions at predetermined knots. See references for exact definition.
+    where :math:`v_j` are our cubic basis functions at predetermined knots, and :math:`H_0` is the cumulative baseline hazard. See references for exact definition.
 
     References
     ------------

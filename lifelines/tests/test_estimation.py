@@ -2922,6 +2922,17 @@ class TestCoxPHFitter:
     def cph_pieces(self):
         return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
 
+    @pytest.mark.xfail
+    def test_has_c_index(self, cph_spline, cph_pieces, cph):
+        rossi = load_rossi()
+        cph.fit(rossi, "week", "arrest")
+        cph_pieces.fit(rossi, "week", "arrest")
+        cph_spline.fit(rossi, "week", "arrest")
+
+        assert cph.concordance_index_
+        assert cph_pieces.concordance_index_
+        assert cph_spline.concordance_index_
+
     def test_score_function_works_with_formulas(self, cph):
         rossi = load_rossi()
         cph = CoxPHFitter()
@@ -3038,6 +3049,14 @@ class TestCoxPHFitter:
         npt.assert_allclose(cph.summary.loc["AIDSY", "coef"], 0.02322, rtol=2)
         npt.assert_allclose(cph.summary.loc["AIDSY", "se(coef)"], 0.24630, rtol=3)
         npt.assert_allclose(cph.log_likelihood_, -95.15478, rtol=2)
+
+    def test_formulas_can_have_np_and_custom_functions(self, rossi, cph):
+        def custom_func(x):
+            return x + 1
+
+        cph.fit(rossi, "week", "arrest", formula="np.log10(age) + custom_func(age)")
+        cph.print_summary()
+        assert False
 
     def test_formulas_can_be_used_for_inference(self, rossi, cph, cph_spline, cph_pieces):
         cph.fit(rossi, "week", "arrest", formula="age + race")
@@ -3352,7 +3371,7 @@ class TestCoxPHFitter:
         cph.check_assumptions(rossi, columns=[])
         cph.check_assumptions(rossi, columns=["age", "fin"])
 
-    def test_check_assumptions_with_formuals(self, cph, rossi):
+    def test_check_assumptions_with_formulas(self, cph, rossi):
         cph.fit(rossi, "week", "arrest", formula="bs(age, df=3) + fin * wexp")
         cph.check_assumptions(rossi)
 
