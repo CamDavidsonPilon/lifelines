@@ -10,6 +10,7 @@ from lifelines.fitters import ParametricRegressionFitter
 from autograd.scipy.special import expit
 import pandas as pd
 from lifelines import CoxPHFitter
+from matplotlib import pyplot as plt
 
 
 class SplineFitter:
@@ -31,7 +32,7 @@ class PHSplineFitter(SplineFitter, ParametricRegressionFitter):
 
     References
     ------------
-    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
+    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203
     """
 
     _fitted_parameter_names = ["beta_", "phi1_", "phi2_"]
@@ -57,7 +58,7 @@ class POSplineFitter(SplineFitter, ParametricRegressionFitter):
 
     References
     ------------
-    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
+    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203
     """
 
     _fitted_parameter_names = ["beta_", "phi1_", "phi2_"]
@@ -83,8 +84,6 @@ class POSplineFitter(SplineFitter, ParametricRegressionFitter):
 class WeibullFitter(ParametricRegressionFitter):
     """
     Alternative parameterization of Weibull Model
-
-
     """
 
     _fitted_parameter_names = ["beta_", "phi1_"]
@@ -111,35 +110,31 @@ df["linear_predictor"] = (
     - 0.058 * (df["prog_recp"] + 1) ** 0.5
     - 0.394 * df["hormone"]
 )
-df["binned_lp"] = pd.qcut(df["linear_predictor"], np.linspace(0, 1, 4))
-
-columns_needed_for_fitting = ["binned_lp", "T", "E"]
-
+df["binned_lp"] = pd.qcut(df["linear_predictor"], np.linspace(0, 1, 4), labels=["good", "medium", "poor"])
 
 # these values look right. Differences could be due to handling ties vs Stata
-cph = CoxPHFitter().fit(df[columns_needed_for_fitting], "T", "E").print_summary()
+cph = CoxPHFitter().fit(df, "T", "E", formula="binned_lp").print_summary(columns=["coef"])
 
-
+print()
 # check PH(1) Weibull model (different parameterization from lifelines)
-regressors = {"beta_": ["binned_lp "], "phi1_": ["1"]}
-waf = WeibullFitter().fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_summary()
+regressors = {"beta_": "binned_lp", "phi1_": "1"}
+waf = WeibullFitter().fit(df, "T", "E", regressors=regressors).print_summary(columns=["coef"])
 
-
+print()
 # Check PH(2) model
-regressors = {"beta_": ["binned_lp"], "phi1_": ["1"], "phi2_": ["1"]}
+regressors = {"beta_": "binned_lp", "phi1_": "1", "phi2_": "1"}
 phf = PHSplineFitter()
-phf.fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_summary()
+phf.fit(df, "T", "E", regressors=regressors).print_summary(columns=["coef"])
 
 
+print()
+print()
 # Check PO(2) mode
-regressors = {"beta_": ["binned_lp"], "phi1_": ["1"], "phi2_": ["1"]}
+regressors = {"beta_": "binned_lp", "phi1_": "1", "phi2_": "1"}
 pof = POSplineFitter()
-pof.fit(df[columns_needed_for_fitting], "T", "E", regressors=regressors).print_summary(5)
+pof.fit(df, "T", "E", regressors=regressors).print_summary(columns=["coef"])
 
+print()
 # looks like figure 2 from paper.
-"""
-pof.predict_hazard(
-    pd.DataFrame({"binned_lp": [0, 0, 1]})
-).plot()
+pof.predict_hazard(pd.DataFrame({"binned_lp": ["poor", "medium", "good"]})).plot()
 plt.show()
-"""
