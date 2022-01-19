@@ -219,7 +219,7 @@ def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_
     return ax
 
 
-def qq_plot(model, ax=None, **plot_kwargs):
+def qq_plot(model, ax=None, scatter_color="k", **plot_kwargs):
     """
     Produces a quantile-quantile plot of the empirical CDF against
     the fitted parametric CDF. Large deviances away from the line y=x
@@ -291,7 +291,7 @@ def qq_plot(model, ax=None, **plot_kwargs):
 
     max_, min_ = quantiles[COL_EMP].max(), quantiles[COL_EMP].min()
 
-    quantiles.plot.scatter(COL_THEO, COL_EMP, c="none", edgecolor="k", lw=0.5, ax=ax)
+    quantiles.plot.scatter(COL_THEO, COL_EMP, c="none", edgecolor=scatter_color, lw=0.5, ax=ax)
     ax.plot([min_, max_], [min_, max_], c="k", ls=":", lw=1.0)
     ax.set_ylim(min_, max_)
     ax.set_xlim(min_, max_)
