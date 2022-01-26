@@ -1232,7 +1232,7 @@ class RegressionFitter(BaseFitter):
     def __init__(self, *args, **kwargs):
         super(RegressionFitter, self).__init__(*args, **kwargs)
 
-    def plot_covariate_groups(*args, **kwargs):
+    def plot_covariate_groups(self, *args, **kwargs):
         """
         Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
         """
@@ -1446,7 +1446,6 @@ class ParametricRegressionFitter(RegressionFitter):
         duration_col=None,
         event_col=None,
         regressors=None,
-        fit_intercept=None,
         show_progress=False,
         timeline=None,
         weights_col=None,
@@ -1473,9 +1472,6 @@ class ParametricRegressionFitter(RegressionFitter):
         event_col: string, optional
             the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
-
-        fit_intercept: bool, optional
-            If true, add a constant column to the regression. Overrides value set in class instantiation.
 
         show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
@@ -1777,6 +1773,7 @@ class ParametricRegressionFitter(RegressionFitter):
         self._central_values = self._compute_central_values_of_raw_training_data(df, self.strata)
 
         regressors = utils.coalesce(regressors, self.regressors, {p: None for p in self._fitted_parameter_names})
+
         self.regressors = utils.CovariateParameterMappings(
             regressors, df, force_intercept=self.fit_intercept, force_no_intercept=self.force_no_intercept
         )

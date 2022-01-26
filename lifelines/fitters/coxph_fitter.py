@@ -38,7 +38,8 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
     1. (default) non-parametrically, using Breslow's method. In this case, the entire model is the traditional semi-parametric Cox model. Ties are
     handled using Efron's method.
-    2. parametrically, using a pre-specified number of cubic splines.
+
+    2. parametrically, using a pre-specified number of cubic splines, or piecewise values.
 
     This is specified using the ``baseline_estimation_method`` parameter in the initialization (default = ``"breslow"``)
 
@@ -602,7 +603,12 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
     def __dir__(self):
         # pretty hacky - probably a better way
-        return self._model.__dir__() + ["print_summary", "baseline_estimation_method"]
+        return self._model.__dir__() + [
+            "print_summary",
+            "baseline_estimation_method",
+            "compute_followup_hazard_ratios",
+            "plot_partial_effects_on_outcome",
+        ]
 
     def _fit_model(self, *args, **kwargs):
         if self.baseline_estimation_method == "breslow":
