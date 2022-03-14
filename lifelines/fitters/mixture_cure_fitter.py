@@ -83,6 +83,7 @@ class MixtureCureFitter(ParametricUnivariateFitter):
                 f" Try something else instead."
             )
 
+        self._compare_to_values = anp.append([0.0], self._base_fitter._compare_to_values)
         self._fitted_parameter_names = [self._CURED_FRACTION_PARAMETER_NAME] + base_fitter._fitted_parameter_names
         self._bounds = [(0, 1)] + base_fitter._bounds
         self._scipy_fit_options = base_fitter._scipy_fit_options

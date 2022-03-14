@@ -2190,6 +2190,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
             df["exp(coef) lower %g%%" % ci] = self.hazard_ratios_ * exp(-z * self.standard_errors_)
             df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * exp(z * self.standard_errors_)
+            df["cmp to"] = np.zeros_like(self.params_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -utils.quiet_log2(df["p"])
