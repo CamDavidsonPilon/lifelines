@@ -87,7 +87,7 @@ class TestPlotting:
         T = np.linspace(-2, 3, n)
         C = np.random.randint(2, size=n)
         kmf.fit(T, C)
-        ax = kmf.plot()
+        ax = kmf.plot_survival_function()
         self.plt.title("test_negative_times_still_plots")
         self.plt.show(block=block)
         return
@@ -97,11 +97,11 @@ class TestPlotting:
         data2 = np.random.exponential(2, size=(200, 1))
         data3 = np.random.exponential(4, size=(500, 1))
         kmf.fit(data1, label="test label 1")
-        ax = kmf.plot()
+        ax = kmf.plot_survival_function()
         kmf.fit(data2, label="test label 2")
-        kmf.plot(ax=ax)
+        kmf.plot_survival_function(ax=ax)
         kmf.fit(data3, label="test label 3")
-        kmf.plot(ax=ax)
+        kmf.plot_survival_function(ax=ax)
         self.plt.title("test_kmf_plotting")
         self.plt.show(block=block)
         return
@@ -109,7 +109,7 @@ class TestPlotting:
     def test_kmf_with_risk_counts(self, block, kmf):
         data1 = np.random.exponential(10, size=(100))
         kmf.fit(data1)
-        kmf.plot(at_risk_counts=True)
+        kmf.plot_survival_function(at_risk_counts=True)
         self.plt.title("test_kmf_with_risk_counts")
         self.plt.show(block=block)
 
@@ -120,9 +120,9 @@ class TestPlotting:
 
         fig = self.plt.figure()
         axes = fig.subplots(1, 2)
-        kmf.plot(ax=axes[0])
+        kmf.plot_survival_function(ax=axes[0])
         add_at_risk_counts(kmf, ax=axes[0])
-        kmf.plot(ax=axes[1])
+        kmf.plot_survival_function(ax=axes[1])
 
         self.plt.title("test_kmf_add_at_risk_counts_with_subplot")
         self.plt.show(block=block)
@@ -134,7 +134,7 @@ class TestPlotting:
 
         fig = self.plt.figure()
         ax = fig.subplots(1, 1)
-        kmf.plot(ax=ax)
+        kmf.plot_survival_function(ax=ax)
         add_at_risk_counts(kmf, ax=ax, rows_to_show=["Censored", "At risk"])
         self.plt.tight_layout()
         self.plt.title("test_kmf_add_at_risk_counts_with_specific_rows")
@@ -261,7 +261,7 @@ class TestPlotting:
         kmf = KaplanMeierFitter()
         left, right = load_diabetes()["left"], load_diabetes()["right"]
         kmf.fit_interval_censoring(left, right)
-        kmf.plot(color="r")
+        kmf.plot_survival_function(color="r")
         self.plt.show(block=block)
         return
 
@@ -445,7 +445,7 @@ class TestPlotting:
         data1 = np.random.exponential(10, size=200)
         E = np.random.rand(200) < 0.8
         kmf.fit(data1, E, label="test label 1")
-        kmf.plot(ci_force_lines=True, show_censors=True, censor_styles={"marker": "|", "mew": 1, "ms": 10})
+        kmf.plot_survival_function(ci_force_lines=True, show_censors=True, censor_styles={"marker": "|", "mew": 1, "ms": 10})
         self.plt.title("test_flat_style_no_censor")
         self.plt.show(block=block)
         return
@@ -454,10 +454,10 @@ class TestPlotting:
         data1 = np.random.exponential(10, size=200)
         data2 = np.random.exponential(5, size=200)
         kmf.fit(data1, label="test label 1")
-        ax = kmf.plot_loglogs()
+        ax = kmf.plot_survival_function_loglogs()
 
         kmf.fit(data2, label="test label 2")
-        ax = kmf.plot_loglogs(ax=ax)
+        ax = kmf.plot_survival_function_loglogs(ax=ax)
 
         self.plt.title("test_loglogs_plot")
         self.plt.show(block=block)
@@ -473,7 +473,7 @@ class TestPlotting:
 
         kmf = KaplanMeierFitter()
         kmf.fit(T, event_observed=E)
-        kmf.plot()
+        kmf.plot_survival_function()
 
         self.plt.title("test_seaborn_doesnt_cause_kmf_plot_error")
         self.plt.show(block=block)
@@ -626,10 +626,10 @@ class TestPlotting:
         alluvial_fan = lcd_dataset.loc[lcd_dataset["group"] == "alluvial_fan"]
         basin_trough = lcd_dataset.loc[lcd_dataset["group"] == "basin_trough"]
         kmf.fit_left_censoring(alluvial_fan["T"], alluvial_fan["E"], label="alluvial_fan")
-        ax = kmf.plot()
+        ax = kmf.plot_survival_function()
 
         kmf.fit_left_censoring(basin_trough["T"], basin_trough["E"], label="basin_trough")
-        ax = kmf.plot(ax=ax)
+        ax = kmf.plot_survival_function(ax=ax)
         self.plt.title("test_kmf_left_censorship_plots")
         self.plt.show(block=block)
         return
@@ -833,7 +833,7 @@ class TestPlotting:
     def test_hide_ci_from_legend(self, block):
         waltons = load_waltons()
         kmf = KaplanMeierFitter().fit(waltons["T"], waltons["E"])
-        ax = kmf.plot(ci_show=True, ci_only_lines=True, ci_legend=False)
+        ax = kmf.plot_survival_function(ci_show=True, ci_only_lines=True, ci_legend=False)
         ax.legend(title="Legend title")
         self.plt.title("test_hide_ci_from_legend")
         self.plt.show(block=block)
@@ -841,7 +841,7 @@ class TestPlotting:
     def test_logx_plotting(self, block):
         waltons = load_waltons()
         kmf = KaplanMeierFitter().fit(np.exp(waltons["T"]), waltons["E"], timeline=np.logspace(0, 40))
-        ax = kmf.plot(logx=True)
+        ax = kmf.plot_survival_function(logx=True)
 
         wf = WeibullFitter().fit(np.exp(waltons["T"]), waltons["E"], timeline=np.logspace(0, 40))
         wf.plot_survival_function(logx=True, ax=ax)
@@ -922,14 +922,28 @@ class TestPlotting:
         E = load_waltons()["E"]
         kmf = KaplanMeierFitter().fit(T, E)
 
-        ax = kmf.plot()
+        ax = kmf.plot_survival_function()
         add_at_risk_counts(kmf, ax=ax, at_risk_count_from_start_of_period=True)
         self.plt.title("test_at_risk_looks_with_start_of_period_counts")
         self.plt.tight_layout()
         self.plt.show(block=block)
 
-        ax = kmf.plot()
+        ax = kmf.plot_survival_function()
         add_at_risk_counts(kmf, ax=ax, at_risk_count_from_start_of_period=False)
         self.plt.title("test_at_risk_looks_with_start_of_period_counts")
+        self.plt.tight_layout()
+        self.plt.show(block=block)
+
+    def test_at_risk_with_late_entry(self, block):
+
+        T = load_multicenter_aids_cohort_study()["T"]
+        E = load_multicenter_aids_cohort_study()["D"]
+        L = load_multicenter_aids_cohort_study()["W"]
+        kmf = KaplanMeierFitter().fit(T, E, entry=L)
+
+        ax = kmf.plot_survival_function()
+        add_at_risk_counts(kmf, ax=ax, at_risk_count_from_start_of_period=True)
+        print(kmf.event_table.head(50))
+        self.plt.title("test_at_risk_with_late_entry")
         self.plt.tight_layout()
         self.plt.show(block=block)
