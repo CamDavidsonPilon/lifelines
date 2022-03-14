@@ -364,7 +364,14 @@ def remove_ticks(ax, x=False, y=False):
 
 
 def add_at_risk_counts(
-    *fitters, labels: Optional[Union[Iterable, bool]] = None, rows_to_show=None, ypos=-0.6, xticks=None, ax=None, **kwargs
+    *fitters,
+    labels: Optional[Union[Iterable, bool]] = None,
+    rows_to_show=None,
+    ypos=-0.6,
+    xticks=None,
+    ax=None,
+    at_risk_count_from_start_of_period=False,
+    **kwargs
 ):
     """
     Add counts showing how many individuals were at risk, censored, and observed, at each time point in
@@ -386,6 +393,9 @@ def add_at_risk_counts(
         make more positive to move the table up.
     xticks: list
         specify the time periods (as a list) you want to evaluate the counts at.
+    at_risk_count_from_start_of_period: bool, default False.
+        By default, we use the at-risk count from the end of the period. This is what other packages, and KMunicate suggests, but
+        the same issue keeps coming up with users. #1383, #1316 and discussion #1229. This makes the adjustment.
     ax:
         a matplotlib axes
 
@@ -489,10 +499,13 @@ def add_at_risk_counts(
             # a) to align with R (and intuition), we do a subtraction off the at_risk column
             # b) we group by the tick intervals
             # c) we want to start at 0, so we give it it's own interval
+            if at_risk_count_from_start_of_period:
+                event_table_slice = f.event_table.assign(at_risk=lambda x: x.at_risk)
+            else:
+                event_table_slice = f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed)
 
             event_table_slice = (
-                f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed)
-                .loc[:tick, ["at_risk", "censored", "observed"]]
+                event_table_slice.loc[:tick, ["at_risk", "censored", "observed"]]
                 .agg({"at_risk": "min", "censored": "sum", "observed": "sum"})
                 .rename({"at_risk": "At risk", "censored": "Censored", "observed": "Events"})
             )

@@ -915,3 +915,21 @@ class TestPlotting:
         self.plt.title("test_at_risk_looks_right_when_scales_are_magnitudes_of_order_larger")
         self.plt.tight_layout()
         self.plt.show(block=block)
+
+    def test_at_risk_looks_with_start_of_period_counts(self, block):
+
+        T = load_waltons()["T"]
+        E = load_waltons()["E"]
+        kmf = KaplanMeierFitter().fit(T, E)
+
+        ax = kmf.plot()
+        add_at_risk_counts(kmf, ax=ax, at_risk_count_from_start_of_period=True)
+        self.plt.title("test_at_risk_looks_with_start_of_period_counts")
+        self.plt.tight_layout()
+        self.plt.show(block=block)
+
+        ax = kmf.plot()
+        add_at_risk_counts(kmf, ax=ax, at_risk_count_from_start_of_period=False)
+        self.plt.title("test_at_risk_looks_with_start_of_period_counts")
+        self.plt.tight_layout()
+        self.plt.show(block=block)

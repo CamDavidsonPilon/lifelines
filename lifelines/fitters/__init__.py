@@ -652,6 +652,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             df["se(coef)"] = self._compute_standard_errors().loc["se"]
             df["coef lower %g%%" % ci] = lower_upper_bounds["lower-bound"]
             df["coef upper %g%%" % ci] = lower_upper_bounds["upper-bound"]
+            df["cmp to"] = self._compare_to_values
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -utils.quiet_log2(df["p"])
@@ -1810,6 +1811,7 @@ class ParametricRegressionFitter(RegressionFitter):
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
 
         self.params_ = _params / self._norm_std
+        self._compare_to_values = np.zeros_like(self.params_)
         self.variance_matrix_ = pd.DataFrame(self._compute_variance_matrix(), index=_index, columns=_index)
         self.standard_errors_ = self._compute_standard_errors(Ts, E.values, weights.values, entries.values, Xs)
         self.confidence_intervals_ = self._compute_confidence_intervals()
@@ -2052,7 +2054,7 @@ class ParametricRegressionFitter(RegressionFitter):
         return unit_scaled_variance_matrix_ / np.outer(self._norm_std, self._norm_std)
 
     def _compute_z_values(self):
-        return self.params_ / self.standard_errors_
+        return (self.params_ - self._compare_to_values) / self.standard_errors_
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -2183,6 +2185,7 @@ class ParametricRegressionFitter(RegressionFitter):
             df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
             df["exp(coef) lower %g%%" % ci] = np.exp(self.params_) * np.exp(-z * self.standard_errors_)
             df["exp(coef) upper %g%%" % ci] = np.exp(self.params_) * np.exp(z * self.standard_errors_)
+            df["cmp to"] = self._compare_to_values
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -utils.quiet_log2(df["p"])
