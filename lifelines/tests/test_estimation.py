@@ -3003,6 +3003,21 @@ class TestCoxPHFitter:
         cph_pieces.fit(rossi, "week", "arrest", strata="paro", formula="age")
         cph_pieces.score(rossi)
 
+    def test_formula_can_accept_numpy_functions(self, cph, rossi):
+        cph.fit(rossi, "week", "arrest", formula="fin + log10(prio) + np.sqrt(age)")
+        assert "fin" in cph.summary.index
+        assert "log10(prio)" in cph.summary.index
+        assert "np.sqrt(age)" in cph.summary.index
+
+    @pytest.mark.xfail
+    def test_formulas_can_have_np_and_custom_functions(self, rossi, cph):
+        def custom_func(x):
+            return x + 1
+
+        cph.fit(rossi, "week", "arrest", formula="np.log10(age) + custom_func(age)")
+        cph.print_summary()
+        assert False
+
     def test_categorical_variables_are_still_encoded_correctly(self, cph):
         """
         We must drop the intercept in the design matrix, but still have proper dummy encoding
@@ -3049,14 +3064,6 @@ class TestCoxPHFitter:
         npt.assert_allclose(cph.summary.loc["AIDSY", "coef"], 0.02322, rtol=2)
         npt.assert_allclose(cph.summary.loc["AIDSY", "se(coef)"], 0.24630, rtol=3)
         npt.assert_allclose(cph.log_likelihood_, -95.15478, rtol=2)
-
-    def test_formulas_can_have_np_and_custom_functions(self, rossi, cph):
-        def custom_func(x):
-            return x + 1
-
-        cph.fit(rossi, "week", "arrest", formula="np.log10(age) + custom_func(age)")
-        cph.print_summary()
-        assert False
 
     def test_formulas_can_be_used_for_inference(self, rossi, cph, cph_spline, cph_pieces):
         cph.fit(rossi, "week", "arrest", formula="age + race")
