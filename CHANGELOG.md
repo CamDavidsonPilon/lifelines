@@ -1,5 +1,20 @@
 ## Changelog
 
+#### 0.27.0 - 2022-03-15
+
+Dropping Python3.6 support.
+
+##### Bug fixes
+ - Fix late entry in `add_at_risk_counts`.
+
+##### New features
+ - `add_at_risk_counts` has a new flag to determine to use start or end-of-period at risk counts.
+ - new column in fitter's `summary` that display the number the parameter is being compared against.
+
+##### API Changes
+ - `plot_lifetimes`'s `duration` arg has the interpretation of "relative time the subject died (since birth)", instead of the old "time observed for". These interpretations are different when there is late entry.
+
+
 #### 0.26.4 - 2021-11-30
 
 ##### New features

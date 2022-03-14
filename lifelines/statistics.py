@@ -199,9 +199,7 @@ class StatisticalResult:
     def ascii_print(self, decimals=2, **kwargs):
         print(self.to_ascii(decimals, **kwargs))
 
-    def _repr_latex_(
-        self,
-    ):
+    def _repr_latex_(self):
         return self.to_latex()
 
     def _repr_html_(self):
