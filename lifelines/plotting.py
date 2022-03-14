@@ -669,7 +669,7 @@ def plot_lifetimes(
     Parameters
     -----------
     durations: (n,) numpy array or pd.Series
-      duration subject was observed for.
+      duration (relative to subject's birth) the subject was alive for.
     event_observed: (n,) numpy array or pd.Series
       array of booleans: True if event observed, else False.
     entry: (n,) numpy array or pd.Series
@@ -727,11 +727,11 @@ def plot_lifetimes(
 
     for i in range(N):
         c = event_observed_color if _iloc(event_observed, i) else event_censored_color
-        ax.hlines(i, _iloc(entry, i), _iloc(entry, i) + _iloc(durations, i), color=c, lw=1.5)
+        ax.hlines(i, _iloc(entry, i), _iloc(durations, i), color=c, lw=1.5)
         if left_truncated:
             ax.hlines(i, 0, _iloc(entry, i), color=c, lw=1.0, linestyle="--")
         m = "" if not _iloc(event_observed, i) else "o"
-        ax.scatter(_iloc(entry, i) + _iloc(durations, i), i, color=c, marker=m, s=13)
+        ax.scatter(_iloc(durations, i), i, color=c, marker=m, s=13)
 
     if label_plot_bars:
         ax.set_yticks(range(0, N))
