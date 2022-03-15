@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 import warnings
 import numpy as np
 import pandas as pd
+import typing as t
 
 from lifelines.fitters import NonParametricUnivariateFitter
 from lifelines.exceptions import StatError, StatisticalWarning
@@ -85,7 +87,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         Parameters
         ----------
           durations: an array, list, pd.DataFrame or pd.Series
-            length n -- duration subject was observed for
+            length n -- duration (relative to subject's birth) the subject was alive for.
           event_observed: an array, list, pd.DataFrame, or pd.Series, optional
              True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
           timeline: an array, list, pd.DataFrame, or pd.Series, optional
@@ -128,7 +130,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         tol: float = 1e-5,
         show_progress: bool = False,
         **kwargs,
-    ) -> "KaplanMeierFitter":
+    ) -> KaplanMeierFitter:
         """
         Fit the model to a interval-censored dataset using non-parametric MLE. This estimator is
         also called the Turnbull Estimator.
@@ -261,7 +263,15 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         return self._fit(durations, event_observed, timeline, entry, label, alpha, ci_labels, weights)
 
     def _fit(
-        self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        entry=None,
+        label: t.Optional[str] = None,
+        alpha=None,
+        ci_labels=None,
+        weights=None,
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Parameters

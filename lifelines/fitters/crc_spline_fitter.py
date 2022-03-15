@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from typing import Optional
 from autograd import numpy as np
 from lifelines.fitters import ParametricRegressionFitter
 from lifelines.fitters.mixins import SplineFitterMixin
@@ -13,12 +14,11 @@ class CRCSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
 
 
 
-
     Parameters
     -----------
 
     n_baseline_knots: int
-        the number of knots in the cubic spline. If equal to 2, then the model is equal to the WeibullAFT model.
+        the number of knots in the cubic spline.
 
 
     References
@@ -46,16 +46,25 @@ class CRCSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
     fit_intercept = True
     _scipy_fit_method = "SLSQP"
 
-    def __init__(self, n_baseline_knots: int, *args, **kwargs):
-        assert n_baseline_knots > 1, "must be greater than 1"
-        self.n_baseline_knots = n_baseline_knots
+    def __init__(self, n_baseline_knots: Optional[int] = None, knots: Optional[list] = None, *args, **kwargs):
+        if n_baseline_knots is not None:
+            assert n_baseline_knots > 1, "must be greater than 1"
+            self.n_baseline_knots = n_baseline_knots
+            self.knots = None
+        elif knots is not None:
+            assert len(knots) > 1
+            self.knots = knots
+            self.n_baseline_knots = len(self.knots)
+        else:
+            assert False, "Must supply n_baseline_knots or knots"
+
         self._fitted_parameter_names = ["beta_"] + ["gamma%d_" % i for i in range(0, self.n_baseline_knots)]
         super(CRCSplineFitter, self).__init__(*args, **kwargs)
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         return [
             {
-                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "gamma0_": np.array([0.0]), "gamma1_": np.array([0.1])},
+                **{"beta_": np.zeros(len(Xs["beta_"].columns)), "gamma0_": np.array([0.0]), "gamma1_": np.array([2.0])},
                 **{"gamma%d_" % i: np.array([0.0]) for i in range(2, self.n_baseline_knots)},
             }
         ]
@@ -64,7 +73,8 @@ class CRCSplineFitter(SplineFitterMixin, ParametricRegressionFitter):
         self.knots = np.percentile(np.log(T[E.astype(bool).values]), np.linspace(5, 95, self.n_baseline_knots))
 
     def _pre_fit_model(self, Ts, E, df):
-        self.set_knots(Ts[0], E)
+        if self.knots is None:
+            self.set_knots(Ts[0], E)
 
     def _cumulative_hazard(self, params, T, Xs):
         # a negative sign makes the interpretation the same as other AFT models

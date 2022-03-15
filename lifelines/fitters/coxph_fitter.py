@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 from typing import Callable, Iterator, List, Optional, Tuple, Union, Any, Iterable
 from textwrap import dedent, fill
 from datetime import datetime
@@ -38,7 +39,8 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
     1. (default) non-parametrically, using Breslow's method. In this case, the entire model is the traditional semi-parametric Cox model. Ties are
     handled using Efron's method.
-    2. parametrically, using a pre-specified number of cubic splines.
+
+    2. parametrically, using a pre-specified number of cubic splines, or piecewise values.
 
     This is specified using the ``baseline_estimation_method`` parameter in the initialization (default = ``"breslow"``)
 
@@ -178,7 +180,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
-    ) -> "CoxPHFitter":
+    ) -> CoxPHFitter:
         """
         Fit the Cox proportional hazard model to a right-censored dataset. Alias of `fit_right_censoring`.
 
@@ -321,7 +323,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
-    ) -> "CoxPHFitter":
+    ) -> CoxPHFitter:
         """
         Fit the Cox proportional hazard model to an interval censored dataset.
 
@@ -466,7 +468,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
-    ) -> "CoxPHFitter":
+    ) -> CoxPHFitter:
         """
         Fit the Cox proportional hazard model to a left censored dataset.
 
@@ -602,7 +604,12 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
     def __dir__(self):
         # pretty hacky - probably a better way
-        return self._model.__dir__() + ["print_summary", "baseline_estimation_method"]
+        return self._model.__dir__() + [
+            "print_summary",
+            "baseline_estimation_method",
+            "compute_followup_hazard_ratios",
+            "plot_partial_effects_on_outcome",
+        ]
 
     def _fit_model(self, *args, **kwargs):
         if self.baseline_estimation_method == "breslow":
@@ -1093,7 +1100,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
     def fit(
         self,
         df: pd.DataFrame,
-        duration_col: str = None,
+        duration_col: Optional[str] = None,
         event_col: Optional[str] = None,
         show_progress: bool = False,
         initial_point: Optional[ndarray] = None,
@@ -1106,7 +1113,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
-    ) -> "SemiParametricPHFitter":
+    ) -> SemiParametricPHFitter:
         """
         Fit the Cox proportional hazard model to a dataset.
 
@@ -2078,9 +2085,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return pd.DataFrame(score_residuals, columns=self.params_.index, index=index)
 
-    def _compute_score_within_strata(
-        self, X: ndarray, _T: Union[ndarray, Series], E: ndarray, weights: ndarray, entries: None
-    ) -> ndarray:
+    def _compute_score_within_strata(self, X: DataFrame, _T: Series, E: Series, weights: Series, entries: None) -> ndarray:
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
@@ -2184,6 +2189,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
             df["exp(coef) lower %g%%" % ci] = self.hazard_ratios_ * exp(-z * self.standard_errors_)
             df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * exp(z * self.standard_errors_)
+            df["cmp to"] = np.zeros_like(self.params_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -utils.quiet_log2(df["p"])

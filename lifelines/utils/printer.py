@@ -128,6 +128,7 @@ class Printer:
                 "coef upper %d%%" % ci,
                 "exp(coef) lower %d%%" % ci,
                 "exp(coef) upper %d%%" % ci,
+                "cmp to",
                 "z",
                 "p",
                 "-log2(p)",
@@ -144,7 +145,7 @@ class Printer:
                 "exp(coef) lower %d%%" % ci,
                 "exp(coef) upper %d%%" % ci,
             ]
-            second_row_set = ["z", "p", "-log2(p)"]
+            second_row_set = ["cmp to", "z", "p", "-log2(p)"]
 
         repr_string += df[columns].to_string(
             float_format=utils.format_floats(decimals),
@@ -176,7 +177,9 @@ class Printer:
     def ascii_print(self):
         print(self.to_ascii())
 
-    def _repr_latex_(self,):
+    def _repr_latex_(
+        self,
+    ):
         return self.to_latex()
 
     def _repr_html_(self):

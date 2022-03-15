@@ -303,6 +303,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
             df["exp(coef) lower %g%%" % ci] = self.hazard_ratios_ * np.exp(-z * self.standard_errors_)
             df["exp(coef) upper %g%%" % ci] = self.hazard_ratios_ * np.exp(z * self.standard_errors_)
+            df["cmp to"] = np.zeros_like(self.params_)
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -utils.quiet_log2(df["p"])
@@ -829,7 +830,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         raise NotImplementedError()
 
     def _compute_delta_beta(self, df, events, start, stop, weights):
-        """ approximate change in betas as a result of excluding ith row"""
+        """approximate change in betas as a result of excluding ith row"""
 
         score_residuals = self._compute_residuals(df, events, start, stop, weights) * weights[:, None]
 

@@ -57,11 +57,11 @@ def survival_probability_calibration(model: RegressionFitter, df: pd.DataFrame, 
 
     # fit new dataset to flexible spline model
     # this new model connects prediction probabilities and actual survival. It should be very flexible, almost to the point of overfitting. It's goal is just to smooth out the data!
-    knots = 3
+    n_knots = 3
     regressors = {"beta_": ["ccl_at_%d" % t0], "gamma0_": "1", "gamma1_": "1", "gamma2_": "1"}
 
     # this model is from examples/royson_crowther_clements_splines.py
-    crc = CRCSplineFitter(knots, penalizer=0.000001)
+    crc = CRCSplineFitter(n_baseline_knots=n_knots, penalizer=0.000001)
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         if CensoringType.is_right_censoring(model):

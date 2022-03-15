@@ -217,7 +217,7 @@ def test_datetimes_to_durations_will_handle_dates_above_multi_fill_date():
     npt.assert_almost_equal(T, np.array([2, 3, 4]))
 
 
-def test_datetimes_to_durations_will_handle_dates_above_multi_fill_date():
+def test_datetimes_to_durations_will_handle_dates_above_multi_fill_date2():
     start_date = ["2013-10-08", "2013-10-09", "2013-10-10"]
     end_date = ["2013-10-10", None, "2013-10-20"]
     last_observation = ["2013-10-10", "2013-10-12", "2013-10-14"]
@@ -843,11 +843,6 @@ class TestLongDataFrameUtils(object):
         long_df = utils.to_episodic_format(df, "T", "E", id_col="id", time_gaps=2.0).sort_values(["id", "stop"])
         assert long_df.groupby("id").last()["E"].tolist() == [1, 0]
 
-    def test_to_episodic_format_handles_floating_durations_and_preserves_events(self):
-        df = pd.DataFrame({"T": [0.1, 3.5], "E": [1, 0], "id": [1, 2]})
-        long_df = utils.to_episodic_format(df, "T", "E", id_col="id", time_gaps=2.0).sort_values(["id", "stop"])
-        assert long_df.groupby("id").last()["E"].tolist() == [1, 0]
-
     def test_to_episodic_format_adds_id_col(self):
         df = pd.DataFrame({"T": [1, 3], "E": [1, 0]})
         long_df = utils.to_episodic_format(df, "T", "E")
@@ -999,7 +994,7 @@ class TestSklearnAdapter:
         clf = load("filename.joblib")
 
     @pytest.mark.xfail
-    def test_sklearn_check():
+    def test_sklearn_check(self):
         from sklearn.utils.estimator_checks import check_estimator
 
         base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")

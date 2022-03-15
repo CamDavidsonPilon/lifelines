@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 from functools import partial, wraps
 from inspect import getfullargspec
 from datetime import datetime
 from textwrap import dedent
-from typing import *
+import typing as t
 import collections
 import warnings
 import sys
@@ -21,7 +22,6 @@ from scipy.integrate import trapz
 from scipy import stats
 
 import pandas as pd
-
 
 from lifelines.plotting import _plot_estimate, set_kwargs_drawstyle
 from lifelines.utils.printer import Printer
@@ -41,8 +41,8 @@ __all__ = [
 
 class BaseFitter:
 
-    weights: np.array
-    event_observed: np.array
+    weights: np.ndarray
+    event_observed: np.ndarray
 
     def __init__(self, alpha: float = 0.05, label: str = None):
         if not (0 < alpha <= 1.0):
@@ -176,7 +176,7 @@ class UnivariateFitter(BaseFitter):
         )
         return t
 
-    def predict(self, times: Union[Iterable[float], float], interpolate=False) -> pd.Series:
+    def predict(self, times: t.Union[t.Iterable[float], float], interpolate=False) -> pd.Series:
         """
         Predict the fitter at certain point in time. Uses a linear interpolation if
         points in time are not in the index.
@@ -287,9 +287,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
     _KNOWN_MODEL = False
     _MIN_PARAMETER_VALUE = 1e-9
     _scipy_fit_method = "L-BFGS-B"
-    _scipy_fit_options: Dict[str, Any] = dict()
+    _scipy_fit_options: dict[str, t.Any] = dict()
     _scipy_fit_callback = None
-    _fitted_parameter_names: List[str]
+    _fitted_parameter_names: list[str]
 
     def __init__(self, *args, **kwargs):
         super(ParametricUnivariateFitter, self).__init__(*args, **kwargs)
@@ -364,7 +364,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             else:
                 yield (ub - lb) / 2.0
 
-    def _buffer_bounds(self, bounds: List[Tuple[Optional[float], Optional[float]]]):
+    def _buffer_bounds(self, bounds: list[tuple[t.Optional[float], t.Optional[float]]]):
         for (lb, ub) in bounds:
             if lb is None and ub is None:
                 yield (None, None)
@@ -652,6 +652,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             df["se(coef)"] = self._compute_standard_errors().loc["se"]
             df["coef lower %g%%" % ci] = lower_upper_bounds["lower-bound"]
             df["coef upper %g%%" % ci] = lower_upper_bounds["upper-bound"]
+            df["cmp to"] = self._compare_to_values
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -utils.quiet_log2(df["p"])
@@ -712,7 +713,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> "self":  # pylint: disable=too-many-arguments
+    ) -> ParametricUnivariateFitter:  # pylint: disable=too-many-arguments
         """
         Parameters
         ----------
@@ -777,7 +778,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> "self":  # pylint: disable=too-many-arguments
+    ) -> ParametricUnivariateFitter:  # pylint: disable=too-many-arguments
         """
         Fit the model to a left-censored dataset
 
@@ -843,7 +844,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> "self":  # pylint: disable=too-many-arguments
+    ) -> ParametricUnivariateFitter:  # pylint: disable=too-many-arguments
         """
         Fit the model to an interval censored dataset.
 
@@ -914,7 +915,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
     def _fit(
         self,
-        Ts: Tuple[Optional[np.array], Optional[np.array]],
+        Ts: tuple[t.Optional[np.ndarray], t.Optional[np.ndarray]],
         event_observed=None,
         timeline=None,
         label=None,
@@ -924,7 +925,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
-    ) -> "ParametricUnivariateFitter":
+    ) -> ParametricUnivariateFitter:
 
         n = len(utils.coalesce(*Ts))
 
@@ -1015,7 +1016,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             )
 
     @property
-    def event_table(self) -> Union[pd.DataFrame, None]:
+    def event_table(self) -> t.Union[pd.DataFrame, None]:
         if hasattr(self, "_event_table"):
             return self._event_table
         else:
@@ -1027,7 +1028,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 self._event_table = None
             return self.event_table
 
-    def survival_function_at_times(self, times, label=None) -> pd.Series:
+    def survival_function_at_times(self, times, label: t.Optional[str] = None) -> pd.Series:
         """
         Return a Pandas series of the predicted survival value at specific times.
 
@@ -1042,7 +1043,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         label = utils.coalesce(label, self._label)
         return pd.Series(self._survival_function(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
-    def cumulative_density_at_times(self, times, label=None) -> pd.Series:
+    def cumulative_density_at_times(self, times, label: t.Optional[str] = None) -> pd.Series:
         """
         Return a Pandas series of the predicted cumulative density function (1-survival function) at specific times.
 
@@ -1072,7 +1073,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         label = utils.coalesce(label, self._label)
         return pd.Series(self._density(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
-    def cumulative_hazard_at_times(self, times, label=None) -> pd.Series:
+    def cumulative_hazard_at_times(self, times, label: t.Optional[str] = None) -> pd.Series:
         """
         Return a Pandas series of the predicted cumulative hazard value at specific times.
 
@@ -1086,7 +1087,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         label = utils.coalesce(label, self._label)
         return pd.Series(self._cumulative_hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
-    def hazard_at_times(self, times, label=None) -> pd.Series:
+    def hazard_at_times(self, times, label: t.Optional[str] = None) -> pd.Series:
         """
         Return a Pandas series of the predicted hazard at specific times.
 
@@ -1211,9 +1212,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
             find_root = np.vectorize(_find_root, otypes=[float])
             return find_root(p)
         except ValueError:
-            warning.warn(
+            warnings.warn(
                 "Looking like the model does not hit %g in the specified timeline. Try refitting with a larger timeline." % p,
-                StatisticalWarning,
+                exceptions.StatisticalWarning,
             )
             return None
 
@@ -1232,7 +1233,7 @@ class RegressionFitter(BaseFitter):
     def __init__(self, *args, **kwargs):
         super(RegressionFitter, self).__init__(*args, **kwargs)
 
-    def plot_covariate_groups(*args, **kwargs):
+    def plot_covariate_groups(self, *args, **kwargs):
         """
         Deprecated as of v0.25.0. Use ``plot_partial_effects_on_outcome`` instead.
         """
@@ -1323,14 +1324,14 @@ class SemiParametricRegressionFitter(RegressionFitter):
 class ParametricRegressionFitter(RegressionFitter):
 
     _scipy_fit_method = "BFGS"
-    _scipy_fit_options: Dict[str, Any] = dict()
+    _scipy_fit_options: dict[str, t.Any] = dict()
     _scipy_fit_callback = None
     fit_intercept = False
     force_no_intercept = False
     regressors = None
     strata = None
 
-    def __init__(self, alpha: float = 0.05, penalizer: Union[float, np.array] = 0.0, l1_ratio: float = 0.0, **kwargs):
+    def __init__(self, alpha: float = 0.05, penalizer: t.Union[float, np.ndarray] = 0.0, l1_ratio: float = 0.0, **kwargs):
         super(ParametricRegressionFitter, self).__init__(alpha=alpha, **kwargs)
         self.penalizer = penalizer
         self.l1_ratio = l1_ratio
@@ -1446,14 +1447,13 @@ class ParametricRegressionFitter(RegressionFitter):
         duration_col=None,
         event_col=None,
         regressors=None,
-        fit_intercept=None,
         show_progress=False,
         timeline=None,
         weights_col=None,
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> "self":
+    ) -> ParametricRegressionFitter:
         """
         Fit the regression model to a left-censored dataset.
 
@@ -1473,9 +1473,6 @@ class ParametricRegressionFitter(RegressionFitter):
         event_col: string, optional
             the  name of the column in DataFrame that contains the subjects' death
             observation. If left as None, assume all individuals are uncensored.
-
-        fit_intercept: bool, optional
-            If true, add a constant column to the regression. Overrides value set in class instantiation.
 
         show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
@@ -1546,7 +1543,7 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> "self":
+    ) -> ParametricRegressionFitter:
         """
         Fit the regression model to a interval-censored dataset.
 
@@ -1650,7 +1647,7 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> "self":
+    ) -> ParametricRegressionFitter:
         """
         Fit the regression model to a right-censored dataset.
 
@@ -1738,7 +1735,7 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
-    ) -> "ParametricRegressionFitter":
+    ) -> ParametricRegressionFitter:
 
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self._n_examples = df.shape[0]
@@ -1777,6 +1774,7 @@ class ParametricRegressionFitter(RegressionFitter):
         self._central_values = self._compute_central_values_of_raw_training_data(df, self.strata)
 
         regressors = utils.coalesce(regressors, self.regressors, {p: None for p in self._fitted_parameter_names})
+
         self.regressors = utils.CovariateParameterMappings(
             regressors, df, force_intercept=self.fit_intercept, force_no_intercept=self.force_no_intercept
         )
@@ -1813,6 +1811,7 @@ class ParametricRegressionFitter(RegressionFitter):
         _params = np.concatenate([_params[k] for k in self.regressors.keys()])
 
         self.params_ = _params / self._norm_std
+        self._compare_to_values = np.zeros_like(self.params_)
         self.variance_matrix_ = pd.DataFrame(self._compute_variance_matrix(), index=_index, columns=_index)
         self.standard_errors_ = self._compute_standard_errors(Ts, E.values, weights.values, entries.values, Xs)
         self.confidence_intervals_ = self._compute_confidence_intervals()
@@ -1835,10 +1834,10 @@ class ParametricRegressionFitter(RegressionFitter):
 
         return s
 
-    def _create_initial_point(self, Ts, E, entries, weights, Xs) -> Union[List[Dict], Dict]:
+    def _create_initial_point(self, Ts, E, entries, weights, Xs) -> t.Union[list[dict], dict]:
         return {parameter_name: np.zeros(len(Xs[parameter_name].columns)) for parameter_name in self._fitted_parameter_names}
 
-    def _add_penalty(self, params: Dict, neg_ll: float):
+    def _add_penalty(self, params: dict, neg_ll: float):
         params_array, _ = flatten(params)
 
         # remove intercepts from being penalized
@@ -2017,7 +2016,7 @@ class ParametricRegressionFitter(RegressionFitter):
         else:
             raise NotImplementedError()
 
-    def _compute_variance_matrix(self) -> np.array:
+    def _compute_variance_matrix(self) -> np.ndarray:
         try:
             unit_scaled_variance_matrix_ = np.linalg.inv(self._hessian_)
         except np.linalg.LinAlgError:
@@ -2055,7 +2054,7 @@ class ParametricRegressionFitter(RegressionFitter):
         return unit_scaled_variance_matrix_ / np.outer(self._norm_std, self._norm_std)
 
     def _compute_z_values(self):
-        return self.params_ / self.standard_errors_
+        return (self.params_ - self._compare_to_values) / self.standard_errors_
 
     def _compute_p_values(self):
         U = self._compute_z_values() ** 2
@@ -2098,11 +2097,11 @@ class ParametricRegressionFitter(RegressionFitter):
         )
 
     @property
-    def _ll_null_dof(self):
+    def _ll_null_dof(self) -> int:
         return len(self._fitted_parameter_names)
 
     @property
-    def _ll_null(self):
+    def _ll_null(self) -> float:
         if hasattr(self, "_ll_null_"):
             return self._ll_null_
 
@@ -2144,7 +2143,7 @@ class ParametricRegressionFitter(RegressionFitter):
         self._ll_null_ = model.log_likelihood_
         return self._ll_null_
 
-    def log_likelihood_ratio_test(self):
+    def log_likelihood_ratio_test(self) -> "StatisticalResult":
         """
         This function computes the likelihood ratio test for the model. We
         compare the existing model (with all the covariates) to the trivial model
@@ -2186,12 +2185,13 @@ class ParametricRegressionFitter(RegressionFitter):
             df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
             df["exp(coef) lower %g%%" % ci] = np.exp(self.params_) * np.exp(-z * self.standard_errors_)
             df["exp(coef) upper %g%%" % ci] = np.exp(self.params_) * np.exp(z * self.standard_errors_)
+            df["cmp to"] = self._compare_to_values
             df["z"] = self._compute_z_values()
             df["p"] = self._compute_p_values()
             df["-log2(p)"] = -utils.quiet_log2(df["p"])
             return df
 
-    def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
+    def print_summary(self, decimals: int = 2, style: t.Optional[str] = None, columns: t.Optional[list] = None, **kwargs) -> None:
         """
         Print summary statistics describing the fit, the coefficients, and the error bounds.
 
@@ -2209,7 +2209,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         """
         justify = utils.string_rjustify(25)
-        headers = []
+        headers: list[t.Any] = []
 
         if utils.CensoringType.is_interval_censoring(self):
             headers.extend(
@@ -2691,7 +2691,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         initial_point=None,
         entry_col=None,
         formula: str = None,
-    ) -> "self":
+    ) -> ParametericAFTRegressionFitter:
         """
         Fit the accelerated failure time model to a right-censored dataset.
 
@@ -2849,7 +2849,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         initial_point=None,
         entry_col=None,
         formula=None,
-    ) -> "self":
+    ) -> ParametericAFTRegressionFitter:
         """
         Fit the accelerated failure time model to a interval-censored dataset.
 
@@ -3016,8 +3016,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
     def fit_left_censoring(
         self,
         df,
-        duration_col=None,
-        event_col=None,
+        duration_col: str = None,
+        event_col: str = None,
         ancillary=None,
         fit_intercept=None,
         show_progress=False,
@@ -3027,7 +3027,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         initial_point=None,
         entry_col=None,
         formula: str = None,
-    ) -> "self":
+    ) -> ParametericAFTRegressionFitter:
         """
         Fit the accelerated failure time model to a left-censored dataset.
 
