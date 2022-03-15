@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from __future__ import annotations
 from typing import Union, Any, Tuple, List, Callable, Optional, Dict
 from datetime import datetime
 from functools import wraps
@@ -284,7 +284,7 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
 
 
 def _expected_value_of_survival_squared_up_to_t(
-    model_or_survival_function: Union["UnivariateFitter", pd.DataFrame], t: float = np.inf
+    model_or_survival_function: Union[UnivariateFitter, pd.DataFrame], t: float = np.inf
 ) -> float:
     r"""
     Compute the restricted mean survival time, RMST, of a survival function. This is defined as
@@ -1576,7 +1576,7 @@ class StepSizer:
         return self.step_size
 
 
-def _to_1d_array(x) -> np.array:
+def _to_1d_array(x) -> np.ndarray:
     v = np.atleast_1d(x)
     try:
         if v.shape[0] > 1 and v.shape[1] > 1:

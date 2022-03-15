@@ -15,7 +15,7 @@ import pandas as pd
 from lifelines.exceptions import ConvergenceWarning
 from typing import *
 
-interval = namedtuple("Interval", ["left", "right"])
+interval = namedtuple("interval", ["left", "right"])
 
 
 class min_max:

@@ -858,7 +858,7 @@ class TimeTransformers:
         "rank": lambda t, c, w: np.cumsum(c),
         "identity": lambda t, c, w: t,
         "log": lambda t, c, w: np.log(t),
-        "km": lambda t, c, w: 1 - KaplanMeierFitter().fit(t, c, weights=w).survival_function_.loc[t, "KM_estimate"],
+        "km": lambda t, c, w: (1 - KaplanMeierFitter().fit(t, c, weights=w).survival_function_.loc[t, "KM_estimate"]),
     }
 
     def get(self, key_or_callable):

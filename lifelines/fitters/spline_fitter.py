@@ -23,7 +23,7 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
 
     References
     ------------
-    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203 
+    Royston, P., & Parmar, M. K. B. (2002). Flexible parametric proportional-hazards and proportional-odds models for censored survival data, with application to prognostic modelling and estimation of treatment effects. Statistics in Medicine, 21(15), 2175–2197. doi:10.1002/sim.1203
 
 
     Examples
@@ -79,7 +79,7 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
     _scipy_fit_method = "SLSQP"
     _scipy_fit_options = {"maxiter": 1000}
 
-    def __init__(self, knot_locations: np.array, *args, **kwargs):
+    def __init__(self, knot_locations: np.ndarray, *args, **kwargs):
         self.knot_locations = knot_locations
         self.n_knots = len(self.knot_locations)
         assert self.n_knots > 1, "knot_locations must have two or more elements."

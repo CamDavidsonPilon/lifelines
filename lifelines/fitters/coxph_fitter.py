@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import annotations
 from typing import Callable, Iterator, List, Optional, Tuple, Union, Any, Iterable
 from textwrap import dedent, fill
 from datetime import datetime
@@ -179,7 +180,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
-    ) -> "CoxPHFitter":
+    ) -> CoxPHFitter:
         """
         Fit the Cox proportional hazard model to a right-censored dataset. Alias of `fit_right_censoring`.
 
@@ -322,7 +323,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
-    ) -> "CoxPHFitter":
+    ) -> CoxPHFitter:
         """
         Fit the Cox proportional hazard model to an interval censored dataset.
 
@@ -467,7 +468,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
-    ) -> "CoxPHFitter":
+    ) -> CoxPHFitter:
         """
         Fit the Cox proportional hazard model to a left censored dataset.
 
@@ -1099,7 +1100,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
     def fit(
         self,
         df: pd.DataFrame,
-        duration_col: str = None,
+        duration_col: Optional[str] = None,
         event_col: Optional[str] = None,
         show_progress: bool = False,
         initial_point: Optional[ndarray] = None,
@@ -1112,7 +1113,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
-    ) -> "SemiParametricPHFitter":
+    ) -> SemiParametricPHFitter:
         """
         Fit the Cox proportional hazard model to a dataset.
 
@@ -2084,9 +2085,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         return pd.DataFrame(score_residuals, columns=self.params_.index, index=index)
 
-    def _compute_score_within_strata(
-        self, X: ndarray, _T: Union[ndarray, Series], E: ndarray, weights: ndarray, entries: None
-    ) -> ndarray:
+    def _compute_score_within_strata(self, X: DataFrame, _T: Series, E: Series, weights: Series, entries: None) -> ndarray:
         # https://www.stat.tamu.edu/~carroll/ftp/gk001.pdf
         # lin1989
         # https://www.ics.uci.edu/~dgillen/STAT255/Handouts/lecture10.pdf
