@@ -90,6 +90,7 @@ Documentation
   Changelog
   Development blog <https://dataorigami.net/blogs/napkin-folding/tagged/lifelines>
   Citing lifelines <Citing lifelines>
+  Support lifelines <https://github.com/sponsors/CamDavidsonPilon>
 
 .. toctree::
   :maxdepth: 1
