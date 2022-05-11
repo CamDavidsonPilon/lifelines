@@ -1532,9 +1532,7 @@ class StepSizer:
     ATM it contains lots of "magic constants"
     """
 
-    def __init__(self, initial_step_size: Optional[float]) -> None:
-        initial_step_size = initial_step_size or 0.90
-
+    def __init__(self, initial_step_size: float):
         self.initial_step_size = initial_step_size
         self.step_size = initial_step_size
         self.temper_back_up = False

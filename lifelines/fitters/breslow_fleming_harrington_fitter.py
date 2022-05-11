@@ -28,9 +28,19 @@ class BreslowFlemingHarringtonFitter(NonParametricUnivariateFitter):
 
     @CensoringType.right_censoring
     def fit(
-        self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        entry=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        weights=None,
+        fit_options=None,
     ):  # pylint: disable=too-many-arguments
         """
+
         Parameters
         ----------
         durations: an array, or pd.Series, of length n
@@ -50,7 +60,8 @@ class BreslowFlemingHarringtonFitter(NonParametricUnivariateFitter):
            alpha for this call to fit only.
         ci_labels: iterable
             add custom column names to the generated confidence intervals as a length-2 list: [<lower-bound name>, <upper-bound name>]. Default: <label>_lower_<alpha>
-
+        fit_options:
+            Not used.
 
         Returns
         -------

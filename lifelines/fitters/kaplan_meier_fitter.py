@@ -79,7 +79,16 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
 
     @CensoringType.right_censoring
     def fit(
-        self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        entry=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        weights=None,
+        fit_options=None,
     ):  # pylint: disable=too-many-arguments,too-many-locals
         """
         Fit the model to a right-censored dataset
@@ -105,6 +114,8 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
               if providing a weighted dataset. For example, instead
               of providing every subject as a single element of `durations` and `event_observed`, one could
               weigh subject differently.
+          fit_options:
+            Not used in KaplanMeierFitter
 
         Returns
         -------
@@ -129,6 +140,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         weights=None,
         tol: float = 1e-5,
         show_progress: bool = False,
+        fit_options=None,
         **kwargs,
     ) -> KaplanMeierFitter:
         """
@@ -226,7 +238,16 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
 
     @CensoringType.left_censoring
     def fit_left_censoring(
-        self, durations, event_observed=None, timeline=None, entry=None, label=None, alpha=None, ci_labels=None, weights=None
+        self,
+        durations,
+        event_observed=None,
+        timeline=None,
+        entry=None,
+        label=None,
+        alpha=None,
+        ci_labels=None,
+        weights=None,
+        fit_options=None,
     ):
         """
         Fit the model to a left-censored dataset

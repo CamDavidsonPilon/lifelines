@@ -524,7 +524,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         # *args has terms like Ts, E, entry, weights
         return np.array(list(self._initial_values_from_bounds()))
 
-    def _fit_model(self, Ts, E, entry, weights, show_progress=True):
+    def _fit_model(self, Ts, E, entry, weights, fit_options: dict, show_progress=True):
 
         if utils.CensoringType.is_left_censoring(self):
             negative_log_likelihood = self._negative_log_likelihood_left_censoring
@@ -539,7 +539,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             minimizing_results, previous_results, minimizing_ll = None, None, np.inf
             for method, option in zip(
                 ["Nelder-Mead", self._scipy_fit_method],
-                [{"maxiter": 100}, {**{"disp": show_progress}, **self._scipy_fit_options}],
+                [{"maxiter": 100}, {**{"disp": show_progress}, **self._scipy_fit_options, **fit_options}],
             ):
 
                 initial_value = self._initial_values if previous_results is None else utils._to_1d_array(previous_results.x)
@@ -713,6 +713,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
+        fit_options: Optional[dict] = None,
     ) -> ParametricUnivariateFitter:  # pylint: disable=too-many-arguments
         """
         Parameters
@@ -740,6 +741,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
         initial_point: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
+        fit_options: dict, optional
+            pass kwargs into the underlying minimization algorithm, like ``tol``, etc.
 
         Returns
         -------
@@ -763,6 +766,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             entry=entry,
             weights=weights,
             initial_point=initial_point,
+            fit_options=fit_options,
         )
 
     @utils.CensoringType.left_censoring
@@ -778,6 +782,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
+        fit_options: Optional[dict] = None,
     ) -> ParametricUnivariateFitter:  # pylint: disable=too-many-arguments
         """
         Fit the model to a left-censored dataset
@@ -807,6 +812,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
         initial_point: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
+        fit_options: dict, optional
+            pass kwargs into the underlying minimization algorithm, like ``tol``, etc.
 
         Returns
         -------
@@ -828,6 +835,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             entry=entry,
             weights=weights,
             initial_point=initial_point,
+            fit_options=fit_options,
         )
 
     @utils.CensoringType.interval_censoring
@@ -844,6 +852,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
+        fit_options: Optional[dict] = None,
     ) -> ParametricUnivariateFitter:  # pylint: disable=too-many-arguments
         """
         Fit the model to an interval censored dataset.
@@ -876,6 +885,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
         initial_point: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
+        fit_options: dict, optional
+            pass kwargs into the underlying minimization algorithm, like ``tol``, etc.
 
         Returns
         -------
@@ -911,6 +922,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             entry=entry,
             weights=weights,
             initial_point=initial_point,
+            fit_options=fit_options,
         )
 
     def _fit(
@@ -925,6 +937,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         entry=None,
         weights=None,
         initial_point=None,
+        fit_options=None,
     ) -> ParametricUnivariateFitter:
 
         n = len(utils.coalesce(*Ts))
@@ -946,6 +959,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         self._label = utils.coalesce(label, self._label, self._class_name.replace("Fitter", "") + "_estimate")
         self._ci_labels = ci_labels
         self.alpha = utils.coalesce(alpha, self.alpha)
+        fit_options = utils.coalesce(fit_options, dict())
 
         # create some initial values, and test them in the hazard.
         self._initial_values = utils.coalesce(
@@ -961,7 +975,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         # estimation
         self._fitted_parameters_, self.log_likelihood_, self._hessian_ = self._fit_model(
-            Ts, self.event_observed.astype(bool), self.entry, self.weights, show_progress=show_progress
+            Ts, self.event_observed.astype(bool), self.entry, self.weights, show_progress=show_progress, fit_options=fit_options
         )
 
         if not self._KNOWN_MODEL:
@@ -1453,6 +1467,7 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
+        fit_options: Optional[dict] = None,
     ) -> ParametricRegressionFitter:
         """
         Fit the regression model to a left-censored dataset.
@@ -1500,6 +1515,9 @@ class ParametricRegressionFitter(RegressionFitter):
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
+        fit_options: dict, optional
+            pass kwargs into the underlying minimization algorithm, like ``tol``, etc.
+
         Returns
         -------
             self with additional new properties ``print_summary``, ``params_``, ``confidence_intervals_`` and more
@@ -1524,6 +1542,7 @@ class ParametricRegressionFitter(RegressionFitter):
             robust=robust,
             initial_point=initial_point,
             entry_col=entry_col,
+            fit_options=fit_options,
         )
 
         return self
@@ -1543,6 +1562,7 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
+        fit_options: Optional[dict] = None,
     ) -> ParametricRegressionFitter:
         """
         Fit the regression model to a interval-censored dataset.
@@ -1593,6 +1613,9 @@ class ParametricRegressionFitter(RegressionFitter):
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
+        fit_options: dict, optional
+            pass kwargs into the underlying minimization algorithm, like ``tol``, etc.
+
         Returns
         -------
             self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
@@ -1630,6 +1653,7 @@ class ParametricRegressionFitter(RegressionFitter):
             robust=robust,
             initial_point=initial_point,
             entry_col=entry_col,
+            fit_options=fit_options,
         )
 
         return self
@@ -1647,6 +1671,7 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
+        fit_options: Optional[dict] = None,
     ) -> ParametricRegressionFitter:
         """
         Fit the regression model to a right-censored dataset.
@@ -1694,6 +1719,9 @@ class ParametricRegressionFitter(RegressionFitter):
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
+        fit_options: dict, optional
+            pass kwargs into the underlying minimization algorithm, like ``tol``, etc.
+
         Returns
         -------
             self with additional new properties: ``print_summary``, ``params_``, ``confidence_intervals_`` and more
@@ -1718,6 +1746,7 @@ class ParametricRegressionFitter(RegressionFitter):
             robust=robust,
             initial_point=initial_point,
             entry_col=entry_col,
+            fit_options=fit_options,
         )
 
         return self
@@ -1735,6 +1764,7 @@ class ParametricRegressionFitter(RegressionFitter):
         robust=False,
         initial_point=None,
         entry_col=None,
+        fit_options: Optional[dict] = None,
     ) -> ParametricRegressionFitter:
 
         self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
@@ -1794,6 +1824,7 @@ class ParametricRegressionFitter(RegressionFitter):
         _norm_std[_norm_std < 1e-8] = 1.0
 
         self._pre_fit_model(Ts, E, Xs)
+
         _params, self.log_likelihood_, self._hessian_ = self._fit_model(
             log_likelihood_function,
             Ts,
@@ -1801,6 +1832,7 @@ class ParametricRegressionFitter(RegressionFitter):
             E.values,
             weights.values,
             entries.values,
+            fit_options=utils.coalesce(fit_options, dict()),
             show_progress=show_progress,
             user_supplied_initial_point=initial_point,
         )
@@ -1881,7 +1913,9 @@ class ParametricRegressionFitter(RegressionFitter):
             initial_point_arrays = [flatten(initial_point_dict)[0] for initial_point_dict in self._initial_point_dicts]
         return initial_point_arrays, unflatten
 
-    def _fit_model(self, likelihood, Ts, Xs, E, weights, entries, show_progress=False, user_supplied_initial_point=None):
+    def _fit_model(
+        self, likelihood, Ts, Xs, E, weights, entries, fit_options, show_progress=False, user_supplied_initial_point=None
+    ):
         inital_points_as_arrays, unflatten_array_to_dict = self._prepare_initial_points(
             user_supplied_initial_point, Ts, E, entries, weights, Xs
         )
@@ -1908,7 +1942,7 @@ class ParametricRegressionFitter(RegressionFitter):
                 method=self._scipy_fit_method,
                 jac=True,
                 args=(Ts, E, weights, entries, utils.DataframeSlicer(Xs)),
-                options={**{"disp": show_progress}, **self._scipy_fit_options},
+                options={**{"disp": show_progress}, **self._scipy_fit_options, **fit_options},
                 callback=self._scipy_fit_callback,
             )
 
@@ -2691,6 +2725,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         initial_point=None,
         entry_col=None,
         formula: str = None,
+        fit_options: Optional[dict] = None,
     ) -> ParametericAFTRegressionFitter:
         """
         Fit the accelerated failure time model to a right-censored dataset.
@@ -2745,6 +2780,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         entry_col: string
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
+
+        fit_options: dict, optional
+            pass kwargs into the underlying minimization algorithm, like ``tol``, etc.
 
         Returns
         -------
@@ -2830,6 +2868,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             robust=robust,
             initial_point=initial_point,
             entry_col=entry_col,
+            fit_options=fit_options,
         )
         return self
 
@@ -2849,6 +2888,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         initial_point=None,
         entry_col=None,
         formula=None,
+        fit_options: Optional[dict] = None,
     ) -> ParametericAFTRegressionFitter:
         """
         Fit the accelerated failure time model to a interval-censored dataset.
@@ -2905,6 +2945,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
+        fit_options: dict, optional
+            pass kwargs into the underlying minimization algorithm, like ``tol``, etc.
 
         Returns
         -------
@@ -3009,6 +3051,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             robust=robust,
             initial_point=initial_point,
             entry_col=entry_col,
+            fit_options=fit_options,
         )
         return self
 
@@ -3027,6 +3070,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         initial_point=None,
         entry_col=None,
         formula: str = None,
+        fit_options: Optional[dict] = None,
     ) -> ParametericAFTRegressionFitter:
         """
         Fit the accelerated failure time model to a left-censored dataset.
@@ -3082,6 +3126,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             specify a column in the DataFrame that denotes any late-entries (left truncation) that occurred. See
             the docs on `left truncation <https://lifelines.readthedocs.io/en/latest/Survival%20analysis%20with%20lifelines.html#left-truncated-late-entry-data>`__
 
+        fit_options: dict, optional
+            pass kwargs into the underlying minimization algorithm, like ``tol``, etc.
 
         Returns
         -------
@@ -3166,6 +3212,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             robust=robust,
             initial_point=initial_point,
             entry_col=entry_col,
+            fit_options=fit_options,
         )
 
         return self

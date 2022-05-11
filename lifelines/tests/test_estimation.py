@@ -401,6 +401,15 @@ class TestUnivariateFitters:
             f = fitter().fit(positive_sample_lifetimes[0], entry=entries)
             assert f.entry is not None
 
+    def test_univariate_fitters_accepts_fit_options(self, positive_sample_lifetimes, univariate_fitters):
+        T = positive_sample_lifetimes[0]
+        for fitter in univariate_fitters:
+            fitter().fit_right_censoring(T, fit_options={"tol": 0.1})
+            if hasattr(fitter, "fit_left_censoring"):
+                fitter().fit_left_censoring(T, fit_options={"tol": 0.1})
+            if hasattr(fitter, "fit_interval_censoring"):
+                fitter().fit_interval_censoring(T, T + 1, fit_options={"tol": 0.1})
+
     def test_univariate_fitters_with_survival_function_have_conditional_time_to_(
         self, positive_sample_lifetimes, univariate_fitters
     ):
@@ -1620,6 +1629,10 @@ class TestParametricRegressionFitter:
 
     def test_AIC_on_models(self, rossi):
         model = WeibullAFTFitter(fit_intercept=False).fit(rossi, "week", "arrest")
+        npt.assert_allclose(model.AIC_, -2 * model.log_likelihood_ + 2 * model.summary.shape[0])
+
+    def test_fit_options(self, rossi):
+        model = WeibullAFTFitter(fit_intercept=False).fit(rossi, "week", "arrest", fit_options={"tol": 0.1})
         npt.assert_allclose(model.AIC_, -2 * model.log_likelihood_ + 2 * model.summary.shape[0])
 
     def test_penalizer_can_be_an_array(self, rossi):
@@ -2923,8 +2936,7 @@ class TestCoxPHFitter:
         return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
 
     @pytest.mark.xfail
-    def test_has_c_index(self, cph_spline, cph_pieces, cph):
-        rossi = load_rossi()
+    def test_has_c_index(self, cph_spline, cph_pieces, cph, rossi):
         cph.fit(rossi, "week", "arrest")
         cph_pieces.fit(rossi, "week", "arrest")
         cph_spline.fit(rossi, "week", "arrest")
@@ -2933,8 +2945,7 @@ class TestCoxPHFitter:
         assert cph_pieces.concordance_index_
         assert cph_spline.concordance_index_
 
-    def test_score_function_works_with_formulas(self, cph):
-        rossi = load_rossi()
+    def test_score_function_works_with_formulas(self, rossi):
         cph = CoxPHFitter()
         cph.fit(
             rossi,
@@ -2944,6 +2955,16 @@ class TestCoxPHFitter:
         )
         cph.score(rossi)
         cph.score(rossi, scoring_method="concordance_index")
+
+    def test_fit_kwargs_works_for_semiparametric(self, cph, rossi, capfd):
+        cph.fit(rossi, "week", "arrest", fit_options={"step_size": 0.1}, show_progress=True)
+        out, err = capfd.readouterr()
+        assert "step_size = 0.1000" in out
+
+    def test_fit_kwargs_works_for_semiparametric(self, cph_spline, rossi, capfd):
+        cph_spline.fit(rossi, "week", "arrest", fit_options={"step_size": 0.1}, show_progress=True)
+        out, err = capfd.readouterr()
+        assert "step_size = 0.1000" in out
 
     def test_parametric_models_can_do_interval_censoring(self, cph_spline, cph_pieces):
         df = load_diabetes()
