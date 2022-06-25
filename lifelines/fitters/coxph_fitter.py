@@ -242,7 +242,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             algorithm. Default is the zero vector.
 
         fit_options: dict, optional
-            pass kwargs for the fitting algorithm. For semi-parametric models, this is the Newton-Rhapson method (see method _newton_rhapson_for_efron_model for kwargs)
+            pass kwargs for the fitting algorithm. For semi-parametric models, this is the Newton-Rhapson method (see method _newton_raphson_for_efron_model for kwargs)
 
         Returns
         -------
@@ -1377,7 +1377,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         initial_point: Optional[ndarray] = None,
         show_progress: bool = True,
     ):
-        beta_, ll_, hessian_ = self._newton_rhapson_for_efron_model(
+        beta_, ll_, hessian_ = self._newton_raphson_for_efron_model(
             X,
             T,
             E,
@@ -1398,6 +1398,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         # rescale parameters back to original scale.
         params_ = beta_ / self._norm_std.values
         if hessian_.size > 0:
+            # possible if the df is trivial (no covariate columns)
             variance_matrix_ = pd.DataFrame(
                 -inv(hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns, columns=X.columns
             )
@@ -1418,7 +1419,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *X.shape)
         return getattr(self, "_get_efron_values_%s" % decision)
 
-    def _newton_rhapson_for_efron_model(
+    def _newton_raphson_for_efron_model(
         self,
         X: DataFrame,
         T: Series,

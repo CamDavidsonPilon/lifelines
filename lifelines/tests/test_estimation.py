@@ -5512,6 +5512,20 @@ log-likelihood ratio test = 15.11 on 4 df
         ctv.fit(heart, id_col="id", event_col="event", strata=["transplant"], initial_point=0.1 * np.ones(3))
         npt.assert_allclose(ctv.log_likelihood_ratio_test().test_statistic, 15.68, atol=0.01)
 
+    def test_fitter_is_okay_with_trival_df(self, ctv):
+        # after all the necessary columns are removed, does this fitter still work with a trivial df?
+        df = pd.DataFrame.from_records(
+            [
+                {"id": 1, "start": 0, "stop": 4, "event": 1},
+                {"id": 2, "start": 0, "stop": 5, "event": 1},
+                {"id": 3, "start": 0, "stop": 5, "event": 1},
+                {"id": 4, "start": 0, "stop": 4, "event": 1},
+            ]
+        )
+        ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
+        assert True
+
 
 class TestAalenJohansenFitter:
     @pytest.fixture  # pytest fixtures are functions that are "executed" before every test

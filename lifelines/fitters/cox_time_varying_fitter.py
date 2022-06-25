@@ -212,7 +212,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         self._norm_mean = X.mean(0)
         self._norm_std = X.std(0)
 
-        params_ = self._newton_rhaphson(
+        beta_, self.log_likelihood_, self._hessian_ = self._newton_raphson_for_efron_model(
             normalize(X, self._norm_mean, self._norm_std),
             events,
             start,
@@ -223,8 +223,14 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             **utils.coalesce(fit_options, {}),
         )
 
-        self.params_ = pd.Series(params_, index=pd.Index(X.columns, name="covariate"), name="coef") / self._norm_std
-        self.variance_matrix_ = pd.DataFrame(-inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns)
+        self.params_ = pd.Series(beta_, index=pd.Index(X.columns, name="covariate"), name="coef") / self._norm_std
+        if self._hessian_.size > 0:
+            # possible if the df is trivial (no covariate columns)
+            self.variance_matrix_ = pd.DataFrame(-inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns)
+
+        else:
+            self.variance_matrix_ = pd.DataFrame(index=X.columns, columns=X.columns)
+
         self.standard_errors_ = self._compute_standard_errors(
             normalize(X, self._norm_mean, self._norm_std), events, start, stop, weights
         )
@@ -313,7 +319,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             df["-log2(p)"] = -utils.quiet_log2(df["p"])
             return df
 
-    def _newton_rhaphson(
+    def _newton_raphson_for_efron_model(
         self,
         df,
         events,
@@ -468,10 +474,6 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
 
             beta += delta
 
-        self._hessian_ = hessian
-        self._score_ = gradient
-        self.log_likelihood_ = ll
-
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
         elif show_progress and not completed:
@@ -487,7 +489,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         elif not completed:
             warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
-        return beta
+        return beta, ll, hessian
 
     @staticmethod
     def _get_gradients(X, events, start, stop, weights, beta):  # pylint: disable=too-many-locals
