@@ -5,6 +5,13 @@
 ##### New features
  - all `fit_` methods now accept a `fit_options` dict that allows one to pass kwargs to the underlying fitting algorithm.
 
+
+##### API Changes
+ - `step_size` is removed from Cox models `fit`. See `fit_options` above.
+
+##### Bug fixes
+ - fixed Cox models when "trival" matrix was passed in (one with no covariates)
+
 #### 0.27.0 - 2022-03-15
 
 Dropping Python3.6 support.
