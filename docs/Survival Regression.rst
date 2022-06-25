@@ -509,9 +509,12 @@ Below we compare the non-parametric and the fully parametric baseline survivals:
     cph_semi = CoxPHFitter().fit(rossi, 'week', event_col='arrest')
     cph_piecewise = CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[20, 35]).fit(rossi, 'week', event_col='arrest')
 
-    ax = cph_spline.baseline_cumulative_hazard_.plot()
-    cph_semi.baseline_cumulative_hazard_.plot(ax=ax, drawstyle="steps-post")
-    cph_piecewise.baseline_cumulative_hazard_.plot(ax=ax)
+    bch_key = "baseline cumulative hazard"
+
+    ax = cph_spline.baseline_cumulative_hazard_[bch_key].plot(label="spline")
+    cph_semi.baseline_cumulative_hazard_[bch_key].plot(ax=ax, drawstyle="steps-post", label="semi")
+    cph_piecewise.baseline_cumulative_hazard_[bch_key].plot(ax=ax, label="peicewise[20,35]")
+    plt.legend()
 
 
 .. figure:: images/spline_and_semi.png
