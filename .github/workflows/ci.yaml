@@ -26,4 +26,4 @@ jobs:
           pip install -r reqs/dev-requirements.txt
 
       - name: Run tests
-        run: pytest lifelines/tests/ -vv --timeout 600 --random-order
+        run: pytest lifelines/tests/ -vv
