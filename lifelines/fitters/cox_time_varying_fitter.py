@@ -4,6 +4,7 @@
 from datetime import datetime
 import warnings
 import time
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -102,11 +103,11 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         weights_col=None,
         id_col=None,
         show_progress=False,
-        step_size=None,
         robust=False,
         strata=None,
         initial_point=None,
         formula: str = None,
+        fit_options: Optional[dict] = None,
     ):  # pylint: disable=too-many-arguments
         """
         Fit the Cox Proportional Hazard model to a time varying dataset. Tied survival times
@@ -138,8 +139,6 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
           ties, so if there are high number of ties, results may significantly differ. See
           "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
-        step_size: float, optional
-            set an initial step size for the fitting algorithm.
         strata: list or string, optional
             specify a column or list of columns n to use in stratification. This is useful if a
             categorical covariate does not obey the proportional hazard assumption. This
@@ -150,6 +149,11 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             algorithm. Default is the zero vector.
         formula: str, optional
             A R-like formula for transforming the covariates
+        fit_options: dict, optional
+            Override the default values in NR algorithm:
+                step_size: 0.95,
+                precision: 1e-07,
+                max_steps: 500,
 
         Returns
         --------
@@ -216,7 +220,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             weights,
             initial_point=initial_point,
             show_progress=show_progress,
-            step_size=step_size,
+            **utils.coalesce(fit_options, {}),
         )
 
         self.params_ = pd.Series(params_, index=pd.Index(X.columns, name="covariate"), name="coef") / self._norm_std
@@ -317,7 +321,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         stop,
         weights,
         show_progress=False,
-        step_size=None,
+        step_size=0.95,
         precision=10e-6,
         max_steps=50,
         initial_point=None,
