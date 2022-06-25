@@ -2753,6 +2753,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         formula: string
             Use an R-style formula for modeling the dataset. See formula syntax: https://matthewwardrop.github.io/formulaic/basic/grammar/
+            If a formula is not provided, all variables in the dataframe are used (minus those used for other purposes like event_col, etc.)
+
 
         ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
@@ -2913,6 +2915,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         formula: string
             Use an R-style formula for modeling the dataset. See formula syntax: https://matthewwardrop.github.io/formulaic/basic/grammar/
+            If a formula is not provided, all variables in the dataframe are used (minus those used for other purposes like event_col, etc.)
 
         ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.
@@ -3094,6 +3097,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         formula: string
             Use an R-style formula for modeling the dataset. See formula syntax: https://matthewwardrop.github.io/formulaic/basic/grammar/
+            If a formula is not provided, all variables in the dataframe are used (minus those used for other purposes like event_col, etc.)
 
         ancillary: None, boolean, str, or DataFrame, optional (default=None)
             Choose to model the ancillary parameters.

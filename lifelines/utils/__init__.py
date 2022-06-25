@@ -245,8 +245,7 @@ def restricted_mean_survival_time(
     https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-13-152#Sec27
 
     """
-    if t is None:
-        t = np.inf
+    t = coalesce(t, np.inf)
 
     mean = _expected_value_of_survival_up_to_t(model_or_survival_function, t)
     if return_variance:
