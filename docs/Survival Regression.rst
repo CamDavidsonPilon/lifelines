@@ -1015,13 +1015,13 @@ two individual columns: a *duration* column and a boolean *event occurred* colum
 
 .. code:: python
 
-    X['T'] = data['duration']
-    X['E'] = data['observed']
+    df['T'] = data['duration']
+    df['E'] = data['observed']
 
 
 .. code:: python
 
-    aaf.fit(X, 'T', event_col='E', formula='un_continent_name + regime + start_year')
+    aaf.fit(df, 'T', event_col='E', formula='un_continent_name + regime + start_year')
 
 
 After fitting, the instance exposes a :attr:`~lifelines.fitters.aalen_additive_fitter.AalenAdditiveFitter.cumulative_hazards_` DataFrame
@@ -1054,7 +1054,7 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
 
 .. code:: python
 
-  aaf.plot(columns=['regime[T.Presidential Dem]', 'baseline', 'un_continent_name[T.Europe]'], iloc=slice(1,15))
+  aaf.plot(columns=['regime[T.Presidential Dem]', 'Intercept', 'un_continent_name[T.Europe]'], iloc=slice(1,15))
 
 
 .. image:: images/survival_regression_aaf.png
@@ -1070,7 +1070,7 @@ Prime Minister Stephen Harper.
 .. code:: python
 
     ix = (data['ctryname'] == 'Canada') & (data['start_year'] == 2006)
-    harper = X.loc[ix]
+    harper = df.loc[ix]
     print("Harper's unique data point:")
     print(harper)
 
