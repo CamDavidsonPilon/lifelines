@@ -809,7 +809,7 @@ Another situation with left-truncation occurs when subjects are exposed before e
     df = load_multicenter_aids_cohort_study()
 
     plot_lifetimes(
-        df["T"] - df["W"],
+        df["T"],
         event_observed=df["D"],
         entry=df["W"],
         event_observed_color="#383838",
