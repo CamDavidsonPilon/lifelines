@@ -401,6 +401,15 @@ class TestUnivariateFitters:
             f = fitter().fit(positive_sample_lifetimes[0], entry=entries)
             assert f.entry is not None
 
+    def test_univariate_fitters_accepts_fit_options(self, positive_sample_lifetimes, univariate_fitters):
+        T = positive_sample_lifetimes[0]
+        for fitter in univariate_fitters:
+            fitter().fit_right_censoring(T, fit_options={"tol": 0.1})
+            if hasattr(fitter, "fit_left_censoring"):
+                fitter().fit_left_censoring(T, fit_options={"tol": 0.1})
+            if hasattr(fitter, "fit_interval_censoring"):
+                fitter().fit_interval_censoring(T, T + 1, fit_options={"tol": 0.1})
+
     def test_univariate_fitters_with_survival_function_have_conditional_time_to_(
         self, positive_sample_lifetimes, univariate_fitters
     ):
@@ -1622,6 +1631,10 @@ class TestParametricRegressionFitter:
         model = WeibullAFTFitter(fit_intercept=False).fit(rossi, "week", "arrest")
         npt.assert_allclose(model.AIC_, -2 * model.log_likelihood_ + 2 * model.summary.shape[0])
 
+    def test_fit_options(self, rossi):
+        model = WeibullAFTFitter(fit_intercept=False).fit(rossi, "week", "arrest", fit_options={"tol": 0.1})
+        npt.assert_allclose(model.AIC_, -2 * model.log_likelihood_ + 2 * model.summary.shape[0])
+
     def test_penalizer_can_be_an_array(self, rossi):
 
         wf_array = WeibullAFTFitter(penalizer=0.01 * np.ones(8), fit_intercept=False).fit(rossi, "week", "arrest")
@@ -1669,13 +1682,13 @@ class TestParametricRegressionFitter:
         cb.fit(rossi, "week", "arrest", regressors=regressors)
         wf.fit(rossi, "week", "arrest")
 
-        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1, check_like=True)
+        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], atol=0.1, check_like=True)
         npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_)
 
         cb.fit_left_censoring(rossi, "week", "arrest", regressors=regressors)
         wf.fit_left_censoring(rossi, "week", "arrest")
 
-        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1, check_like=True)
+        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], atol=0.1, check_like=True)
         npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_)
 
         rossi = rossi.loc[rossi["arrest"].astype(bool)]
@@ -1684,7 +1697,7 @@ class TestParametricRegressionFitter:
         cb.fit_interval_censoring(rossi, "week", "week_end", regressors=regressors)
         wf.fit_interval_censoring(rossi, "week", "week_end")
 
-        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], check_less_precise=1, check_like=True)
+        assert_frame_equal(cb.summary.loc["lambda_"], wf.summary.loc["lambda_"], atol=0.1, check_like=True)
         npt.assert_allclose(cb.log_likelihood_, wf.log_likelihood_, rtol=0.01)
 
 
@@ -2038,10 +2051,10 @@ class TestRegressionFitters:
                     assert_series_equal(
                         hazards.drop("Intercept", axis=0, level=1),
                         hazards_norm.drop("Intercept", axis=0, level=1),
-                        check_less_precise=1,
+                        atol=0.1,
                     )
                 else:
-                    assert_series_equal(hazards, hazards_norm, check_less_precise=1)
+                    assert_series_equal(hazards, hazards_norm, atol=0.1)
 
     def test_prediction_methods_respect_index(self, regression_models, rossi):
         X = rossi.iloc[:4].sort_index(ascending=False)
@@ -2699,7 +2712,7 @@ class TestWeibullAFTFitter:
         aft.fit_right_censoring(rossi, "week", event_col="arrest")
         right_censored_results = aft.summary.copy()
 
-        assert_frame_equal(interval_censored_results, right_censored_results, check_less_precise=2)
+        assert_frame_equal(interval_censored_results, right_censored_results, atol=0.01)
 
     def test_weibull_interval_censoring_inference_on_known_R_output(self, aft):
         """
@@ -2870,7 +2883,7 @@ class TestCoxPHFitter_SemiParametric:
 
     def test_efron_newtons_method(self, data_nus, cph):
         cph._batch_mode = False
-        newton = cph._newton_rhapson_for_efron_model
+        newton = cph._newton_raphson_for_efron_model
         X, T, E, W = (data_nus[["x"]], data_nus["t"], data_nus["E"], pd.Series(np.ones_like(data_nus["t"])))
         entries = None
 
@@ -2923,8 +2936,7 @@ class TestCoxPHFitter:
         return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
 
     @pytest.mark.xfail
-    def test_has_c_index(self, cph_spline, cph_pieces, cph):
-        rossi = load_rossi()
+    def test_has_c_index(self, cph_spline, cph_pieces, cph, rossi):
         cph.fit(rossi, "week", "arrest")
         cph_pieces.fit(rossi, "week", "arrest")
         cph_spline.fit(rossi, "week", "arrest")
@@ -2933,8 +2945,7 @@ class TestCoxPHFitter:
         assert cph_pieces.concordance_index_
         assert cph_spline.concordance_index_
 
-    def test_score_function_works_with_formulas(self, cph):
-        rossi = load_rossi()
+    def test_score_function_works_with_formulas(self, rossi):
         cph = CoxPHFitter()
         cph.fit(
             rossi,
@@ -2945,6 +2956,18 @@ class TestCoxPHFitter:
         cph.score(rossi)
         cph.score(rossi, scoring_method="concordance_index")
 
+    def test_fit_kwargs_works_for_semiparametric(self, cph, rossi, capfd):
+        cph.fit(rossi, "week", "arrest", fit_options={"step_size": 0.1}, show_progress=True)
+        out, err = capfd.readouterr()
+        assert "step_size = 0.1000" in out
+
+    def test_fit_kwargs_works_for_spline_model(self, cph_spline, rossi, capfd):
+        with pytest.raises(ConvergenceError):
+            cph_spline.fit(rossi, "week", "arrest", fit_options={"maxiter": 10}, show_progress=True)
+
+        cph_spline.fit(rossi, "week", "arrest", fit_options={"maxiter": 1000}, show_progress=True)
+        assert True
+
     def test_parametric_models_can_do_interval_censoring(self, cph_spline, cph_pieces):
         df = load_diabetes()
         df["gender"] = df["gender"] == "male"
@@ -2954,12 +2977,6 @@ class TestCoxPHFitter:
 
         cph_pieces.fit_interval_censoring(df, "left", "right")
         cph_pieces.print_summary()
-
-        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, penalizer=0.01)
-        cph_spline.fit_interval_censoring(
-            df, "left", "right", formula="gender", show_progress=True, initial_point=np.array([-8.68, -0.13, 3.04, 0.52])
-        )
-        cph_spline.print_summary()
 
     def test_parametric_models_can_do_left_censoring(self, cph_spline, cph_pieces):
         df = load_diabetes()
@@ -3432,7 +3449,7 @@ class TestCoxPHFitter:
         expected = pd.DataFrame(
             [-0.2165282492, -0.4573005808, 1.1117589644, -0.4379301344, 0.0], columns=pd.Index(["var1"], name="covariate")
         )
-        assert_frame_equal(results, expected, check_less_precise=3)
+        assert_frame_equal(results, expected, atol=0.001)
 
     def test_schoenfeld_residuals_with_censorship_and_ties(self, cph):
         """
@@ -3456,7 +3473,7 @@ class TestCoxPHFitter:
         expected = pd.DataFrame(
             [-0.3903793341, -0.5535578141, 0.9439371482, 0.0], columns=pd.Index(["var1"], name="covariate"), index=[0, 1, 2, 4]
         )
-        assert_frame_equal(results, expected, check_less_precise=3)
+        assert_frame_equal(results, expected, atol=0.001)
 
     def test_schoenfeld_residuals_with_weights(self, cph):
         """
@@ -3485,7 +3502,7 @@ class TestCoxPHFitter:
         expected = pd.DataFrame(
             [-0.6633324862, -0.9107785234, 0.6176009038, -0.6103579448, 0.0], columns=pd.Index(["var1"], name="covariate")
         )
-        assert_frame_equal(results, expected, check_less_precise=3)
+        assert_frame_equal(results, expected, atol=0.001)
 
     def test_schoenfeld_residuals_with_strata(self, cph):
         """
@@ -3518,7 +3535,7 @@ class TestCoxPHFitter:
             columns=pd.Index(["var1"], name="covariate"),
             index=[0, 3, 4, 1, 2],
         )
-        assert_frame_equal(results, expected, check_less_precise=3)
+        assert_frame_equal(results, expected, atol=0.001)
 
     def test_schoenfeld_residuals_with_first_subjects_censored(self, rossi, cph):
         rossi.loc[rossi["week"] == 1, "arrest"] = 0
@@ -3912,13 +3929,13 @@ log-likelihood ratio test = 33.27 on 7 df
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": 7.680, "var2": -0.915})
-        assert_series_equal(cph.params_, expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.params_, expected, atol=0.01, check_names=False)
 
         expected_cov = np.array([[33.079106, -5.964652], [-5.964652, 2.040642]])
         npt.assert_array_almost_equal(w * cph.variance_matrix_, expected_cov, decimal=1)
 
         expected = pd.Series({"var1": 2.097, "var2": 0.827})
-        assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.summary["se(coef)"], expected, atol=0.01, check_names=False)
 
     def test_delta_betas_are_the_same_as_in_R(self):
         """
@@ -4041,7 +4058,7 @@ log-likelihood ratio test = 33.27 on 7 df
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", cluster_col="id", show_progress=True)
         expected = pd.Series({"var1": 5.9752, "var2": 4.0683})
-        assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.summary["se(coef)"], expected, atol=0.01, check_names=False)
 
     def test_cluster_option_with_strata(self, regression_dataset):
         """
@@ -4070,7 +4087,7 @@ log-likelihood ratio test = 33.27 on 7 df
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", cluster_col="id", strata=["strata"], show_progress=True)
         expected = pd.Series({"var": 0.643})
-        assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.summary["se(coef)"], expected, atol=0.01, check_names=False)
 
     def test_robust_errors_with_less_trival_weights_is_the_same_as_R(self, regression_dataset):
         """
@@ -4101,7 +4118,7 @@ log-likelihood ratio test = 33.27 on 7 df
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": 1.431, "var2": -1.277})
-        assert_series_equal(cph.params_, expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.params_, expected, atol=0.01, check_names=False)
 
         expected_cov = np.array([[3.5439245, -0.3549099], [-0.3549099, 0.4499553]])
         npt.assert_array_almost_equal(
@@ -4109,7 +4126,7 @@ log-likelihood ratio test = 33.27 on 7 df
         )  # not as precise because matrix inversion will accumulate estimation errors.
 
         expected = pd.Series({"var1": 2.094, "var2": 0.452})
-        assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.summary["se(coef)"], expected, atol=0.01, check_names=False)
 
     def test_robust_errors_with_non_trivial_weights_is_the_same_as_R(self, regression_dataset):
         """
@@ -4138,10 +4155,10 @@ log-likelihood ratio test = 33.27 on 7 df
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": -5.16231, "var2": 1.71924})
-        assert_series_equal(cph.params_, expected, check_less_precise=1, check_names=False)
+        assert_series_equal(cph.params_, expected, atol=0.1, check_names=False)
 
         expected = pd.Series({"var1": 9.97730, "var2": 2.45648})
-        assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.summary["se(coef)"], expected, atol=0.01, check_names=False)
 
     def test_robust_errors_with_non_trivial_weights_with_censorship_is_the_same_as_R(self, regression_dataset):
         """
@@ -4170,10 +4187,10 @@ log-likelihood ratio test = 33.27 on 7 df
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, weights_col="var3", show_progress=True)
         expected = pd.Series({"var1": -8.360533, "var2": 1.781126})
-        assert_series_equal(cph.params_, expected, check_less_precise=3, check_names=False)
+        assert_series_equal(cph.params_, expected, atol=0.001, check_names=False)
 
         expected = pd.Series({"var1": 12.303338, "var2": 2.395670})
-        assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=3, check_names=False)
+        assert_series_equal(cph.summary["se(coef)"], expected, atol=0.001, check_names=False)
 
     def test_robust_errors_is_the_same_as_R(self, regression_dataset):
         """
@@ -4199,10 +4216,10 @@ log-likelihood ratio test = 33.27 on 7 df
         cph = CoxPHFitter()
         cph.fit(df, "T", "E", robust=True, show_progress=True)
         expected = pd.Series({"var1": 7.680, "var2": -0.915})
-        assert_series_equal(cph.params_, expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.params_, expected, atol=0.01, check_names=False)
 
         expected = pd.Series({"var1": 2.097, "var2": 0.827})
-        assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.summary["se(coef)"], expected, atol=0.01, check_names=False)
 
     def test_compute_likelihood_ratio_test_is_different_if_weights_are_provided(self, regression_dataset):
         cph = CoxPHFitter()
@@ -4269,10 +4286,10 @@ log-likelihood ratio test = 33.27 on 7 df
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
 
             expected_coef = pd.Series({"var1": 7.680, "var2": -0.915})
-            assert_series_equal(cph.params_, expected_coef, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.params_, expected_coef, atol=0.01, check_names=False)
 
             expected_std = pd.Series({"var1": 6.641, "var2": 1.650})
-            assert_series_equal(cph.summary["se(coef)"], expected_std, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.summary["se(coef)"], expected_std, atol=0.01, check_names=False)
 
             expected_ll = -1.142397
             assert abs(cph.log_likelihood_ - expected_ll) < 0.001
@@ -4300,10 +4317,10 @@ log-likelihood ratio test = 33.27 on 7 df
 
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
             expected = pd.Series({"var1": 7.995, "var2": -1.154})
-            assert_series_equal(cph.params_, expected, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.params_, expected, atol=0.01, check_names=False)
 
             expected = pd.Series({"var1": 6.690, "var2": 1.614})
-            assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.summary["se(coef)"], expected, atol=0.01, check_names=False)
 
     def test_non_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
@@ -4317,10 +4334,10 @@ log-likelihood ratio test = 33.27 on 7 df
 
             cph.fit(df, "T", "E", weights_col="var3", show_progress=True)
             expected = pd.Series({"var1": 0.3268, "var2": 0.0775})
-            assert_series_equal(cph.params_, expected, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.params_, expected, atol=0.01, check_names=False)
 
             expected = pd.Series({"var1": 0.0697, "var2": 0.0861})
-            assert_series_equal(cph.summary["se(coef)"], expected, check_less_precise=2, check_names=False)
+            assert_series_equal(cph.summary["se(coef)"], expected, atol=0.01, check_names=False)
 
     def test_summary_output_using_non_trivial_but_integer_weights(self, rossi):
 
@@ -4729,7 +4746,7 @@ log-likelihood ratio test = 33.27 on 7 df
         df = regression_dataset
         cph.fit(df, "T", "E", robust=True)
         expected = pd.Series({"var1": 0.0879, "var2": 0.0847, "var3": 0.0655})
-        assert_series_equal(cph.standard_errors_, expected, check_less_precise=2, check_names=False)
+        assert_series_equal(cph.standard_errors_, expected, atol=0.01, check_names=False)
 
     def test_robust_errors_with_strata_against_R(self, rossi, cph):
         """
@@ -5462,7 +5479,7 @@ log-likelihood ratio test = 15.11 on 4 df
         cph = CoxPHFitter()
         cph.fit(rossi, "week", "arrest")
 
-        assert_frame_equal(cph.summary, ctv.summary, check_like=True, check_less_precise=3)
+        assert_frame_equal(cph.summary, ctv.summary, check_like=True, atol=0.001)
 
     def test_ctv_with_strata_against_R(self, ctv, heart):
         """
@@ -5490,6 +5507,20 @@ log-likelihood ratio test = 15.11 on 4 df
     def test_ctv_ratio_test_with_strata_and_initial_point(self, ctv, heart):
         ctv.fit(heart, id_col="id", event_col="event", strata=["transplant"], initial_point=0.1 * np.ones(3))
         npt.assert_allclose(ctv.log_likelihood_ratio_test().test_statistic, 15.68, atol=0.01)
+
+    def test_fitter_is_okay_with_trival_df(self, ctv):
+        # after all the necessary columns are removed, does this fitter still work with a trivial df?
+        df = pd.DataFrame.from_records(
+            [
+                {"id": 1, "start": 0, "stop": 4, "event": 1},
+                {"id": 2, "start": 0, "stop": 5, "event": 1},
+                {"id": 3, "start": 0, "stop": 5, "event": 1},
+                {"id": 4, "start": 0, "stop": 4, "event": 1},
+            ]
+        )
+        ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
+
+        assert True
 
 
 class TestAalenJohansenFitter:

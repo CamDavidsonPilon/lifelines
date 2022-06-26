@@ -172,7 +172,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         show_progress: bool = False,
         initial_point: Optional[ndarray] = None,
         strata: Optional[Union[str, List[str]]] = None,
-        step_size: Optional[float] = None,
         weights_col: Optional[str] = None,
         cluster_col: Optional[str] = None,
         robust: bool = False,
@@ -180,6 +179,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
+        fit_options: Optional[dict] = None,
     ) -> CoxPHFitter:
         """
         Fit the Cox proportional hazard model to a right-censored dataset. Alias of `fit_right_censoring`.
@@ -228,13 +228,10 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
 
         formula: str, optional
-            an Wilkinson formula, like in R and statsmodels, for the right-hand-side. If left as None, all columns not assigned as durations, weights, etc. are used.
+            an Wilkinson formula, like in R and statsmodels, for the right-hand-side. If left as None, all columns not assigned as durations, weights, etc. are used. Uses the library Formulaic for parsing.
 
         batch_mode: bool, optional
             enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
-
-        step_size: float, optional
-            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
 
         show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
@@ -243,6 +240,9 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         initial_point: (d,) numpy array, optional
             initialize the starting point of the iterative
             algorithm. Default is the zero vector.
+
+        fit_options: dict, optional
+            pass kwargs for the fitting algorithm. For semi-parametric models, this is the Newton-Rhapson method (see method _newton_raphson_for_efron_model for kwargs)
 
         Returns
         -------
@@ -294,7 +294,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             show_progress=show_progress,
             initial_point=initial_point,
             strata=self.strata,
-            step_size=step_size,
             weights_col=weights_col,
             cluster_col=cluster_col,
             robust=robust,
@@ -302,6 +301,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             timeline=timeline,
             formula=formula,
             entry_col=entry_col,
+            fit_options=fit_options,
         )
         return self
 
@@ -315,7 +315,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         show_progress: bool = False,
         initial_point: Optional[ndarray] = None,
         strata: Optional[Union[str, List[str]]] = None,
-        step_size: Optional[float] = None,
         weights_col: Optional[str] = None,
         cluster_col: Optional[str] = None,
         robust: bool = False,
@@ -323,6 +322,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
+        fit_options: Optional[dict] = None,
     ) -> CoxPHFitter:
         """
         Fit the Cox proportional hazard model to an interval censored dataset.
@@ -378,9 +378,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
         batch_mode: bool, optional
             enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
-
-        step_size: float, optional
-            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
 
         show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
@@ -440,7 +437,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             show_progress=show_progress,
             initial_point=initial_point,
             strata=self.strata,
-            step_size=step_size,
             weights_col=weights_col,
             cluster_col=cluster_col,
             robust=robust,
@@ -448,6 +444,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             timeline=timeline,
             formula=formula,
             entry_col=entry_col,
+            fit_options=fit_options,
         )
         return self
 
@@ -460,7 +457,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         show_progress: bool = False,
         initial_point: Optional[ndarray] = None,
         strata: Optional[Union[str, List[str]]] = None,
-        step_size: Optional[float] = None,
         weights_col: Optional[str] = None,
         cluster_col: Optional[str] = None,
         robust: bool = False,
@@ -468,6 +464,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
+        fit_options: Optional[dict] = None,
     ) -> CoxPHFitter:
         """
         Fit the Cox proportional hazard model to a left censored dataset.
@@ -520,9 +517,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
         batch_mode: bool, optional
             enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
-
-        step_size: float, optional
-            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
 
         show_progress: bool, optional (default=False)
             since the fitter is iterative, show convergence
@@ -582,7 +576,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             show_progress=show_progress,
             initial_point=initial_point,
             strata=self.strata,
-            step_size=step_size,
             weights_col=weights_col,
             cluster_col=cluster_col,
             robust=robust,
@@ -590,6 +583,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             timeline=timeline,
             formula=formula,
             entry_col=entry_col,
+            fit_options=fit_options,
         )
         return self
 
@@ -645,7 +639,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
         # these are not needed, should be popped off.
         kwargs.pop("cluster_col")
-        kwargs.pop("step_size")
         kwargs.pop("batch_mode")
 
         # handle strata
@@ -700,7 +693,6 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
         # these are not needed, should be popped off.
         kwargs.pop("cluster_col")
-        kwargs.pop("step_size")
         kwargs.pop("batch_mode")
 
         # handle strata
@@ -1105,7 +1097,6 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         show_progress: bool = False,
         initial_point: Optional[ndarray] = None,
         strata: Optional[Union[str, List[str]]] = None,
-        step_size: Optional[float] = None,
         weights_col: Optional[str] = None,
         cluster_col: Optional[str] = None,
         robust: bool = False,
@@ -1113,6 +1104,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         timeline: Optional[Iterator] = None,
         formula: str = None,
         entry_col: str = None,
+        fit_options: Optional[dict] = None,
     ) -> SemiParametricPHFitter:
         """
         Fit the Cox proportional hazard model to a dataset.
@@ -1156,9 +1148,6 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             is used similar to the ``strata`` expression in R.
             See http://courses.washington.edu/b515/l17.pdf.
 
-        step_size: float, optional
-            set an initial step size for the fitting algorithm. Setting to 1.0 may improve performance, but could also hurt convergence.
-
         robust: bool, optional (default=False)
             Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
             ties, so if there are high number of ties, results may significantly differ. See
@@ -1170,6 +1159,12 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
 
         batch_mode: bool, optional
             enabling batch_mode can be faster for datasets with a large number of ties. If left as None, lifelines will choose the best option.
+
+        fit_options: dict, optional
+            Override the default values in NR algorithm:
+                step_size: 0.95,
+                precision: 1e-07,
+                max_steps: 500,
 
         Returns
         -------
@@ -1260,9 +1255,9 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             E,
             weights=weights,
             entries=entries,
+            fit_options=utils.coalesce(fit_options, dict()),
             initial_point=initial_point,
             show_progress=show_progress,
-            step_size=step_size,
         )
 
         self.log_likelihood_ = ll_
@@ -1378,12 +1373,19 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         E: Series,
         weights: Series,
         entries: Optional[Series],
+        fit_options: dict,
         initial_point: Optional[ndarray] = None,
-        step_size: Optional[float] = None,
         show_progress: bool = True,
     ):
-        beta_, ll_, hessian_ = self._newton_rhapson_for_efron_model(
-            X, T, E, weights, entries, initial_point=initial_point, step_size=step_size, show_progress=show_progress
+        beta_, ll_, hessian_ = self._newton_raphson_for_efron_model(
+            X,
+            T,
+            E,
+            weights,
+            entries,
+            initial_point=initial_point,
+            show_progress=show_progress,
+            **fit_options,
         )
 
         # compute the baseline hazard here.
@@ -1396,6 +1398,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         # rescale parameters back to original scale.
         params_ = beta_ / self._norm_std.values
         if hessian_.size > 0:
+            # possible if the df is trivial (no covariate columns)
             variance_matrix_ = pd.DataFrame(
                 -inv(hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns, columns=X.columns
             )
@@ -1416,7 +1419,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         decision = _BatchVsSingle().decide(self._batch_mode, T.nunique(), *X.shape)
         return getattr(self, "_get_efron_values_%s" % decision)
 
-    def _newton_rhapson_for_efron_model(
+    def _newton_raphson_for_efron_model(
         self,
         X: DataFrame,
         T: Series,
@@ -1424,9 +1427,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         weights: Series,
         entries: Optional[Series],
         initial_point: Optional[ndarray] = None,
-        step_size: Optional[float] = None,
-        precision: float = 1e-07,
         show_progress: bool = True,
+        step_size: float = 0.95,
+        precision: float = 1e-07,
         max_steps: int = 500,
     ):  # pylint: disable=too-many-statements,too-many-branches
         """

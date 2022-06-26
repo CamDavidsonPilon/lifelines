@@ -245,8 +245,7 @@ def restricted_mean_survival_time(
     https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-13-152#Sec27
 
     """
-    if t is None:
-        t = np.inf
+    t = coalesce(t, np.inf)
 
     mean = _expected_value_of_survival_up_to_t(model_or_survival_function, t)
     if return_variance:
@@ -266,7 +265,7 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
             ApproximationWarning,
         )
         sf = model_or_survival_function.loc[:t]
-        sf = sf.append(pd.DataFrame([1], index=[0], columns=sf.columns)).sort_index()
+        sf = pd.concat((sf, pd.DataFrame([1], index=[0], columns=sf.columns))).sort_index()
         return trapz(y=sf.values[:, 0], x=sf.index)
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
         # lifelines model
@@ -274,7 +273,7 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
         # if KM, we can compute exactly
         if isinstance(model, lifelines.KaplanMeierFitter):
             sf = model.survival_function_.loc[:t]
-            sf = sf.append(pd.DataFrame([model.predict(t)], index=[t], columns=sf.columns)).sort_index()
+            sf = pd.concat((sf, pd.DataFrame([model.predict(t)], index=[t], columns=sf.columns))).sort_index()
             sf = sf.reset_index()
             return (sf["index"].diff().shift(-1) * sf[model._label]).sum()
         else:
@@ -1532,9 +1531,7 @@ class StepSizer:
     ATM it contains lots of "magic constants"
     """
 
-    def __init__(self, initial_step_size: Optional[float]) -> None:
-        initial_step_size = initial_step_size or 0.90
-
+    def __init__(self, initial_step_size: float):
         self.initial_step_size = initial_step_size
         self.step_size = initial_step_size
         self.temper_back_up = False
@@ -1927,7 +1924,6 @@ class CovariateParameterMappings:
         # in pandas 0.23.4, the Xs as a dict is sorted differently from the Xs as a DataFrame's columns
         # hence we need to reorder, see https://github.com/CamDavidsonPilon/lifelines/issues/931
         Xs_df = pd.concat(Xs, axis=1, names=("param", "covariate")).astype(float)
-        Xs_df = Xs_df[list(self.mappings.keys())]
 
         # we can't concat empty dataframes and return a column MultiIndex,
         # so we create a "fake" dataframe (acts like a dataframe) to return.
@@ -1935,6 +1931,7 @@ class CovariateParameterMappings:
         if Xs_df.size == 0:
             return {p: pd.DataFrame(index=df.index) for p in self.mappings.keys()}
         else:
+            Xs_df = Xs_df[list(self.mappings.keys())]
             return Xs_df
 
     def keys(self):

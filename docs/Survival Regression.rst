@@ -509,9 +509,12 @@ Below we compare the non-parametric and the fully parametric baseline survivals:
     cph_semi = CoxPHFitter().fit(rossi, 'week', event_col='arrest')
     cph_piecewise = CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[20, 35]).fit(rossi, 'week', event_col='arrest')
 
-    ax = cph_spline.baseline_cumulative_hazard_.plot()
-    cph_semi.baseline_cumulative_hazard_.plot(ax=ax, drawstyle="steps-post")
-    cph_piecewise.baseline_cumulative_hazard_.plot(ax=ax)
+    bch_key = "baseline cumulative hazard"
+
+    ax = cph_spline.baseline_cumulative_hazard_[bch_key].plot(label="spline")
+    cph_semi.baseline_cumulative_hazard_[bch_key].plot(ax=ax, drawstyle="steps-post", label="semi")
+    cph_piecewise.baseline_cumulative_hazard_[bch_key].plot(ax=ax, label="peicewise[20,35]")
+    plt.legend()
 
 
 .. figure:: images/spline_and_semi.png
@@ -1015,13 +1018,13 @@ two individual columns: a *duration* column and a boolean *event occurred* colum
 
 .. code:: python
 
-    X['T'] = data['duration']
-    X['E'] = data['observed']
+    df['T'] = data['duration']
+    df['E'] = data['observed']
 
 
 .. code:: python
 
-    aaf.fit(X, 'T', event_col='E', formula='un_continent_name + regime + start_year')
+    aaf.fit(df, 'T', event_col='E', formula='un_continent_name + regime + start_year')
 
 
 After fitting, the instance exposes a :attr:`~lifelines.fitters.aalen_additive_fitter.AalenAdditiveFitter.cumulative_hazards_` DataFrame
@@ -1054,7 +1057,7 @@ containing the estimates of :math:`\int_0^t b_i(s) \; ds`:
 
 .. code:: python
 
-  aaf.plot(columns=['regime[T.Presidential Dem]', 'baseline', 'un_continent_name[T.Europe]'], iloc=slice(1,15))
+  aaf.plot(columns=['regime[T.Presidential Dem]', 'Intercept', 'un_continent_name[T.Europe]'], iloc=slice(1,15))
 
 
 .. image:: images/survival_regression_aaf.png
@@ -1070,7 +1073,7 @@ Prime Minister Stephen Harper.
 .. code:: python
 
     ix = (data['ctryname'] == 'Canada') & (data['start_year'] == 2006)
-    harper = X.loc[ix]
+    harper = df.loc[ix]
     print("Harper's unique data point:")
     print(harper)
 

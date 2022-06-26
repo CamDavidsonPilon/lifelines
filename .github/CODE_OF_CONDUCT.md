@@ -1,5 +1,7 @@
 # Contributor Code of Conduct
 
+**If you support or allow fascism, racism, or misogyny: don’t use this code, don’t open issues, don’t ask for help.**
+
 As contributors and maintainers of this project, and in the interest of
 fostering an open and welcoming community, we pledge to respect all people who
 contribute through reporting issues, posting feature requests, updating

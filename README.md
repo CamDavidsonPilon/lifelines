@@ -2,8 +2,6 @@
 
 [![PyPI version](https://badge.fury.io/py/lifelines.svg)](https://badge.fury.io/py/lifelines)
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/lifelines/badges/installer/conda.svg)](https://conda.anaconda.org/conda-forge)
-[![Build Status](https://travis-ci.org/CamDavidsonPilon/lifelines.svg?branch=master)](https://travis-ci.org/CamDavidsonPilon/lifelines)
-[![Coverage Status](https://coveralls.io/repos/github/CamDavidsonPilon/lifelines/badge.svg?branch=master)](https://coveralls.io/github/CamDavidsonPilon/lifelines?branch=master)
 [![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
 
 
@@ -27,9 +25,6 @@ If you are new to survival analysis, wondering why it is useful, or are interest
  - Start a conversation in our [Discussions room](https://github.com/CamDavidsonPilon/lifelines/discussions).
  - Some users have posted common questions at [stats.stackexchange.com](https://stats.stackexchange.com/search?tab=votes&q=%22lifelines%22%20is%3aquestion)
  - creating an issue in the [Github repository](https://github.com/camdavidsonpilon/lifelines).
-
-## Roadmap
-You can find the roadmap for lifelines [here](https://www.notion.so/camdp/6e2965207f564eb2a3e48b5937873c14?v=47edda47ab774ca2ac7532bb0c750559).
 
 ## Development
 
