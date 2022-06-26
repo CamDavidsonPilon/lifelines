@@ -59,7 +59,7 @@ class Printer:
             columns = summary_df.columns
         else:
             columns = summary_df.columns.intersection(self.columns)
-        return summary_df[columns].style.to_latex(float_format="%." + str(self.decimals) + "f")
+        return summary_df[columns].to_latex(float_format="%." + str(self.decimals) + "f")
 
     def html_print(self):
         print(self.to_html())
