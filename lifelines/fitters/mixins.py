@@ -105,7 +105,7 @@ class ProportionalHazardMixin:
         n = residuals_and_duration.shape[0]
         axes = []
 
-        for variable in self.params_.index & (columns or self.params_.index):
+        for variable in self.params_.index.intersection(columns or self.params_.index):
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
             if np.round(minumum_observed_p_value, 2) > p_value_threshold:
                 continue
