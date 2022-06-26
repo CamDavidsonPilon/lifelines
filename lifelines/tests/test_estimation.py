@@ -2976,12 +2976,6 @@ class TestCoxPHFitter:
         cph_pieces.fit_interval_censoring(df, "left", "right")
         cph_pieces.print_summary()
 
-        cph_spline = CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2, penalizer=0.01)
-        cph_spline.fit_interval_censoring(
-            df, "left", "right", formula="gender", show_progress=True, initial_point=np.array([-8.68, -0.13, 3.04, 0.52])
-        )
-        cph_spline.print_summary()
-
     def test_parametric_models_can_do_left_censoring(self, cph_spline, cph_pieces):
         df = load_diabetes()
         df = df.drop("left", axis=1)
