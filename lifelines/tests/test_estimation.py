@@ -2962,7 +2962,10 @@ class TestCoxPHFitter:
         assert "step_size = 0.1000" in out
 
     def test_fit_kwargs_works_for_spline_model(self, cph_spline, rossi, capfd):
-        cph_spline.fit(rossi, "week", "arrest", fit_options={"step_size": 0.1}, show_progress=True)
+        with pytest.raises(ConvergenceError):
+            cph_spline.fit(rossi, "week", "arrest", fit_options={"maxiter": 10}, show_progress=True)
+
+        cph_spline.fit(rossi, "week", "arrest", fit_options={"maxiter": 1000}, show_progress=True)
         assert True
 
     def test_parametric_models_can_do_interval_censoring(self, cph_spline, cph_pieces):
