@@ -140,7 +140,7 @@ class StatisticalResult:
         print(self.to_latex(decimals, **kwargs))
 
     def to_latex(self, decimals=2, **kwargs):
-        return self.summary.to_latex()
+        return self.summary.style.to_latex()
 
     @property
     def summary(self):
