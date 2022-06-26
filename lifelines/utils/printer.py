@@ -71,7 +71,7 @@ class Printer:
         if self.columns is None:
             columns = summary_df.columns
         else:
-            columns = summary_df.columns.interesection(self.columns)
+            columns = summary_df.columns.intersection(self.columns)
 
         headers = self.headers.copy()
         headers.insert(0, ("model", "lifelines." + self.model._class_name))
