@@ -223,6 +223,7 @@ class AalenAdditiveFitter(RegressionFitter):
         variance_hazards_ = np.zeros((n_deaths, d))
         v = np.zeros(d)
         start = time.time()
+        last_iteration = 0
 
         W = np.sqrt(weights)
         X = W[:, None] * X
