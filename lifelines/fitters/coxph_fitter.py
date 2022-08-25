@@ -1621,7 +1621,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         Calculates the first and second order vector differentials, with respect to beta.
         Note that X, T, E are assumed to be sorted on T!
 
-        A good explanation for Efron. Consider three of five subjects who fail at the time.
+        A good explanation for Efron. Consider three of five subjects who fail at the same time.
         As it is not known a priori that who is the first to fail, so one-third of
         (φ1 + φ2 + φ3) is adjusted from sum_j^{5} φj after one fails. Similarly two-third
         of (φ1 + φ2 + φ3) is adjusted after first two individuals fail, etc.
