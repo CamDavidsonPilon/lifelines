@@ -1,6 +1,9 @@
 ## Changelog
 
-#### 0.27.1 - 2022-03-15
+#### 0.27.2 - 2022-03-15
+
+
+#### 0.27.1 - 2022-06-25
 
 ##### New features
  - all `fit_` methods now accept a `fit_options` dict that allows one to pass kwargs to the underlying fitting algorithm.
