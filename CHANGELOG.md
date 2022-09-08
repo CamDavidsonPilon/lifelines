@@ -1,6 +1,12 @@
 ## Changelog
 
-#### 0.27.1 - 2022-03-15
+#### 0.27.2 - 2022-09-07
+
+##### Bug fixes
+ - Fixed issue in add_at_risk_table when there were very late entries.
+
+
+#### 0.27.1 - 2022-06-25
 
 ##### New features
  - all `fit_` methods now accept a `fit_options` dict that allows one to pass kwargs to the underlying fitting algorithm.
@@ -10,7 +16,7 @@
  - `step_size` is removed from Cox models `fit`. See `fit_options` above.
 
 ##### Bug fixes
- - fixed Cox models when "trival" matrix was passed in (one with no covariates)
+ - fixed Cox models when "trivial" matrix was passed in (one with no covariates)
 
 #### 0.27.0 - 2022-03-15
 

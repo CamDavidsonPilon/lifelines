@@ -504,12 +504,16 @@ def add_at_risk_counts(
             else:
                 event_table_slice = f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed)
 
-            event_table_slice = (
-                event_table_slice.loc[:tick, ["at_risk", "censored", "observed"]]
-                .agg({"at_risk": lambda x: x.tail(1).values, "censored": "sum", "observed": "sum"})  # see #1385
-                .rename({"at_risk": "At risk", "censored": "Censored", "observed": "Events"})
-            )
-            counts.extend([int(c) for c in event_table_slice.loc[rows_to_show]])
+            if not event_table_slice.loc[:tick].empty:
+                event_table_slice = (
+                    event_table_slice.loc[:tick, ["at_risk", "censored", "observed"]]
+                    .agg({"at_risk": lambda x: x.tail(1).values, "censored": "sum", "observed": "sum"})  # see #1385
+                    .rename({"at_risk": "At risk", "censored": "Censored", "observed": "Events"})
+                    .fillna(0)
+                )
+                counts.extend([int(c) for c in event_table_slice.loc[rows_to_show]])
+            else:
+                counts.extend([0 for _ in range(n_rows)])
 
         if n_rows > 1:
             if tick == ax2.get_xticks()[0]:
