@@ -1,5 +1,14 @@
 ## Changelog
 
+#### 0.27.3 - Upcoming
+
+##### Bug fixes
+ - Migrate to newer Pandas `Styler` for `to_latex`
+
+##### API Changes
+ - There were way too many functions on the summary objects, so I've hidden `to_*` on them.
+
+
 #### 0.27.2 - 2022-09-07
 
 ##### Bug fixes

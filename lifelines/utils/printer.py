@@ -31,11 +31,11 @@ class Printer:
 
     def print_specific_style(self, style):
         if style == "html":
-            return self.html_print()
+            return self._html_print()
         elif style == "ascii":
-            return self.ascii_print()
+            return self._ascii_print()
         elif style == "latex":
-            return self.latex_print()
+            return self._latex_print()
         else:
             raise ValueError("style not available.")
 
@@ -48,9 +48,9 @@ class Printer:
 
                 display(self)
             except ImportError:
-                self.ascii_print()
+                self._ascii_print()
 
-    def latex_print(self):
+    def _latex_print(self):
         print(self.to_latex())
 
     def to_latex(self):
@@ -59,9 +59,11 @@ class Printer:
             columns = summary_df.columns
         else:
             columns = summary_df.columns.intersection(self.columns)
-        return summary_df[columns].to_latex(float_format="%." + str(self.decimals) + "f")
+        s = summary_df[columns].style
+        s = s.format(precision=self.decimals)
+        return s.to_latex()
 
-    def html_print(self):
+    def _html_print(self):
         print(self.to_html())
 
     def to_html(self):
@@ -174,7 +176,7 @@ class Printer:
                 repr_string += "{} = {}".format(string, value) + "\n"
         return repr_string
 
-    def ascii_print(self):
+    def _ascii_print(self):
         print(self.to_ascii())
 
     def _repr_latex_(
