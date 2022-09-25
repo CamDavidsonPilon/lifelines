@@ -1581,7 +1581,7 @@ class TestNelsonAalenFitter:
     def test_nelson_aalen_smoothing(self):
         # this test was included because I was refactoring the estimators.
         np.random.seed(1)
-        N = 10 ** 4
+        N = 10**4
         t = np.random.exponential(1, size=N)
         c = np.random.binomial(1, 0.9, size=N)
         naf = NelsonAalenFitter(nelson_aalen_smoothing=True)
@@ -2494,7 +2494,7 @@ class TestLogLogisticAFTFitter:
         factor = aft.summary.loc[("alpha_", "prio"), "exp(coef)"]
         expon = aft.summary.loc[("beta_", "Intercept"), "exp(coef)"]
         npt.assert_allclose(
-            baseline_survival / (1 - baseline_survival) * factor ** expon, accelerated_survival / (1 - accelerated_survival)
+            baseline_survival / (1 - baseline_survival) * factor**expon, accelerated_survival / (1 - accelerated_survival)
         )
 
 
@@ -3365,10 +3365,9 @@ class TestCoxPHFitter:
         cph = CoxPHFitter(penalizer=1.0)
         cph.fit(rossi, "week", "arrest")
 
-        with pytest.warns(None) as record:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             cph.compute_residuals(rossi, "martingale")
-
-            assert len(record) == 0
 
     def test_that_adding_strata_will_change_c_index(self, cph, rossi):
         """
@@ -4366,16 +4365,16 @@ log-likelihood ratio test = 33.27 on 7 df
         cf2 = CoxPHFitter()
         cf2.fit(rossi, duration_col="week", event_col="arrest")
 
-        assert_series_equal(cf2.standard_errors_ ** 2, w * cf1.standard_errors_ ** 2)
+        assert_series_equal(cf2.standard_errors_**2, w * cf1.standard_errors_**2)
 
     def test_adding_non_integer_weights_is_fine_if_robust_is_on(self, rossi):
         rossi["weights"] = np.random.exponential(1, rossi.shape[0])
 
         cox = CoxPHFitter()
 
-        with pytest.warns(None) as w:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             cox.fit(rossi, "week", "arrest", weights_col="weights", robust=True)
-            assert len(w) == 0
 
     def test_standard_error_coef_output_against_R(self, rossi):
         """
@@ -5126,9 +5125,9 @@ class TestCoxTimeVaryingFitter:
 
         df = df.loc[~((df["start"] == df["stop"]) & (df["start"] == 0))]
 
-        with pytest.warns(None) as w:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
-            assert len(w) == 0
 
     def test_fitter_will_error_if_degenerate_time(self, ctv):
         df = pd.DataFrame.from_records(

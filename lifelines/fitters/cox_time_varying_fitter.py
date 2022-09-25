@@ -77,7 +77,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         The event_observed variable provided
     variance_matrix_ : DataFrame
         The variance matrix of the coefficients
-    strata: list
+    strata: list | str
         the strata provided
     standard_errors_: Series
         the standard errors of the estimates
@@ -91,7 +91,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         super(CoxTimeVaryingFitter, self).__init__(alpha=alpha)
         self.alpha = alpha
         self.penalizer = penalizer
-        self.strata = strata
+        self.strata = utils._to_list_or_singleton(strata)
         self.l1_ratio = l1_ratio
 
     def fit(
@@ -139,7 +139,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             Compute the robust errors using the Huber sandwich estimator, aka Wei-Lin estimate. This does not handle
           ties, so if there are high number of ties, results may significantly differ. See
           "The Robust Inference for the Cox Proportional Hazards Model", Journal of the American Statistical Association, Vol. 84, No. 408 (Dec., 1989), pp. 1074- 1078
-        strata: list or string, optional
+        strata: list | string, optional
             specify a column or list of columns n to use in stratification. This is useful if a
             categorical covariate does not obey the proportional hazard assumption. This
             is used similar to the `strata` expression in R.
@@ -161,7 +161,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             self, with additional properties like ``hazards_`` and ``print_summary``
 
         """
-        self.strata = coalesce(strata, self.strata)
+        self.strata = utils._to_list_or_singleton(coalesce(strata, self.strata))
         self.robust = robust
         if self.robust:
             raise NotImplementedError("Not available yet.")
@@ -358,7 +358,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
         penalizer = (
             lambda beta, a: n
-            * (self.penalizer * (self.l1_ratio * (soft_abs(beta, a)) + 0.5 * (1 - self.l1_ratio) * (beta ** 2))).sum()
+            * (self.penalizer * (self.l1_ratio * (soft_abs(beta, a)) + 0.5 * (1 - self.l1_ratio) * (beta**2))).sum()
         )
         d_penalizer = elementwise_grad(penalizer)
         dd_penalizer = elementwise_grad(d_penalizer)
@@ -402,13 +402,13 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
                 self._log_likelihood_null = ll
 
             if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
-                ll -= penalizer(beta, 1.5 ** i)
-                g -= d_penalizer(beta, 1.5 ** i)
-                h[np.diag_indices(d)] -= dd_penalizer(beta, 1.5 ** i)
+                ll -= penalizer(beta, 1.5**i)
+                g -= d_penalizer(beta, 1.5**i)
+                h[np.diag_indices(d)] -= dd_penalizer(beta, 1.5**i)
 
             try:
                 # reusing a piece to make g * inv(h) * g.T faster later
-                inv_h_dot_g_T = spsolve(-h, g, sym_pos=True)
+                inv_h_dot_g_T = spsolve(-h, g, assume_a="pos")
             except ValueError as e:
                 if "infs or NaNs" in str(e):
                     raise ConvergenceError(
@@ -444,7 +444,8 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             if show_progress:
                 print(
                     "\rIteration %d: norm_delta = %.5f, step_size = %.5f, ll = %.5f, newton_decrement = %.5f, seconds_since_start = %.1f"
-                    % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start_time))
+                    % (i, norm_delta, step_size, ll, newton_decrement, time.time() - start_time)
+                )
 
             # convergence criteria
             if norm_delta < precision:
