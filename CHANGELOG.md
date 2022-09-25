@@ -2,6 +2,9 @@
 
 #### 0.27.3 - Upcoming
 
+##### New features
+ - Fixed and silenced a lot of warnings
+
 ##### Bug fixes
  - Migrate to newer Pandas `Styler` for `to_latex`
 
