@@ -27,7 +27,7 @@ LICENSE = "MIT"
 PACKAGE_DATA = {"lifelines": ["datasets/*"]}
 DESCRIPTION = "Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression"
 URL = "https://github.com/CamDavidsonPilon/lifelines"
-PYTHON_REQ = ">=3.7"
+PYTHON_REQ = ">=3.7, !=3.11.*"
 
 setup(
     name=NAME,

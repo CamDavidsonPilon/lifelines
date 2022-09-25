@@ -150,7 +150,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             raise ValueError("l1_ratio parameter must in [0, 1].")
 
         self.penalizer = penalizer
-        self.strata = strata
+        self.strata = utils._to_list_or_singleton(strata)
         self.l1_ratio = l1_ratio
         self.baseline_estimation_method = baseline_estimation_method
         if knots is not None:
@@ -286,7 +286,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             cph.print_summary()
 
         """
-        self.strata = utils.coalesce(strata, self.strata)
+        self.strata = utils._to_list_or_singleton(utils.coalesce(strata, self.strata))
         self._model = self._fit_model(
             df,
             duration_col,
@@ -429,7 +429,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             cph.print_summary()
 
         """
-        self.strata = utils.coalesce(strata, self.strata)
+        self.strata = utils._to_list_or_singleton(utils.coalesce(strata, self.strata))
         self._model = self._fit_model(
             df,
             (lower_bound_col, upper_bound_col),
@@ -568,7 +568,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             cph.print_summary()
 
         """
-        self.strata = utils.coalesce(strata, self.strata)
+        self.strata = utils._to_list_or_singleton(utils.coalesce(strata, self.strata))
         self._model = self._fit_model(
             df,
             duration_col,
@@ -642,14 +642,14 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         kwargs.pop("batch_mode")
 
         # handle strata
-        strata = kwargs.pop("strata")
+        strata = utils._to_list_or_singleton(kwargs.pop("strata"))
 
         if strata is None:
             regressors = {**{"beta_": formula}, **{"log_lambda%d_" % i: "1" for i in range(2, len(self.breakpoints) + 2)}}
             strata_values = None
         elif isinstance(strata, (list, str)):
             strata_namer = ParametricPiecewiseBaselinePHFitter._strata_labeler
-            strata = utils._to_list(strata)
+            strata = utils._to_list_or_singleton(utils._to_list(strata))
 
             df = df.set_index(strata).sort_index()
 
@@ -696,14 +696,14 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         kwargs.pop("batch_mode")
 
         # handle strata
-        strata = kwargs.pop("strata")
+        strata = utils._to_list_or_singleton(kwargs.pop("strata"))
 
         if strata is None:
             regressors = {**{"beta_": formula}, **{"phi%d_" % i: "1" for i in range(1, self.n_baseline_knots + 1)}}
             strata_values = None
         elif isinstance(strata, (list, str)):
             strata_namer = ParametricSplinePHFitter._strata_labeler
-            strata = utils._to_list(strata)
+            strata = utils._to_list_or_singleton(utils._to_list(strata))
 
             df = df.set_index(strata).sort_index()
 
@@ -1085,7 +1085,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             raise ValueError("l1_ratio parameter must in [0, 1].")
 
         self.penalizer = penalizer
-        self.strata = strata
+        self.strata = utils._to_list_or_singleton(strata)
         self.l1_ratio = l1_ratio
 
     @utils.CensoringType.right_censoring
@@ -1222,7 +1222,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         self.weights_col = weights_col
         self._n_examples = df.shape[0]
         self._batch_mode = batch_mode
-        self.strata = utils.coalesce(strata, self.strata)
+        self.strata = utils._to_list_or_singleton(utils.coalesce(strata, self.strata))
         self.formula = formula
         self.entry_col = entry_col
 
@@ -1470,7 +1470,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         soft_abs = lambda x, a: 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
         elastic_net_penalty = (
             lambda beta, a: n
-            * (self.penalizer * (self.l1_ratio * (soft_abs(beta, a)) + 0.5 * (1 - self.l1_ratio) * (beta ** 2))).sum()
+            * (self.penalizer * (self.l1_ratio * (soft_abs(beta, a)) + 0.5 * (1 - self.l1_ratio) * (beta**2))).sum()
         )
         d_elastic_net_penalty = elementwise_grad(elastic_net_penalty)
         dd_elastic_net_penalty = elementwise_grad(d_elastic_net_penalty)
@@ -1518,9 +1518,9 @@ estimate the variances. See paper "Variance estimation when using inverse probab
                 self._ll_null_ = ll_
 
             if isinstance(self.penalizer, np.ndarray) or self.penalizer > 0:
-                ll_ -= elastic_net_penalty(beta, 1.3 ** i)
-                g -= d_elastic_net_penalty(beta, 1.3 ** i)
-                h[np.diag_indices(d)] -= dd_elastic_net_penalty(beta, 1.3 ** i)
+                ll_ -= elastic_net_penalty(beta, 1.3**i)
+                g -= d_elastic_net_penalty(beta, 1.3**i)
+                h[np.diag_indices(d)] -= dd_elastic_net_penalty(beta, 1.3**i)
 
             # reusing a piece to make g * inv(h) * g.T faster later
             try:
@@ -2971,7 +2971,7 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
     fit_intercept = True
 
     def __init__(self, strata, strata_values, n_baseline_knots=1, knots=None, *args, **kwargs):
-        self.strata = strata
+        self.strata = utils._to_list_or_singleton(strata)
         self.strata_values = strata_values
 
         assert (
@@ -3092,7 +3092,7 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
     cluster_col = None
 
     def __init__(self, strata, strata_values, breakpoints, *args, **kwargs):
-        self.strata = strata
+        self.strata = utils._to_list_or_singleton(strata)
         self.strata_values = strata_values
 
         assert (
@@ -3254,8 +3254,8 @@ class _BatchVsSingle:
                 + n_total * 4.771_387e-06
                 + log_frac_dups * 2.610_877e-01
                 + n_total * log_frac_dups * -3.830_987e-11
-                + log_frac_dups ** 2 * 1.389_890e-02
-                + n_total ** 2 * 3.129_870e-14
+                + log_frac_dups**2 * 1.389_890e-02
+                + n_total**2 * 3.129_870e-14
                 + n_vars * 3.196_517e-03
                 + n_vars * n_total * -7.356_722e-07
             )

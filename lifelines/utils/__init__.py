@@ -250,7 +250,7 @@ def restricted_mean_survival_time(
     mean = _expected_value_of_survival_up_to_t(model_or_survival_function, t)
     if return_variance:
         sq = _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t)
-        return (mean, sq - mean ** 2)
+        return (mean, sq - mean**2)
     else:
         return mean
 
@@ -993,7 +993,7 @@ def check_dimensions(df):
 
 
 def check_for_numeric_dtypes_or_raise(df):
-    nonnumeric_cols = [col for (col, dtype) in df.dtypes.iteritems() if dtype.name == "category" or dtype.kind not in "biuf"]
+    nonnumeric_cols = [col for (col, dtype) in df.dtypes.items() if dtype.name == "category" or dtype.kind not in "biuf"]
     if len(nonnumeric_cols) > 0:  # pylint: disable=len-as-condition
         raise TypeError(
             "DataFrame contains nonnumeric columns: %s. Try 1) using pandas.get_dummies to convert the non-numeric column(s) to numerical data, 2) using it in stratification `strata=`, or 3) dropping the column(s)."
@@ -1153,7 +1153,7 @@ def check_complete_separation_close_to_perfect_correlation(df: pd.DataFrame, dur
         durations = durations.sample(n=500, random_state=0)
 
     rank_durations = durations.argsort()
-    for col, series in df.iteritems():
+    for col, series in df.items():
         with np.errstate(invalid="ignore", divide="ignore"):
             rank_series = series.values.argsort()
             if abs(pearson_correlation(rank_durations, rank_series)) >= THRESHOLD:
@@ -1583,15 +1583,21 @@ def _to_1d_array(x) -> np.ndarray:
     return v
 
 
-def _to_list(x) -> List[Any]:
+def _to_list(x: Any) -> List[Any]:
     if not isinstance(x, list):
         return [x]
     return x
 
 
-def _to_tuple(x) -> Tuple[Any, ...]:
+def _to_tuple(x: Any) -> Tuple[Any, ...]:
     if not isinstance(x, tuple):
         return (x,)
+    return x
+
+
+def _to_list_or_singleton(x: List[Any] | Any) -> List[Any] | Any:
+    if isinstance(x, list) and len(x) == 1:
+        return x[0]
     return x
 
 
@@ -1604,7 +1610,7 @@ def format_exp_floats(decimals) -> Callable:
     """
     sometimes the exp. column can be too large
     """
-    threshold = 10 ** 5
+    threshold = 10**5
     return lambda n: "{:.{prec}e}".format(n, prec=decimals) if n > threshold else "{:4.{prec}f}".format(n, prec=decimals)
 
 
@@ -1819,7 +1825,7 @@ def find_best_parametric_model(
                     entry=entry,
                     alpha=alpha,
                     ci_labels=ci_labels,
-                    timeline=timeline
+                    timeline=timeline,
                 )
             score_ = eval_(model)
 

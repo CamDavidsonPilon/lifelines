@@ -1933,16 +1933,18 @@ class ParametricRegressionFitter(RegressionFitter):
             if _initial_point.shape[0] != Xs.columns.size:
                 raise ValueError("initial_point is not the correct shape.")
 
-            results = minimize(
-                # using value_and_grad is much faster (takes advantage of shared computations) than splitting.
-                value_and_grad(self._neg_likelihood_with_penalty_function),
-                _initial_point,
-                method=self._scipy_fit_method,
-                jac=True,
-                args=(Ts, E, weights, entries, utils.DataframeSlicer(Xs)),
-                options={**{"disp": show_progress}, **self._scipy_fit_options, **fit_options},
-                callback=self._scipy_fit_callback,
-            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                results = minimize(
+                    # using value_and_grad is much faster (takes advantage of shared computations) than splitting.
+                    value_and_grad(self._neg_likelihood_with_penalty_function),
+                    _initial_point,
+                    method=self._scipy_fit_method,
+                    jac=True,
+                    args=(Ts, E, weights, entries, utils.DataframeSlicer(Xs)),
+                    options={**{"disp": show_progress}, **self._scipy_fit_options, **fit_options},
+                    callback=self._scipy_fit_callback,
+                )
 
             if results.fun < minimum_ll:
                 minimum_ll, minimum_results = results.fun, results

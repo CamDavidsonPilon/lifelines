@@ -77,7 +77,7 @@ class StatisticalResult:
         kwargs["test_name"] = test_name
         self._kwargs = kwargs
 
-    def print_specific_style(self, style, decimals=2, **kwargs):
+    def _print_specific_style(self, style, decimals=2, **kwargs):
         """
         Parameters
         -----------
@@ -87,39 +87,47 @@ class StatisticalResult:
 
         """
         if style == "html":
-            return self.html_print(decimals=decimals, **kwargs)
+            return self._html_print(decimals=decimals, **kwargs)
         elif style == "ascii":
-            return self.ascii_print(decimals=decimals, **kwargs)
+            return self._ascii_print(decimals=decimals, **kwargs)
         elif style == "latex":
-            return self.latex_print(decimals=decimals, **kwargs)
+            return self._latex_print(decimals=decimals, **kwargs)
         else:
             raise ValueError("style not available.")
 
     def print_summary(self, decimals=2, style=None, **kwargs):
         """
-        Print summary statistics describing the fit, the coefficients, and the error bounds.
+        Print summary statistics describing the results.
 
         Parameters
         -----------
         decimals: int, optional (default=2)
             specify the number of decimal places to show
+        style: string,
+            {html, ascii, latex}, default ascii
         kwargs:
             print additional meta data in the output (useful to provide model names, dataset names, etc.) when comparing
             multiple outputs.
 
         """
         if style is not None:
-            self.print_specific_style(style)
+            self._print_specific_style(style)
         else:
             try:
                 from IPython.display import display
 
                 display(self)
             except ImportError:
-                self.ascii_print()
+                self._ascii_print()
 
-    def html_print(self, decimals=2, **kwargs):
+    def _html_print(self, decimals=2, **kwargs):
         print(self.to_html(decimals, **kwargs))
+
+    def _latex_print(self, decimals=2, **kwargs):
+        print(self.to_latex(decimals, **kwargs))
+
+    def _ascii_print(self, decimals=2, **kwargs):
+        print(self.to_ascii(decimals, **kwargs))
 
     def to_html(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
@@ -136,11 +144,11 @@ class StatisticalResult:
 
         return header_html + summary_html
 
-    def latex_print(self, decimals=2, **kwargs):
-        print(self.to_latex(decimals, **kwargs))
-
     def to_latex(self, decimals=2, **kwargs):
-        return self.summary.to_latex()
+        # This is using the new Style object in Pandas. Previously df.to_latex was giving a warning.
+        s = self.summary.style
+        s = s.format(precision=decimals)
+        return s.to_latex()
 
     @property
     def summary(self):
@@ -195,9 +203,6 @@ class StatisticalResult:
         names = self.name + other.name
         kwargs = dict(list(self._kwargs.items()) + list(other._kwargs.items()))
         return StatisticalResult(p_values, test_statistics, name=names, **kwargs)
-
-    def ascii_print(self, decimals=2, **kwargs):
-        print(self.to_ascii(decimals, **kwargs))
 
     def _repr_latex_(self):
         return self.to_latex()
