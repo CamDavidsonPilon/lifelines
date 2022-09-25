@@ -922,6 +922,7 @@ class TestLogLogisticFitter:
 
 
 class TestWeibullFitter:
+    @pytest.mark.skip("skipping due to url read error")
     def test_unstable_data(self):
         data = pd.read_csv("https://raw.githubusercontent.com/scotty269/lifelines_test/master/my_data.csv")
         T = data["T"]
