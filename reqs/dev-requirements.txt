@@ -16,6 +16,7 @@ dill
 statsmodels
 flaky
 scikit-learn>=0.22.0
+Jinja2
 
 # ex: `py.test` in the docs/ folder. See conftest.py in docs/ first
 sybil
