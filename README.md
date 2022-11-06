@@ -1,7 +1,8 @@
 ![](http://i.imgur.com/EOowdSD.png)
 
 [![PyPI version](https://badge.fury.io/py/lifelines.svg)](https://badge.fury.io/py/lifelines)
-[![Anaconda-Server Badge](https://anaconda.org/conda-forge/lifelines/badges/installer/conda.svg)](https://conda.anaconda.org/conda-forge)
+[![Anaconda-Server Badge](https://anaconda.org/conda-forge/lifelines/badges/version.svg
+)](https://conda.anaconda.org/conda-forge)
 [![DOI](https://zenodo.org/badge/12420595.svg)](https://zenodo.org/badge/latestdoi/12420595)
 
 
