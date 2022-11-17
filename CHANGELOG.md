@@ -1,6 +1,11 @@
 ## Changelog
 
-#### 0.27.3 - Upcoming
+#### 0.27.4 - 2022-11-16
+
+##### New features
+ - Support py3.11
+
+#### 0.27.3 - 2022-09-25
 
 ##### New features
  - Fixed and silenced a lot of warnings
