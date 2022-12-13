@@ -3434,6 +3434,9 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             return self._prep_inputs_for_prediction_and_return_scores(X.to_frame().T.infer_objects(), ancillary_X)
         else:
             assert X.shape[1] == self.params_.loc[self._primary_parameter_name].shape[0]
+            return self._prep_inputs_for_prediction_and_return_scores(pd.DataFrame(X,
+                                            columns=self.params_.loc[self._primary_parameter_name].index.to_list()),
+                                                                      ancillary_X)
 
         primary_params = self.params_[self._primary_parameter_name]
         ancillary_params = self.params_[self._ancillary_parameter_name]
