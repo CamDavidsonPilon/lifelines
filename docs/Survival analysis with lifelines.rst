@@ -17,7 +17,7 @@ For this example, we will be investigating the lifetimes of political
 leaders around the world. A political leader, in this case, is defined by a single individual's
 time in office who controls the ruling regime. This political leader could be an elected president,
 unelected dictator, monarch, etc. The birth event is the start of the individual's tenure, and the death
-event is the retirement of the individual. Censoring can occur if they are a) still in offices at the time
+event is the voluntary retirement of the individual. Censoring can occur if they are a) still in offices at the time
 of dataset compilation (2008), or b) die while in power (this includes assassinations).
 
 For example, the Bush regime began in 2000 and officially ended in 2008
