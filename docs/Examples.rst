@@ -148,7 +148,7 @@ Survival differences at a point in time
 
 Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other.  For example, analysts may be interested in 5-year survival. Statistically comparing the naive Kaplan-Meier points at a specific time
 actually has reduced power. By transforming the Kaplan-Meier curve, we can recover more power. The function :func:`lifelines.statistics.survival_difference_at_fixed_point_in_time_test` uses
-the log(-log) transformation implicitly and compares the survival-ness of populations at a specific point in time.
+the log(-log) transformation implicitly and compares the survival-ness of populations at a specific point in time using chi-squared test.
 
 
 
