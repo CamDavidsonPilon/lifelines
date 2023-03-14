@@ -135,7 +135,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         p: float, optional (default=0.5)
             the percentile, must be between 0 and 1.
         conditional_after: iterable, optional
-            Must be equal is size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
+            Must be equal in size to df.shape[0] (denoted `n` above).  An iterable (array, list, series) of possibly non-zero values that represent how long the
             subject has already lived for. Ex: if :math:`T` is the unknown event time, then this represents
             :math:`T | T > s`. This is useful for knowing the *remaining* hazard/survival of censored subjects.
             The new timeline is the remaining duration of the subject, i.e. normalized back to starting at 0.
