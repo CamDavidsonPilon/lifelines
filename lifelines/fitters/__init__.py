@@ -1278,7 +1278,7 @@ class RegressionFitter(BaseFitter):
             return v
 
         else:
-            if pd.__version__ >= "1.1.0":
+            if pd.__version__ >= "1.1.0" and pd.__version__ < "2.0.0":
                 # silence deprecation warning
                 describe_kwarg = {"datetime_is_numeric": True}
             else:
