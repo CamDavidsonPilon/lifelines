@@ -1961,11 +1961,12 @@ class ParametricRegressionFitter(RegressionFitter):
             hessian_ = (hessian_ + hessian_.T) / 2
             return (unflatten_array_to_dict(minimum_results.x), -sum_weights * minimum_results.fun, sum_weights * hessian_)
         else:
-            print(minimum_results)
             self._check_values_post_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
             raise exceptions.ConvergenceError(
                 dedent(
-                    """\
+                    f"""\
+                {minimum_results=}
+
                 Fitting did not converge. Try the following:
 
                 0. Are there any lifelines warnings outputted during the `fit`?
@@ -1973,11 +1974,9 @@ class ParametricRegressionFitter(RegressionFitter):
                 2. Try scaling your duration vector down, i.e. `df[duration_col] = df[duration_col]/100`
                 3. Is there high-collinearity in the dataset? Try using the variance inflation factor (VIF) to find redundant variables.
                 4. Try using an alternate minimizer: ``fitter._scipy_fit_method = "SLSQP"``.
-                5. Trying adding a small penalizer (or changing it, if already present). Example: `{fitter_name}(penalizer=0.01).fit(...)`.
+                5. Trying adding a small penalizer (or changing it, if already present). Example: `{self._class_name}(penalizer=0.01).fit(...)`.
                 6. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
-            """.format(
-                        fitter_name=self._class_name
-                    )
+            """
                 )
             )
 

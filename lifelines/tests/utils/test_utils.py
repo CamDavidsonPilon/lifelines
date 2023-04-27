@@ -122,7 +122,7 @@ def test_qth_survival_times_with_varying_datatype_inputs():
 
 def test_qth_survival_times_multi_dim_input():
     sf = np.linspace(1, 0, 50)
-    sf_multi_df = pd.DataFrame({"sf": sf, "sf**2": sf ** 2})
+    sf_multi_df = pd.DataFrame({"sf": sf, "sf**2": sf**2})
     medians = utils.qth_survival_times(0.5, sf_multi_df)
     assert medians["sf"].loc[0.5] == 25
     assert medians["sf**2"].loc[0.5] == 15
@@ -152,7 +152,7 @@ def test_qth_survival_time_with_dataframe():
 
 def test_qth_survival_times_with_multivariate_q():
     sf = np.linspace(1, 0, 50)
-    sf_multi_df = pd.DataFrame({"sf": sf, "sf**2": sf ** 2})
+    sf_multi_df = pd.DataFrame({"sf": sf, "sf**2": sf**2})
 
     assert_frame_equal(
         utils.qth_survival_times([0.2, 0.5], sf_multi_df),
@@ -181,7 +181,7 @@ def test_datetimes_to_durations_with_different_frequencies():
     # days
     start_date = ["2013-10-10 0:00:00", "2013-10-09", "2012-10-10"]
     end_date = ["2013-10-13", "2013-10-10 0:00:00", "2013-10-15"]
-    T, C = utils.datetimes_to_durations(start_date, end_date)
+    T, C = utils.datetimes_to_durations(start_date, end_date, format="mixed")
     npt.assert_almost_equal(T, np.array([3, 1, 5 + 365]))
     npt.assert_almost_equal(C, np.array([1, 1, 1], dtype=bool))
 
@@ -1058,9 +1058,9 @@ def test_rmst_variance():
     hazard = 1 / expf.lambda_
     t = 1
 
-    sq = 2 / hazard ** 2 * (1 - np.exp(-hazard * t) * (1 + hazard * t))
+    sq = 2 / hazard**2 * (1 - np.exp(-hazard * t) * (1 + hazard * t))
     actual_mean = 1 / hazard * (1 - np.exp(-hazard * t))
-    actual_var = sq - actual_mean ** 2
+    actual_var = sq - actual_mean**2
 
     assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[0] - actual_mean) < 0.001
     assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[1] - actual_var) < 0.001

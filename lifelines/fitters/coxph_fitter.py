@@ -1900,9 +1900,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         df = self._compute_martingale(X, T, E, weights, index)
         rmart = df.pop("martingale")
 
-        with np.warnings.catch_warnings():
-            np.warnings.filterwarnings("ignore")
-            log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * log(E.values - rmart.values))
+        log_term = np.where((E.values - rmart.values) <= 0, 0, E.values * log(E.values - rmart.values))
 
         deviance = np.sign(rmart) * np.sqrt(-2 * (rmart + log_term))
         df["deviance"] = deviance
@@ -2385,6 +2383,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             cumulative_hazard_ = pd.DataFrame(c_0 * v.values, columns=col, index=times_)
 
         return cumulative_hazard_
+
+    def predict_hazard(*args, **kwargs):
+        raise NotImplementedError(
+            "This can't be reliably computed for the Cox proportional hazard model with Breslow baseline hazard."
+        )
 
     def predict_survival_function(
         self,

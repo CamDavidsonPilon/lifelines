@@ -12,7 +12,7 @@ pypandoc
 prospector[with_pyroma]
 pre-commit
 black
-dill
+dill>=0.3.6
 statsmodels
 flaky
 scikit-learn>=0.22.0
