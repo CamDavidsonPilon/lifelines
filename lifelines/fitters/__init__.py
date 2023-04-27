@@ -1965,7 +1965,6 @@ class ParametricRegressionFitter(RegressionFitter):
             raise exceptions.ConvergenceError(
                 dedent(
                     f"""\
-                {minimum_results=}
 
                 Fitting did not converge. Try the following:
 
@@ -1976,6 +1975,8 @@ class ParametricRegressionFitter(RegressionFitter):
                 4. Try using an alternate minimizer: ``fitter._scipy_fit_method = "SLSQP"``.
                 5. Trying adding a small penalizer (or changing it, if already present). Example: `{self._class_name}(penalizer=0.01).fit(...)`.
                 6. Are there any extreme outliers? Try modeling them or dropping them to see if it helps convergence.
+
+                minimum_results={minimum_results}
             """
                 )
             )
