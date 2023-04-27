@@ -1,5 +1,11 @@
 ## Changelog
 
+#### 0.27.5 - 2023-04-27
+ - Support pandas 2.0+
+
+##### New features
+ - Support py3.11
+
 #### 0.27.4 - 2022-11-16
 
 ##### New features
