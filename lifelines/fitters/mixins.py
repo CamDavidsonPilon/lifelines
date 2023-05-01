@@ -107,6 +107,49 @@ class ProportionalHazardMixin:
 
         for variable in self.params_.index.intersection(columns or self.params_.index):
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
+            
+            # plot is done (regardless of test result) whenever `show_plots = True`
+            if show_plots:
+                axes.append([])
+                print()
+                print("   Bootstrapping lowess lines. May take a moment...")
+                print()
+                from matplotlib import pyplot as plt
+
+                fig = plt.figure()
+
+                # plot variable against all time transformations.
+                for i, (transform_name, transformer) in enumerate(TimeTransformers().iter(["rank", "km"]), start=1):
+                    p_value = test_results.summary.loc[(variable, transform_name), "p"]
+
+                    ax = fig.add_subplot(1, 2, i)
+
+                    y = residuals_and_duration[variable]
+                    tt = transformer(self.durations, self.event_observed, self.weights)[self.event_observed.values]
+
+                    ax.scatter(tt, y, alpha=0.75)
+
+                    y_lowess = lowess(tt.values, y.values)
+                    ax.plot(tt, y_lowess, color="k", alpha=1.0, linewidth=2)
+
+                    # bootstrap some possible other lowess lines. This is an approximation of the 100% confidence intervals
+                    for _ in range(plot_n_bootstraps):
+                        ix = sorted(np.random.choice(n, n))
+                        tt_ = tt.values[ix]
+                        y_lowess = lowess(tt_, y.values[ix])
+                        ax.plot(tt_, y_lowess, color="k", alpha=0.30)
+
+                    best_xlim = ax.get_xlim()
+                    ax.hlines(0, 0, tt.max(), linestyles="dashed", linewidths=1)
+                    ax.set_xlim(best_xlim)
+
+                    ax.set_xlabel("%s-transformed time\n(p=%.4f)" % (transform_name, p_value), fontsize=10)
+                    axes[-1].append(ax)
+
+                fig.suptitle("Scaled Schoenfeld residuals of '%s'" % variable, fontsize=14)
+                plt.tight_layout()
+                plt.subplots_adjust(top=0.90)
+
             if np.round(minumum_observed_p_value, 2) > p_value_threshold:
                 continue
 
@@ -181,48 +224,9 @@ class ProportionalHazardMixin:
                         ),
                         end="\n\n",
                     )
+#################
 
-            if show_plots:
-                axes.append([])
-                print()
-                print("   Bootstrapping lowess lines. May take a moment...")
-                print()
-                from matplotlib import pyplot as plt
-
-                fig = plt.figure()
-
-                # plot variable against all time transformations.
-                for i, (transform_name, transformer) in enumerate(TimeTransformers().iter(["rank", "km"]), start=1):
-                    p_value = test_results.summary.loc[(variable, transform_name), "p"]
-
-                    ax = fig.add_subplot(1, 2, i)
-
-                    y = residuals_and_duration[variable]
-                    tt = transformer(self.durations, self.event_observed, self.weights)[self.event_observed.values]
-
-                    ax.scatter(tt, y, alpha=0.75)
-
-                    y_lowess = lowess(tt.values, y.values)
-                    ax.plot(tt, y_lowess, color="k", alpha=1.0, linewidth=2)
-
-                    # bootstrap some possible other lowess lines. This is an approximation of the 100% confidence intervals
-                    for _ in range(plot_n_bootstraps):
-                        ix = sorted(np.random.choice(n, n))
-                        tt_ = tt.values[ix]
-                        y_lowess = lowess(tt_, y.values[ix])
-                        ax.plot(tt_, y_lowess, color="k", alpha=0.30)
-
-                    best_xlim = ax.get_xlim()
-                    ax.hlines(0, 0, tt.max(), linestyles="dashed", linewidths=1)
-                    ax.set_xlim(best_xlim)
-
-                    ax.set_xlabel("%s-transformed time\n(p=%.4f)" % (transform_name, p_value), fontsize=10)
-                    axes[-1].append(ax)
-
-                fig.suptitle("Scaled Schoenfeld residuals of '%s'" % variable, fontsize=14)
-                plt.tight_layout()
-                plt.subplots_adjust(top=0.90)
-
+            
         if advice and counter > 0:
             print(
                 dedent(
