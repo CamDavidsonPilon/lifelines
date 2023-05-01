@@ -1,8 +1,11 @@
 ## Changelog
 
+#### 0.27.7 - 2023-05-01
+ - `check_assumptions(show_plots=True)` will always show plots, regardless of test outcome. Thanks @nomennominatur!
+ - `lifelines.datasets` is now importable.
+
 #### 0.27.6 - 2023-04-27
  - Fix for py3.7
-
 
 #### 0.27.5 - 2023-04-27
  - Support pandas 2.0+
