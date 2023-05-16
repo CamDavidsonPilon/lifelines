@@ -137,7 +137,7 @@ class UnivariateFitter(BaseFitter):
         )
         # Fix the confidence interval plot bug from Aalen-Johanson
         # when calculate_variance is True.
-        if not self._calc_var:
+        if not getattr(self._calc_var, None, False):
             kwargs["ci_show"] = False
         return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
 
