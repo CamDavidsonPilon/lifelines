@@ -7,6 +7,7 @@ import warnings
 from lifelines.fitters import NonParametricUnivariateFitter
 from lifelines.utils import _preprocess_inputs, inv_normal_cdf, CensoringType, coalesce
 from lifelines import KaplanMeierFitter
+from lifelines.plotting import _plot_estimate
 
 
 class AalenJohansenFitter(NonParametricUnivariateFitter):
@@ -261,3 +262,47 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
 
         # Detect duplicated times with different event types
         return (dup_times & (~dup_events)).any()
+
+    def plot_cumulative_density(self, **kwargs):
+        """
+        Plots a pretty figure of the model
+
+        Matplotlib plot arguments can be passed in inside the kwargs, plus
+
+        Parameters
+        -----------
+        show_censors: bool
+            place markers at censorship events. Default: False
+        censor_styles: dict
+            If show_censors, this dictionary will be passed into the plot call.
+        ci_alpha: float
+            the transparency level of the confidence interval. Default: 0.3
+        ci_force_lines: bool
+            force the confidence intervals to be line plots (versus default shaded areas). Default: False
+        ci_show: bool
+            show confidence intervals. Default: True
+        ci_legend: bool
+            if ci_force_lines is True, this is a boolean flag to add the lines' labels to the legend. Default: False
+        at_risk_counts: bool
+            show group sizes at time points. See function ``add_at_risk_counts`` for details. Default: False
+        loc: slice
+            specify a time-based subsection of the curves to plot, ex:
+
+            >>> model.plot(loc=slice(0.,10.))
+
+            will plot the time values between t=0. and t=10.
+        iloc: slice
+            specify a location-based subsection of the curves to plot, ex:
+
+            >>> model.plot(iloc=slice(0,10))
+
+            will plot the first 10 time points.
+
+        Returns
+        -------
+        ax:
+            a pyplot axis object
+        """
+        if not self._calc_var:
+            kwargs["ci_show"] = False
+        _plot_estimate(self, estimate=self._estimate_name, **kwargs)
