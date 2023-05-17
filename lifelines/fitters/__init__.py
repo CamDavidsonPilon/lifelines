@@ -135,7 +135,7 @@ class UnivariateFitter(BaseFitter):
             "The `plot` function is deprecated, and will be removed in future versions. Use `plot_%s`" % self._estimate_name,
             DeprecationWarning,
         )
-        # Fix the confidence interval plot bug from Aalen-Johanson
+        # Fix the confidence interval plot bug from Aalen-Johansen
         # when calculate_variance is False.
         if getattr(self, "_calc_var", None) is False:
             kwargs["ci_show"] = False
