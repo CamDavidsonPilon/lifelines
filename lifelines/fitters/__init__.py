@@ -135,6 +135,10 @@ class UnivariateFitter(BaseFitter):
             "The `plot` function is deprecated, and will be removed in future versions. Use `plot_%s`" % self._estimate_name,
             DeprecationWarning,
         )
+        # Fix the confidence interval plot bug from Aalen-Johansen
+        # when calculate_variance is False.
+        if getattr(self, "_calc_var", None) is False:
+            kwargs["ci_show"] = False
         return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
 
     def subtract(self, other) -> pd.DataFrame:
