@@ -264,10 +264,9 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
         return (dup_times & (~dup_events)).any()
 
     def plot_cumulative_density(self, **kwargs):
-        """
-        Plots a pretty figure of the model
+        """Plots a pretty figure of the model
 
-        Matplotlib plot arguments can be passed in inside the kwargs, plus
+        Matplotlib plot arguments can be passed in inside the kwargs.
 
         Parameters
         -----------
