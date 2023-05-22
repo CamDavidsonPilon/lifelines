@@ -442,6 +442,43 @@ def difference_in_restricted_mean_survival_time(point_in_time, fitterA, fitterB)
 
         results
     """
+    #check point_in_time argument validity
+    time_max = max(fitterA.durations.max(), fitterB.durations.max())
+    time_lesser_max = min(fitterA.durations.max(), fitterB.durations.max())
+    statusA_max = fitterA.event_table.censored.iloc[-1] == 0
+    statusB_max = fitterB.event_table.censored.iloc[-1] == 0
+    #print(statusA_max, statusB_max)
+    #case 1: last event in both groups is not censored 
+    if statusA_max and statusB_max:
+        if point_in_time is not None:
+            if point_in_time > time_max:
+                raise ValueError(f'the point in time needs to be shorter than or equal to the largest observed time on each of the two groups: {time_max}')
+        else:
+            point_in_time = time_max
+    #case 2: the last observed event in the shorter arm is observed, the last observed event in the longer arm is censored
+    if (statusA_max==0 and statusB_max == 1 and fitterA.durations.max() >= fitterB.durations.max()) or \
+       (statusA_max==1 and statusB_max == 0 and fitterB.durations.max() > fitterA.durations.max()):
+        if point_in_time is not None:
+            if point_in_time > time_max:
+                raise ValueError(f'The point_in_time needs to be shorter than or equal to the largest observed time on each of the two groups: {time_max}')
+        else:
+            point_in_time = time_max
+    #case 3: the last observed event in the shorter arm is censored, the last observed event in the longer arm is observed
+    if (statusA_max == 1 and statusB_max == 0 and fitterA.durations.max() >= fitterB.durations.max()) or \
+        (statusA_max == 0 and statusB_max == 1 and fitterB.durations.max() > fitterA.durations.max()):
+        if point_in_time is not None:
+            if point_in_time > time_lesser_max:
+                raise ValueError(f'The point in time needs to be shorter than or equal to the minimum of the largest observed time on each of the two groups: {time_lesser_max}')
+        else:
+            point_in_time = time_lesser_max
+    #case 4: the last event in both groups is censored
+    if (not statusA_max) and (not statusB_max):
+        if point_in_time is not None:
+            if point_in_time > time_lesser_max:
+                raise ValueError(f'the point in time needs to be shorter than or equal to the minimum of the largest observed time on each of the two groups: {time_lesser_max}')
+        else:
+            point_in_time = time_lesser_max
+
     wk0 = restricted_mean_survival_time(point_in_time, fitterA)
     wk1 = restricted_mean_survival_time(point_in_time, fitterB)
     alpha = fitterA.alpha
@@ -794,10 +831,6 @@ def pairwise_logrank_test(
         )
 
     return result
-
-
-def difference_of_restricted_mean_survival_time_test(model1, model2, t):
-    pass
 
 
 def multivariate_logrank_test(
