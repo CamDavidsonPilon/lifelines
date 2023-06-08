@@ -1908,7 +1908,7 @@ class CovariateParameterMappings:
 
         Xs = {}
         for param_name, transform in self.mappings.items():
-            if isinstance(transform, formulaic.formula.Formula):
+            if isinstance(transform, formulaic.ModelSpec):
                 X = transform.get_model_matrix(df)
             elif isinstance(transform, list):
                 if self.force_intercept:
@@ -1954,6 +1954,6 @@ class CovariateParameterMappings:
         if self.force_intercept:
             formula += "+ 1"
 
-        design_info = formulaic.Formula(formula)
+        design_info = formulaic.ModelSpec.from_spec(formulaic.Formula(formula).get_model_matrix(df))
 
         return design_info
