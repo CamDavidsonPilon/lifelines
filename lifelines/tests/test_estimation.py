@@ -3115,6 +3115,14 @@ class TestCoxPHFitter:
         cph.fit(rossi, "week", "arrest", formula="age * race")
         cph.predict_survival_function(rossi)
 
+    def test_formulas_handles_categories_at_inference(self, cph):
+        # Create a dummy dataset with some one continuous and one categorical features
+        df = pd.DataFrame({
+            'time': [1, 2, 3, 1, 2, 3], 'event': [0, 1, 1, 1, 0, 0],
+            'cov_cont':[0.1, 0.2, 0.3, 0.1, 0.2, 0.3], 'cov_categ': ['A', 'A', 'B', 'B', 'C', 'C']})
+        cph.fit(df, "time", "event", formula="cov_cont + C(cov_categ)")
+        cph.predict_survival_function(df.iloc[:4])
+
     def test_timeline_argument_can_be_set(self, rossi, cph_spline, cph):
         timeline = np.linspace(0, 100)
         cph.fit(rossi, "week", "arrest", timeline=timeline)
