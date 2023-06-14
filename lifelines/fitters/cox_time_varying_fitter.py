@@ -328,7 +328,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         weights,
         show_progress=False,
         step_size=0.95,
-        precision=10e-6,
+        precision=1e-8,
         r_precision=1e-9,
         max_steps=50,
         initial_point=None,
@@ -457,7 +457,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             elif previous_ll > 0 and abs(ll - previous_ll) / (-previous_ll) < r_precision:
                 # this is what R uses by default with r_precision=1e-9
                 converging, completed = False, True
-            elif newton_decrement < 1e-8:  # precision:
+            elif newton_decrement < precision:
                 converging, completed = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
