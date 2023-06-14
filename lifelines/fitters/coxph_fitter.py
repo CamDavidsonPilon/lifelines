@@ -1455,7 +1455,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             successive positions is less than ``precision``.
         r_precision: float, optional
             the algorithms stops if the relative decrease in log-likelihood
-            goes below ``r_precision``.
+            between successive iterations goes below ``r_precision``.
         show_progress: bool, optional
             since the fitter is iterative, show convergence diagnostics.
         max_steps: int, optional
@@ -1597,7 +1597,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             step_size = step_sizer.update(norm_delta).next()
 
         if show_progress and success:
-            import ipdb; ipdb.set_trace()
             print("Convergence success after %d iterations." % (i))
         elif show_progress and not success:
             print("Convergence failed. See any warning messages.")
@@ -1606,14 +1605,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if success and norm_delta > 0.1:
             self._check_values_post_fitting(X, T, E, weights)
             warnings.warn(
-                "Newton-Rhaphson convergence completed successfully but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?\n"
+                "Newton-Raphson convergence completed successfully but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?\n"
                 % norm_delta,
                 exceptions.ConvergenceWarning,
             )
         elif not success:
             self._check_values_post_fitting(X, T, E, weights)
             warnings.warn(
-                "Newton-Rhaphson failed to converge sufficiently. {0}".format(CONVERGENCE_DOCS), exceptions.ConvergenceWarning
+                "Newton-Raphson failed to converge sufficiently. {0}".format(CONVERGENCE_DOCS), exceptions.ConvergenceWarning
             )
 
         return beta, ll_, hessian
