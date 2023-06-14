@@ -242,7 +242,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
             algorithm. Default is the zero vector.
 
         fit_options: dict, optional
-            pass kwargs for the fitting algorithm. For semi-parametric models, this is the Newton-Rhapson method (see method _newton_raphson_for_efron_model for kwargs)
+            pass kwargs for the fitting algorithm. For semi-parametric models, this is the Newton-Raphson method (see method _newton_raphson_for_efron_model for kwargs)
 
         Returns
         -------
@@ -1430,10 +1430,11 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         show_progress: bool = True,
         step_size: float = 0.95,
         precision: float = 1e-07,
+        r_precision: float = 1e-9,
         max_steps: int = 500,
     ):  # pylint: disable=too-many-statements,too-many-branches
         """
-        Newton Rhaphson algorithm for fitting CPH model.
+        Newton Raphson algorithm for fitting CPH model.
 
         Note
         ----
@@ -1450,13 +1451,15 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         step_size: float, optional
             > 0.001 to determine a starting step size in NR algorithm.
         precision: float, optional
-            the convergence halts if the norm of delta between
-            successive positions is less than epsilon.
+            the algorithm stops if the norm of delta between
+            successive positions is less than ``precision``.
+        r_precision: float, optional
+            the algorithms stops if the relative decrease in log-likelihood
+            between successive iterations goes below ``r_precision``.
         show_progress: bool, optional
-            since the fitter is iterative, show convergence
-                 diagnostics.
+            since the fitter is iterative, show convergence diagnostics.
         max_steps: int, optional
-            the maximum number of iterations of the Newton-Rhaphson algorithm.
+            the maximum number of iterations of the Newton-Raphson algorithm.
 
         Returns
         -------
@@ -1571,8 +1574,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             # convergence criteria
             if norm_delta < precision:
                 converging, success = False, True
-            elif previous_ll_ != 0 and abs(ll_ - previous_ll_) / (-previous_ll_) < 1e-09:
-                # this is what R uses by default
+            elif previous_ll_ != 0 and abs(ll_ - previous_ll_) / (-previous_ll_) < r_precision:
+                # this is what R uses by default, with r_precision = 1e-9
                 converging, success = False, True
             elif newton_decrement < precision:
                 converging, success = False, True
@@ -1602,14 +1605,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if success and norm_delta > 0.1:
             self._check_values_post_fitting(X, T, E, weights)
             warnings.warn(
-                "Newton-Rhaphson convergence completed successfully but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?\n"
+                "Newton-Raphson convergence completed successfully but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is collinearity or complete separation in the dataset?\n"
                 % norm_delta,
                 exceptions.ConvergenceWarning,
             )
         elif not success:
             self._check_values_post_fitting(X, T, E, weights)
             warnings.warn(
-                "Newton-Rhaphson failed to converge sufficiently. {0}".format(CONVERGENCE_DOCS), exceptions.ConvergenceWarning
+                "Newton-Raphson failed to converge sufficiently. {0}".format(CONVERGENCE_DOCS), exceptions.ConvergenceWarning
             )
 
         return beta, ll_, hessian
