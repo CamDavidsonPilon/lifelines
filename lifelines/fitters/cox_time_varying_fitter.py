@@ -153,6 +153,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             Override the default values in NR algorithm:
                 step_size: 0.95,
                 precision: 1e-07,
+                r_precision=1e-9,
                 max_steps: 500,
 
         Returns
@@ -346,8 +347,8 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         step_size: float
             > 0 to determine a starting step size in NR algorithm.
         precision: float
-            the convergence halts if the norm of delta between
-                     successive positions is less than epsilon.
+            the algorithm stops if the norm of delta between
+            successive positions is less than ``precision``.
         r_precision: float, optional
             the algorithms stops if the relative decrease in log-likelihood
             between successive iterations goes below ``r_precision``.
