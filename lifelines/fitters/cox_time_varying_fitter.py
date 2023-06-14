@@ -329,11 +329,12 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         show_progress=False,
         step_size=0.95,
         precision=10e-6,
+        r_precision=1e-9,
         max_steps=50,
         initial_point=None,
     ):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
         """
-        Newton Rhaphson algorithm for fitting CPH model.
+        Newton Raphson algorithm for fitting CPH model.
 
         Parameters
         ----------
@@ -347,6 +348,9 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         precision: float
             the convergence halts if the norm of delta between
                      successive positions is less than epsilon.
+        r_precision: float, optional
+            the algorithms stops if the relative decrease in log-likelihood
+            between successive iterations goes below ``r_precision``.
 
         Returns
         --------
@@ -450,10 +454,10 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
-            elif previous_ll > 0 and abs(ll - previous_ll) / (-previous_ll) < 1e-09:
-                # this is what R uses by default
+            elif previous_ll > 0 and abs(ll - previous_ll) / (-previous_ll) < r_precision:
+                # this is what R uses by default with r_precision=1e-9
                 converging, completed = False, True
-            elif newton_decrement < 10e-8:
+            elif newton_decrement < precision:
                 converging, completed = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
@@ -481,12 +485,12 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         # report to the user problems that we detect.
         if completed and norm_delta > 0.1:
             warnings.warn(
-                "Newton-Rhapson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity or complete separation in the dataset?"
+                "Newton-Raphson convergence completed but norm(delta) is still high, %.3f. This may imply non-unique solutions to the maximum likelihood. Perhaps there is colinearity or complete separation in the dataset?"
                 % norm_delta,
                 ConvergenceWarning,
             )
         elif not completed:
-            warnings.warn("Newton-Rhapson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
+            warnings.warn("Newton-Raphson failed to converge sufficiently in %d steps." % max_steps, ConvergenceWarning)
 
         return beta, ll, hessian
 
