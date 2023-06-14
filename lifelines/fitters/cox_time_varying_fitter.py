@@ -457,7 +457,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             elif previous_ll > 0 and abs(ll - previous_ll) / (-previous_ll) < r_precision:
                 # this is what R uses by default with r_precision=1e-9
                 converging, completed = False, True
-            elif newton_decrement < precision:
+            elif newton_decrement < 1e-8:  # precision:
                 converging, completed = False, True
             elif i >= max_steps:
                 # 50 iterations steps with N-R is a lot.
