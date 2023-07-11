@@ -507,7 +507,7 @@ def add_at_risk_counts(
             if not event_table_slice.loc[:tick].empty:
                 event_table_slice = (
                     event_table_slice.loc[:tick, ["at_risk", "censored", "observed"]]
-                    .agg({"at_risk": lambda x: x.tail(1).values, "censored": "sum", "observed": "sum"})  # see #1385
+                    .agg({"at_risk": lambda x: x.tail(1).values[0], "censored": "sum", "observed": "sum"})  # see #1385
                     .rename({"at_risk": "At risk", "censored": "Censored", "observed": "Events"})
                     .fillna(0)
                 )
