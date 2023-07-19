@@ -168,6 +168,32 @@ the log(-log) transformation implicitly and compares the survival-ness of popula
     point_in_time = 10.
     results = survival_difference_at_fixed_point_in_time_test(point_in_time, kmf_exp, kmf_con)
     results.print_summary()
+	
+	"""
+	t_0 = -1
+	null_distribution = chi squared
+	degrees_of_freedom = 1
+	point_in_time = 10.0
+	test_name = survival_difference_at_fixed_point_in_time_test
+	---
+	test_statistic    p  -log2(p)
+			  4.77 0.03      5.11  
+	"""
+	
+	
+Moreover, we can plot the two survival curves and compare them at the fixed point in time:
+
+	
+.. code-block:: python
+	
+	kmf_exp.plot_survival_function(point_in_time=point_in_time)
+	kmf_con.plot_survival_function(point_in_time=point_in_time)
+
+.. image:: images/plot_survival_difference_at_fixed_point_in_time_test.png	
+
+
+We can see that the expermintal's survival function value (blue) is lower than the control's group value (orange).
+It is worth observing that at that particular point, the confidence intervals for both groups overlap to some extent, which is not consistently observed at all other time points.	
 
 
 Restricted mean survival times (RMST)
