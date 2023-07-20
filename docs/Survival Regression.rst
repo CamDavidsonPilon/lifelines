@@ -1134,15 +1134,15 @@ In this author's opinion, the best way to measure predictive performance is eval
     from lifelines import CoxPHFitter
     from lifelines.datasets import load_rossi
 
-    rossi = load_rossi().sample(frac=1.0)
+    rossi = load_rossi().sample(frac=1.0, random_state=25)  # ensures the reproducibility of the example
     train_rossi = rossi.iloc[:400]
     test_rossi = rossi.iloc[400:]
 
-    cph_l2 = CoxPHFitter(penalizer=0.1, l1_ratio=0.).fit(train_rossi, 'week', 'arrest')
     cph_l1 = CoxPHFitter(penalizer=0.1, l1_ratio=1.).fit(train_rossi, 'week', 'arrest')
+    cph_l2 = CoxPHFitter(penalizer=0.1, l1_ratio=0.).fit(train_rossi, 'week', 'arrest')
 
-    print(cph_l2.score(test_rossi))
-    print(cph_l1.score(test_rossi)) # better model
+    print(cph_l1.score(test_rossi))
+    print(cph_l2.score(test_rossi))  # higher is better
 
 Akaike information criterion (AIC)
 *****************************************
