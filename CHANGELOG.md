@@ -1,5 +1,10 @@
 ## Changelog
 
+#### 0.27.8 - 2023-09-13
+ - Estimators now have `.label` property
+ - Fixed some deprecation warnings
+ - Pinned to numpy < 2.0
+
 #### 0.27.7 - 2023-05-01
  - `check_assumptions(show_plots=True)` will always show plots, regardless of test outcome. Thanks @nomennominatur!
  - `lifelines.datasets` is now importable.
