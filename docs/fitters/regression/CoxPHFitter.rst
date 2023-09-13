@@ -50,11 +50,6 @@ CoxPHFitter
         see :meth:`~lifelines.fitters.coxph_fitter.SemiParametricPHFitter.predict_log_partial_hazard`
 
 
-    .. method:: predict_hazard()
-
-        see :meth:`~lifelines.fitters.coxph_fitter.SemiParametricPHFitter.predict_hazard`
-
-
     .. method:: predict_cumulative_hazard()
 
         see :meth:`~lifelines.fitters.coxph_fitter.SemiParametricPHFitter.predict_cumulative_hazard`
