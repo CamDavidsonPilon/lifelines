@@ -2858,6 +2858,7 @@ class ParametricCoxModelFitter(ParametricRegressionFitter, ProportionalHazardMix
             df = df.to_frame().T.infer_objects()
 
         df = df.copy()
+        df.index.name = None
 
         if self.strata is not None:
             df = df.reset_index().set_index(self.strata)
