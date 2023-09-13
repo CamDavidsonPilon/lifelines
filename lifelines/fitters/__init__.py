@@ -70,6 +70,10 @@ class BaseFitter:
             s = """<lifelines.%s>""" % classname
         return s
 
+    @property
+    def label(self):
+        return self._label
+
     @utils.CensoringType.right_censoring
     def fit(*args, **kwargs):
         raise NotImplementedError()

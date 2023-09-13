@@ -347,10 +347,12 @@ class TestUnivariateFitters:
         fitter = WeibullFitter(label="Weibull")
         fitter.fit([1, 2, 3, 4], event_observed=[1, 1, 1, 1])
         assert fitter._label == "Weibull"
+        assert fitter.label == "Weibull"
 
         fitter = KaplanMeierFitter(label="KM")
         fitter.fit([1, 2, 3, 4], event_observed=[1, 1, 1, 1])
         assert fitter._label == "KM"
+        assert fitter.label == "KM"
 
     def test_confidence_interval_has_the_correct_order_so_plotting_doesnt_break(self, sample_lifetimes, univariate_fitters):
         T, E = sample_lifetimes
@@ -370,7 +372,7 @@ class TestUnivariateFitters:
                 == """<lifelines.%s:"%s", fitted with %d total observations, %d right-censored observations>"""
                 % (
                     f._class_name,
-                    f._label,
+                    f.label,
                     E.shape[0],
                     E.shape[0] - E.sum(),
                 )
@@ -525,7 +527,7 @@ class TestUnivariateFitters:
         for f in univariate_fitters:
             fitter = f()
             fitter.fit(positive_sample_lifetimes[0], label=label)
-            assert fitter._label == label
+            assert fitter.label == label
             assert fitter.confidence_interval_.columns[0] == "%s_lower_0.95" % label
             assert fitter.confidence_interval_.columns[1] == "%s_upper_0.95" % label
 
@@ -1231,7 +1233,7 @@ class TestKaplanMeierFitter:
         kmf = KaplanMeierFitter()
         kmf.fit_left_censoring(T, C)
 
-        actual = kmf.cumulative_density_[kmf._label].values
+        actual = kmf.cumulative_density_[kmf.label].values
         npt.assert_allclose(actual, np.array([0, 0.437500, 0.5833333, 0.875, 0.875, 1]))
 
     def test_shifting_durations_doesnt_affect_survival_function_values(self):
