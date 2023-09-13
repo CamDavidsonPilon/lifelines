@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
-from pkg_resources import resource_filename
+from importlib import resources
 
 
 def _load_dataset(filename, **kwargs):
@@ -18,7 +18,7 @@ def _load_dataset(filename, **kwargs):
     -------
         output: DataFrame
     """
-    return pd.read_csv(resource_filename("lifelines", "datasets/" + filename), engine="python", **kwargs)
+    return pd.read_csv(resources.files("lifelines") / "datasets" / filename, engine="python", **kwargs)
 
 
 def load_recur(**kwargs):
