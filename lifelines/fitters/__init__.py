@@ -221,10 +221,10 @@ class UnivariateFitter(BaseFitter):
         might be 9 years.
         """
         age = self.survival_function_.index.values[:, None]
-        columns = ["%s - Conditional median duration remaining to event" % self._label]
+        columns = ["%s - Conditional median duration remaining to event" % self.label]
         return (
             pd.DataFrame(
-                utils.qth_survival_times(self.survival_function_[self._label] * 0.5, self.survival_function_)
+                utils.qth_survival_times(self.survival_function_[self.label] * 0.5, self.survival_function_)
                 .sort_index(ascending=False)
                 .values,
                 index=self.survival_function_.index,
@@ -462,7 +462,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         return -ll / weights.sum()
 
     def _compute_confidence_bounds_of_cumulative_hazard(self, alpha, ci_labels) -> pd.DataFrame:
-        return self._compute_confidence_bounds_of_transform(self._cumulative_hazard, alpha, ci_labels)
+        return self._compute_confidence_bounds_of_transform(self._cumulative_hazard, alpha, ci_labels, self.timeline)
 
     def _compute_variance_of_transform(self, transform, timeline=None):
         """
@@ -495,7 +495,9 @@ class ParametricUnivariateFitter(UnivariateFitter):
             np.einsum("nj,jk,nk->n", gradient_at_times.T, self.variance_matrix_, gradient_at_times.T), index=timeline
         )
 
-    def _compute_confidence_bounds_of_transform(self, transform, alpha, ci_labels) -> pd.DataFrame:
+    def _compute_confidence_bounds_of_transform(
+        self, transform, alpha: float, ci_labels: tuple[str, str], timeline
+    ) -> pd.DataFrame:
         """
         This computes the confidence intervals of a transform of the parameters. Ex: take
         the fitted parameters, a function/transform and the variance matrix and give me
@@ -511,20 +513,21 @@ class ParametricUnivariateFitter(UnivariateFitter):
         alpha: float
             confidence level
         ci_labels: tuple
+        timeline: iterable
 
         """
         alpha2 = 1 - alpha / 2.0
         z = utils.inv_normal_cdf(alpha2)
-        df = pd.DataFrame(index=self.timeline)
+        df = pd.DataFrame(index=timeline)
 
         std_of_transform = np.sqrt(self._compute_variance_of_transform(transform))
 
         if ci_labels is None:
-            ci_labels = ["%s_lower_%g" % (self._label, 1 - alpha), "%s_upper_%g" % (self._label, 1 - alpha)]
+            ci_labels = ["%s_lower_%g" % (self.label, 1 - alpha), "%s_upper_%g" % (self.label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = transform(self._fitted_parameters_, self.timeline) - z * std_of_transform
-        df[ci_labels[1]] = transform(self._fitted_parameters_, self.timeline) + z * std_of_transform
+        df[ci_labels[0]] = transform(self._fitted_parameters_, timeline) - z * std_of_transform
+        df[ci_labels[1]] = transform(self._fitted_parameters_, timeline) + z * std_of_transform
         return df
 
     def _create_initial_point(self, *args) -> np.ndarray:
@@ -1062,7 +1065,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
           Rename the series returned. Useful for plotting.
 
         """
-        label = utils.coalesce(label, self._label)
+        label = utils.coalesce(label, self.label)
         return pd.Series(self._survival_function(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     def cumulative_density_at_times(self, times, label: t.Optional[str] = None) -> pd.Series:
@@ -1077,7 +1080,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
           Rename the series returned. Useful for plotting.
 
         """
-        label = utils.coalesce(label, self._label)
+        label = utils.coalesce(label, self.label)
         return pd.Series(self._cumulative_density(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     def density_at_times(self, times, label=None) -> pd.Series:
@@ -1092,7 +1095,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
           Rename the series returned. Useful for plotting.
 
         """
-        label = utils.coalesce(label, self._label)
+        label = utils.coalesce(label, self.label)
         return pd.Series(self._density(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     def cumulative_hazard_at_times(self, times, label: t.Optional[str] = None) -> pd.Series:
@@ -1106,7 +1109,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         label: string, optional
           Rename the series returned. Useful for plotting.
         """
-        label = utils.coalesce(label, self._label)
+        label = utils.coalesce(label, self.label)
         return pd.Series(self._cumulative_hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     def hazard_at_times(self, times, label: t.Optional[str] = None) -> pd.Series:
@@ -1121,7 +1124,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
           Rename the series returned. Useful for plotting.
 
         """
-        label = utils.coalesce(label, self._label)
+        label = utils.coalesce(label, self.label)
         return pd.Series(self._hazard(self._fitted_parameters_, times), index=utils._to_1d_array(times), name=label)
 
     @property
@@ -1143,28 +1146,28 @@ class ParametricUnivariateFitter(UnivariateFitter):
         """
         The confidence interval of the hazard.
         """
-        return self._compute_confidence_bounds_of_transform(self._hazard, self.alpha, self._ci_labels)
+        return self._compute_confidence_bounds_of_transform(self._hazard, self.alpha, self._ci_labels, self.timeline)
 
     @property
     def confidence_interval_density_(self) -> pd.DataFrame:
         """
         The confidence interval of the hazard.
         """
-        return self._compute_confidence_bounds_of_transform(self._density, self.alpha, self._ci_labels)
+        return self._compute_confidence_bounds_of_transform(self._density, self.alpha, self._ci_labels, self.timeline)
 
     @property
     def confidence_interval_survival_function_(self) -> pd.DataFrame:
         """
         The lower and upper confidence intervals for the survival function
         """
-        return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels)
+        return self._compute_confidence_bounds_of_transform(self._survival_function, self.alpha, self._ci_labels, self.timeline)
 
     @property
     def confidence_interval_cumulative_density_(self) -> pd.DataFrame:
         """
         The lower and upper confidence intervals for the cumulative density
         """
-        return self._compute_confidence_bounds_of_transform(self._cumulative_density, self.alpha, self._ci_labels)
+        return self._compute_confidence_bounds_of_transform(self._cumulative_density, self.alpha, self._ci_labels, self.timeline)
 
     def plot(self, **kwargs):
         """
@@ -1211,7 +1214,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         """
         age = self.timeline
-        columns = ["%s - Conditional median duration remaining to event" % self._label]
+        columns = ["%s - Conditional median duration remaining to event" % self.label]
 
         return pd.DataFrame(self.percentile(0.5 * self.survival_function_.values) - age[:, None], index=age, columns=columns)
 
