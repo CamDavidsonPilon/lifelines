@@ -3365,6 +3365,8 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
             also display the baseline survival, defined as the survival at the mean of the original dataset.
         times: iterable
             pass in a times to plot
+        y: str
+            one of "survival_function", "hazard", "cumulative_hazard". Default "survival_function"
         kwargs:
             pass in additional plotting commands
 
