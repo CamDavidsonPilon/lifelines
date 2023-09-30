@@ -365,7 +365,7 @@ To make proper inferences, we should ask if our Cox model is appropriate for our
 Stratification
 -----------------------------------------------
 
-Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be including in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *m* smaller datasets, partitioned by the unique values of the stratifying covariate(s). Each dataset has its own baseline hazard (the non-parametric part of the model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *m* baseline hazards under :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_cumulative_hazard_`.
+Sometimes one or more covariates may not obey the proportional hazard assumption. In this case, we can allow the covariate(s) to still be included in the model without estimating its effect. This is called stratification. At a high level, think of it as splitting the dataset into *m* smaller datasets, partitioned by the unique values of the stratifying covariate(s). Each dataset has its own baseline hazard (the non-parametric part of the model), but they all share the regression parameters (the parametric part of the model). Since covariates are the same within each dataset, there is no regression parameter for the covariates stratified on, hence they will not show up in the output. However there will be *m* baseline hazards under :attr:`~lifelines.fitters.coxph_fitter.CoxPHFitter.baseline_cumulative_hazard_`.
 
 To specify variables to be used in stratification, we define them in the call to :meth:`~lifelines.fitters.coxph_fitter.CoxPHFitter.fit`:
 
@@ -1018,13 +1018,13 @@ two individual columns: a *duration* column and a boolean *event occurred* colum
 
 .. code:: python
 
-    df['T'] = data['duration']
-    df['E'] = data['observed']
+    data['T'] = data['duration']
+    data['E'] = data['observed']
 
 
 .. code:: python
 
-    aaf.fit(df, 'T', event_col='E', formula='un_continent_name + regime + start_year')
+    aaf.fit(data, 'T', event_col='E', formula='un_continent_name + regime + start_year')
 
 
 After fitting, the instance exposes a :attr:`~lifelines.fitters.aalen_additive_fitter.AalenAdditiveFitter.cumulative_hazards_` DataFrame
@@ -1073,7 +1073,7 @@ Prime Minister Stephen Harper.
 .. code:: python
 
     ix = (data['ctryname'] == 'Canada') & (data['start_year'] == 2006)
-    harper = df.loc[ix]
+    harper = data.loc[ix]
     print("Harper's unique data point:")
     print(harper)
 
@@ -1232,7 +1232,7 @@ Also, lifelines has wrappers for `compatibility with scikit learn`_ for making c
 Model probability calibration
 ---------------------------------------------------
 
-New in *lifelines* v0.24.11 is the :func:`~lifelines.calibration.survival_probability_calibration` function to measure your fitted survival model against observed frequencies of events. We follow the advice in "Graphical calibration curves and the integrated calibration index (ICI) for survival models" by P. Austin and co., and use create a smoothed calibration curve using a flexible spline regression model (this avoids the traditional problem of binning the continuous-valued probability, and handles censored data).
+New in *lifelines* v0.24.11 is the :func:`~lifelines.calibration.survival_probability_calibration` function to measure your fitted survival model against observed frequencies of events. We follow the advice in "Graphical calibration curves and the integrated calibration index (ICI) for survival models" by P. Austin and co., and create a smoothed calibration curve using a flexible spline regression model (this avoids the traditional problem of binning the continuous-valued probability, and handles censored data).
 
 
 .. code:: python
