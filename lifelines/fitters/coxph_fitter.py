@@ -80,7 +80,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         When ``baseline_estimation_method="spline"``, this allows customizing the points in the time axis for the baseline hazard curve.
         To use evenly-spaced points in time, the ``n_baseline_knots`` parameter can be employed instead.
 
-      breakpoints: int
+      breakpoints: list, optional
         Used when ``baseline_estimation_method="piecewise"``. Set the positions of the baseline hazard breakpoints.
 
     Examples
