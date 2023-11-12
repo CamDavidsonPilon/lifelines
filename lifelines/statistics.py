@@ -375,29 +375,25 @@ def restricted_mean_survival_time(point_in_time, fitterA) -> pd.Series:
         results
     """
     ft = pd.DataFrame({"time": fitterA.timeline})
-    data = pd.DataFrame({"time": np.array(fitterA.durations), "event": np.array(fitterA.event_observed)})
-    # print(data)
     ft.index = ft.time
-    ft["n_risk"] = [sum(data.time >= i) for i in ft.index]
+    ft["n_risk"] = fitterA.event_table.at_risk
     ft["surv"] = fitterA.survival_function_
 
-    n_event = data[data.event == 1].groupby("time").count()
-    n_event = n_event.join(ft["time"], how="right").drop("time", axis=1)
-    n_event.event.fillna(0, inplace=True)
-    # print(n_event)
+    n_event = pd.merge(fitterA.event_table.observed, ft["time"], how='right', left_index=True, right_index=True).drop('time', axis=1)
+    
     idx = ft.time <= point_in_time
 
     wk_time = sorted(ft.time[idx].index.tolist() + [point_in_time])
     wk_surv = ft.surv[idx]
     wk_n_risk = ft.n_risk[idx]
     wk_n_event = n_event[ft.time <= point_in_time]
-    time_diff = np.diff([0] + wk_time)
-    areas = time_diff * ([1] + wk_surv.tolist())
+    time_diff = np.diff(wk_time)
+    areas = time_diff * wk_surv
     rmst = sum(areas)
 
-    wk_var = wk_n_event.event / (wk_n_risk * (wk_n_risk - wk_n_event.event))
-    wk_var = wk_var.tolist() + [0]
-    rmst_var = sum((np.flip(areas[1:])).cumsum() ** 2 * np.flip(wk_var)[1:])
+    wk_var = wk_n_event.observed / (wk_n_risk * (wk_n_risk - wk_n_event.observed))
+    wk_var = wk_var.replace(np.inf, 0).tolist()[1:] + [0]
+    rmst_var = sum((np.flip(areas.values[1:])).cumsum() ** 2 * np.flip(wk_var)[1:])
     rmst_se = np.sqrt(rmst_var)
     z = stats.norm.ppf(1 - fitterA.alpha / 2)
     out = pd.Series(
