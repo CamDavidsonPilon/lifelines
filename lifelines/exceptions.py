@@ -5,6 +5,10 @@ class StatError(Exception):
     pass
 
 
+class ProportionalHazardAssumptionError(Exception):
+    pass
+
+
 class ConvergenceError(ValueError):
     # inherits from ValueError for backwards compatibility reasons
     def __init__(self, msg, original_exception=""):
