@@ -72,7 +72,14 @@ class BreslowFlemingHarringtonFitter(NonParametricUnivariateFitter):
         alpha = coalesce(alpha, self.alpha)
 
         naf = NelsonAalenFitter(alpha=alpha)
-        naf.fit(durations, event_observed=event_observed, timeline=timeline, label=self._label, entry=entry, ci_labels=ci_labels)
+        naf.fit(
+            durations,
+            event_observed=event_observed,
+            timeline=timeline,
+            label=self._label,
+            entry=entry,
+            ci_labels=ci_labels,
+        )
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights = (
             naf.durations,
             naf.event_observed,
@@ -87,6 +94,7 @@ class BreslowFlemingHarringtonFitter(NonParametricUnivariateFitter):
         self.confidence_interval_ = np.exp(-naf.confidence_interval_)
         self.confidence_interval_survival_function_ = self.confidence_interval_
         self.confidence_interval_cumulative_density = 1 - self.confidence_interval_
+        self.confidence_interval_cumulative_density[:] = np.fliplr(self.confidence_interval_cumulative_density.values)
 
         # estimation methods
         self._estimation_method = "survival_function_"

@@ -351,9 +351,14 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         primary_estimate_name = "survival_function_"
         secondary_estimate_name = "cumulative_density_"
 
-        (self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights) = _preprocess_inputs(
-            durations, event_observed, timeline, entry, weights
-        )
+        (
+            self.durations,
+            self.event_observed,
+            self.timeline,
+            self.entry,
+            self.event_table,
+            self.weights,
+        ) = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
 
         alpha = alpha if alpha else self.alpha
         log_estimate, cumulative_sq_ = _additive_estimate(
@@ -386,6 +391,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
 
         self.confidence_interval_survival_function_ = self.confidence_interval_
         self.confidence_interval_cumulative_density_ = 1 - self.confidence_interval_
+        self.confidence_interval_cumulative_density_[:] = np.fliplr(self.confidence_interval_cumulative_density_.values)
         self._median = median_survival_times(self.survival_function_)
         self._cumulative_sq_ = cumulative_sq_
 
