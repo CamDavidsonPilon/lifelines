@@ -4,6 +4,7 @@ from textwrap import dedent, fill
 from autograd import numpy as anp
 import numpy as np
 from pandas import DataFrame, Series
+from lifelines.exceptions import ProportionalHazardAssumptionError
 from lifelines.statistics import proportional_hazard_test, TimeTransformers
 from lifelines.utils import format_p_value
 from lifelines.utils.lowess import lowess
@@ -28,6 +29,7 @@ class ProportionalHazardMixin:
         p_value_threshold: float = 0.01,
         plot_n_bootstraps: int = 15,
         columns: Optional[List[str]] = None,
+        raise_on_fail: bool = False,
     ) -> None:
         """
         Use this function to test the proportional hazards assumption. See usage example at
@@ -51,6 +53,8 @@ class ProportionalHazardMixin:
             the function significantly.
         columns: list, optional
             specify a subset of columns to test.
+        raise_on_fail: bool, optional
+            throw a ``ProportionalHazardAssumptionError`` if the test fails. Default: False.
 
         Returns
         --------
@@ -107,7 +111,7 @@ class ProportionalHazardMixin:
 
         for variable in self.params_.index.intersection(columns or self.params_.index):
             minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
-            
+
             # plot is done (regardless of test result) whenever `show_plots = True`
             if show_plots:
                 axes.append([])
@@ -224,9 +228,8 @@ class ProportionalHazardMixin:
                         ),
                         end="\n\n",
                     )
-#################
+        #################
 
-            
         if advice and counter > 0:
             print(
                 dedent(
@@ -243,6 +246,8 @@ class ProportionalHazardMixin:
 
         if counter == 0:
             print("Proportional hazard assumption looks okay.")
+        elif raise_on_fail:
+            raise ProportionalHazardAssumptionError()
         return axes
 
     @property

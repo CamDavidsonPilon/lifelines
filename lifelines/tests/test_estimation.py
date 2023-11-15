@@ -34,7 +34,14 @@ from lifelines.utils import (
     qth_survival_time,
 )
 
-from lifelines.exceptions import StatisticalWarning, ApproximationWarning, StatError, ConvergenceWarning, ConvergenceError
+from lifelines.exceptions import (
+    ProportionalHazardAssumptionError,
+    StatisticalWarning,
+    ApproximationWarning,
+    StatError,
+    ConvergenceWarning,
+    ConvergenceError,
+)
 from lifelines.fitters import BaseFitter, ParametricUnivariateFitter, ParametricRegressionFitter, RegressionFitter
 from lifelines.fitters.coxph_fitter import SemiParametricPHFitter
 
@@ -3119,9 +3126,14 @@ class TestCoxPHFitter:
 
     def test_formulas_handles_categories_at_inference(self, cph):
         # Create a dummy dataset with some one continuous and one categorical features
-        df = pd.DataFrame({
-            'time': [1, 2, 3, 1, 2, 3], 'event': [0, 1, 1, 1, 0, 0],
-            'cov_cont':[0.1, 0.2, 0.3, 0.1, 0.2, 0.3], 'cov_categ': ['A', 'A', 'B', 'B', 'C', 'C']})
+        df = pd.DataFrame(
+            {
+                "time": [1, 2, 3, 1, 2, 3],
+                "event": [0, 1, 1, 1, 0, 0],
+                "cov_cont": [0.1, 0.2, 0.3, 0.1, 0.2, 0.3],
+                "cov_categ": ["A", "A", "B", "B", "C", "C"],
+            }
+        )
         cph.fit(df, "time", "event", formula="cov_cont + C(cov_categ)")
         cph.predict_survival_function(df.iloc[:4])
 
@@ -3401,6 +3413,11 @@ class TestCoxPHFitter:
         # TODO make this test better
         cph.fit(rossi, "week", "arrest")
         cph.check_assumptions(rossi)
+
+    def test_check_assumptions_thows_if_raise_on_fail_enalbed(self, cph, rossi):
+        cph.fit(rossi, "week", "arrest")
+        with pytest.raises(ProportionalHazardAssumptionError):
+            cph.check_assumptions(rossi, p_value_threshold=0.05, raise_on_fail=True)
 
     def test_check_assumptions_for_subset_of_columns(self, cph, rossi):
         cph.fit(rossi, "week", "arrest")
