@@ -336,9 +336,9 @@ The survival functions is a great way to summarize and visualize the
 survival dataset, however it is not the only way. If we are curious about the hazard function :math:`h(t)` of a
 population, we unfortunately cannot transform the Kaplan Meier estimate
 -- statistics doesn't work quite that well. Fortunately, there is a
-proper non-parametric estimator of the *cumulative* hazard function:
+proper non-parametric estimator of the *cumulative* hazard function, :math:`H(t)`:
 
-.. math::  H(t) =  \int_0^t \lambda(z) \;dz
+.. math::  \text{Let} H(t) =  \int_0^t \h(z) \;dz
 
 
 

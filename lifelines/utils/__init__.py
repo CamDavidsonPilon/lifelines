@@ -744,9 +744,6 @@ def k_fold_cross_validation(
     results: list
       (k,1) list of scores for each fold. The scores can be anything.
 
-    See Also
-    ---------
-    lifelines.utils.sklearn_adapter.sklearn_adapter
 
     """
     # Make sure fitters is a list

@@ -475,6 +475,19 @@ class TestUnivariateFitters:
             assert not isinstance(fitter.predict(1), Iterable)
             assert isinstance(fitter.predict([1, 2]), Iterable)
 
+    def test_cumulative_density_ci_is_ordered_correctly(self, positive_sample_lifetimes, univariate_fitters):
+        T = positive_sample_lifetimes[0]
+        for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(T)
+            if not hasattr(fitter, "confidence_interval_cumulative_density_"):
+                continue
+            lower, upper = f"{fitter.label}_lower_0.95", f"{fitter.label}_upper_0.95"
+            assert np.all(
+                (fitter.confidence_interval_cumulative_density_[upper] - fitter.confidence_interval_cumulative_density_[lower])
+                >= 0
+            )
+
     def test_predict_method_returns_exact_value_if_given_an_observed_time(self):
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
@@ -2893,6 +2906,38 @@ class TestCoxPHFitter_SemiParametric:
 
         assert np.abs(newton(X, T, E, W, entries)[0] - -0.0335) < 0.0001
 
+    def test_baseline_prediction_with_extreme_means(self, rossi):
+        cph = CoxPHFitter()
+        cph.fit(rossi, "week", "arrest")
+
+        rossi_shifted = rossi.copy()
+        rossi_shifted["prio"] += 100
+        cph_shifted = CoxPHFitter()
+        cph_shifted.fit(rossi_shifted, "week", "arrest")
+
+        # make sure summary stats are equal
+        assert_frame_equal(cph_shifted.summary, cph.summary)
+
+        # confirm hazards are equal
+        assert_frame_equal(cph.baseline_hazard_, cph_shifted.baseline_hazard_)
+        assert_frame_equal(cph.baseline_cumulative_hazard_, cph_shifted.baseline_cumulative_hazard_)
+
+    def test_baseline_prediction_with_extreme_scaling(self, rossi):
+        cph = CoxPHFitter()
+        cph.fit(rossi, "week", "arrest")
+
+        rossi_scaled = rossi.copy()
+        rossi_scaled["prio"] *= 100
+        cph_scaled = CoxPHFitter()
+        cph_scaled.fit(rossi_scaled, "week", "arrest")
+
+        # make sure summary stats are equal - note that CI and coefs are unequal since we scaled params.
+        assert_frame_equal(cph_scaled.summary[["z", "p"]], cph.summary[["z", "p"]])
+
+        # confirm hazards are equal
+        assert_frame_equal(cph.baseline_hazard_, cph_scaled.baseline_hazard_)
+        assert_frame_equal(cph.baseline_cumulative_hazard_, cph_scaled.baseline_cumulative_hazard_)
+
 
 class TestCoxPHFitterPeices:
     @pytest.fixture
@@ -3119,9 +3164,14 @@ class TestCoxPHFitter:
 
     def test_formulas_handles_categories_at_inference(self, cph):
         # Create a dummy dataset with some one continuous and one categorical features
-        df = pd.DataFrame({
-            'time': [1, 2, 3, 1, 2, 3], 'event': [0, 1, 1, 1, 0, 0],
-            'cov_cont':[0.1, 0.2, 0.3, 0.1, 0.2, 0.3], 'cov_categ': ['A', 'A', 'B', 'B', 'C', 'C']})
+        df = pd.DataFrame(
+            {
+                "time": [1, 2, 3, 1, 2, 3],
+                "event": [0, 1, 1, 1, 0, 0],
+                "cov_cont": [0.1, 0.2, 0.3, 0.1, 0.2, 0.3],
+                "cov_categ": ["A", "A", "B", "B", "C", "C"],
+            }
+        )
         cph.fit(df, "time", "event", formula="cov_cont + C(cov_categ)")
         cph.predict_survival_function(df.iloc[:4])
 

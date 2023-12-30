@@ -1,5 +1,10 @@
 ## Changelog
 
+#### 0.28.0 - Upcoming
+ - Fixes bins that are far into the future with using `survival_table_from_events`, see #1587
+ - Removed `sklean_adaptor`. It was a terrible hack, and causing more confusion and support debt than I want. This cleans up our API and simplifies the library. ✨ There's no replacement, and I doubt I'll introduce one ✨
+ - Fix Pandas 2.0 compatibility.
+
 #### 0.27.8 - 2023-09-13
  - Estimators now have `.label` property
  - Fixed some deprecation warnings

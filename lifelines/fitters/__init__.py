@@ -1409,7 +1409,7 @@ class ParametricRegressionFitter(RegressionFitter):
     def _survival_function(self, params, T, Xs):
         return anp.clip(anp.exp(-self._cumulative_hazard(params, T, Xs)), 1e-12, 1 - 1e-12)
 
-    def _log_likelihood_right_censoring(self, params, Ts, E, W, entries, Xs) -> float:
+    def _log_likelihood_right_censoring(self, params, Ts: tuple, E, W, entries, Xs) -> float:
 
         T = Ts[0]
         non_zero_entries = entries > 0
