@@ -561,7 +561,7 @@ def _group_event_table_by_intervals(event_table, intervals) -> pd.DataFrame:
     )
     # convert columns from multiindex
     event_table.columns = event_table.columns.droplevel(1)
-    return event_table.bfill()
+    return event_table.bfill().fillna(0)
 
 
 def survival_events_from_table(survival_table, observed_deaths_col="observed", censored_col="censored"):
