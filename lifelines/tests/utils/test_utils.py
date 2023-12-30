@@ -303,6 +303,13 @@ def test_survival_table_from_events_binned_with_empty_bin():
     assert not pd.isnull(event_table).any().any()
 
 
+def test_survival_table_from_events_with_future_bins():
+    df = load_waltons()
+    event_table = utils.survival_table_from_events(df["T"], df["E"], collapse=True, intervals=np.arange(10, 100).tolist())
+    assert not pd.isnull(event_table).any().any()
+    assert event_table.iloc[-1].sum() == 0
+
+
 def test_survival_table_from_events_at_risk_column():
     df = load_waltons()
     # from R
@@ -1025,7 +1032,14 @@ def test_rmst_works_at_kaplan_meier_with_left_censoring():
     assert abs(results[1] - 0) < 0.0001
 
 
-def test_rmst_exactely_with_known_solution():
+def test_rmst_works_with_return_variance():
+    # issue 1578
+    T = [1, 2, 3, 4, 10]
+    kmf = KaplanMeierFitter().fit(T)
+    result = utils.restricted_mean_survival_time(kmf.survival_function_, t=10, return_variance=True)
+
+
+def test_rmst_exactly_with_known_solution():
     T = np.random.exponential(2, 100)
     exp = ExponentialFitter().fit(T)
     lambda_ = exp.lambda_
