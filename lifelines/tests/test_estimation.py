@@ -1620,6 +1620,13 @@ class TestNelsonAalenFitter:
 
         assert_frame_equal(naf_w_weights.cumulative_hazard_, naf_no_weights.cumulative_hazard_)
 
+    def test_variance_calculation_does_not_overflow(self):
+
+        y = np.random.randint(1, 1000, 100000000)
+        naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
+        naf.fit(y, event_observed=None, timeline=range(0, int(y.max())))
+        assert (naf._cumulative_sq >= 0).all()
+
 
 class TestBreslowFlemingHarringtonFitter:
     def test_BHF_fit_when_KMF_throws_an_error(self):

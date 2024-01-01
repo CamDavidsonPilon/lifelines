@@ -881,6 +881,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
         population = events["at_risk"] - entrances
 
         estimate_ = np.cumsum(_additive_f(population, deaths))
+
         var_ = np.cumsum(_additive_var(population, deaths))
 
     timeline = sorted(timeline)
