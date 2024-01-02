@@ -105,6 +105,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
     """
 
     _scipy_fit_method = "SLSQP"
+    _scipy_fit_options = {"maxiter": 10_000, "maxfev": 10_000}
     _fitted_parameter_names = ["mu_", "ln_sigma_", "lambda_"]
     _bounds = [(None, None), (None, None), (None, None)]
     _compare_to_values = np.array([0.0, 0.0, 1.0])
@@ -117,14 +118,14 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         elif CensoringType.is_interval_censoring(self):
             # this fails if Ts[1] == Ts[0], so we add a some fudge factors.
             log_data = log(Ts[1] - Ts[0] + 0.1)
-        return np.array([log_data.mean(), log(log_data.std() + 0.01), 0.1])
+        return np.array([log_data.mean() * 1.5, log(log_data.std() + 0.1), 1.0])
 
     def _cumulative_hazard(self, params, times):
         mu_, ln_sigma_, lambda_ = params
 
         sigma_ = safe_exp(ln_sigma_)
         Z = (log(times) - mu_) / sigma_
-        ilambda_2 = 1 / lambda_ ** 2
+        ilambda_2 = 1 / lambda_**2
         clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e20)
 
         if lambda_ > 0:
@@ -137,7 +138,7 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
 
     def _log_hazard(self, params, times):
         mu_, ln_sigma_, lambda_ = params
-        ilambda_2 = 1 / lambda_ ** 2
+        ilambda_2 = 1 / lambda_**2
         Z = (log(times) - mu_) / safe_exp(ln_sigma_)
         clipped_exp = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e20)
         if lambda_ > 0:
@@ -171,5 +172,5 @@ class GeneralizedGammaFitter(KnownModelParametricUnivariateFitter):
         sigma_ = exp(self.ln_sigma_)
 
         if lambda_ > 0:
-            return exp(sigma_ * log(gammainccinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * exp(self.mu_)
-        return exp(sigma_ * log(gammaincinv(1 / lambda_ ** 2, p) * lambda_ ** 2) / lambda_) * exp(self.mu_)
+            return exp(sigma_ * log(gammainccinv(1 / lambda_**2, p) * lambda_**2) / lambda_) * exp(self.mu_)
+        return exp(sigma_ * log(gammaincinv(1 / lambda_**2, p) * lambda_**2) / lambda_) * exp(self.mu_)
