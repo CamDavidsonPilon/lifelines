@@ -5745,6 +5745,4 @@ class TestMixtureCureFitter:
         T, E = load_kidney_transplant()["time"], load_kidney_transplant()["death"]
         wmc.fit(T, E)
         mcfitter.fit(T, E)
-        print(wmc.summary)
-        print(mcfitter.summary)
         assert_frame_equal(wmc.summary.reset_index(drop=True), mcfitter.summary.reset_index(drop=True), rtol=0.25)

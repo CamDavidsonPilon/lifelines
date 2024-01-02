@@ -550,7 +550,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             minimizing_results, previous_results, minimizing_ll = None, None, np.inf
             for method, option in zip(
                 ["Nelder-Mead", self._scipy_fit_method],
-                [{"maxiter": 200}, {**{"disp": show_progress}, **self._scipy_fit_options, **fit_options}],
+                [{"maxiter": 400}, {**{"disp": show_progress}, **self._scipy_fit_options, **fit_options}],
             ):
 
                 initial_value = self._initial_values if previous_results is None else utils._to_1d_array(previous_results.x)
