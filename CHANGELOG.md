@@ -5,6 +5,7 @@
  - Removed `sklean_adaptor`. It was a terrible hack, and causing more confusion and support debt than I want. This cleans up our API and simplifies the library. ✨ There's no replacement, and I doubt I'll introduce one ✨
  - Fix Pandas 2.0 compatibility.
  - Fix overflow issue in NelsonAalenfitter, #1585
+ - officially drop support for < py3.9
 
 #### 0.27.8 - 2023-09-13
  - Estimators now have `.label` property

@@ -3079,7 +3079,7 @@ class TestCoxPHFitter:
     def test_formula_can_accept_numpy_functions(self, cph, rossi):
         cph.fit(rossi, "week", "arrest", formula="fin + log10(prio+1) + np.sqrt(age)")
         assert "fin" in cph.summary.index
-        assert "log10(prio+1)" in cph.summary.index
+        assert "log10(prio + 1)" in cph.summary.index
         assert "np.sqrt(age)" in cph.summary.index
 
     @pytest.mark.xfail
