@@ -15,7 +15,6 @@ from lifelines import CoxPHFitter, WeibullAFTFitter, KaplanMeierFitter, Exponent
 from lifelines.datasets import load_regression_dataset, load_larynx, load_waltons, load_rossi
 from lifelines import utils
 from lifelines import exceptions
-from lifelines.utils.sklearn_adapter import sklearn_adapter
 from lifelines.utils.safe_exp import safe_exp
 
 
@@ -301,6 +300,13 @@ def test_survival_table_from_events_binned_with_empty_bin():
     ix = df["group"] == "miR-137"
     event_table = utils.survival_table_from_events(df.loc[ix]["T"], df.loc[ix]["E"], intervals=[0, 10, 20, 30, 40, 50])
     assert not pd.isnull(event_table).any().any()
+
+
+def test_survival_table_from_events_with_future_bins():
+    df = load_waltons()
+    event_table = utils.survival_table_from_events(df["T"], df["E"], collapse=True, intervals=np.arange(10, 100).tolist())
+    assert not pd.isnull(event_table).any().any()
+    assert event_table.iloc[-1].sum() == 0
 
 
 def test_survival_table_from_events_at_risk_column():
@@ -885,122 +891,6 @@ class TestStepSizer:
         assert ss.next() < start
 
 
-class TestSklearnAdapter:
-    @pytest.fixture
-    def X(self):
-        return load_regression_dataset().drop("T", axis=1)
-
-    @pytest.fixture
-    def Y(self):
-        return load_regression_dataset().pop("T")
-
-    def test_model_has_correct_api(self, X, Y):
-        base_model = sklearn_adapter(CoxPHFitter, event_col="E")
-        cph = base_model()
-        assert hasattr(cph, "fit")
-        cph.fit(X, Y)
-        assert hasattr(cph, "predict")
-        cph.predict(X)
-        assert hasattr(cph, "score")
-        cph.score(X, Y)
-
-    def test_sklearn_cross_val_score_accept_model(self, X, Y):
-        from sklearn.model_selection import cross_val_score
-        from sklearn.model_selection import GridSearchCV
-
-        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
-        wf = base_model(penalizer=1.0)
-        assert len(cross_val_score(wf, X, Y, cv=3)) == 3
-
-    def test_sklearn_GridSearchCV_accept_model(self, X, Y):
-        from sklearn.model_selection import cross_val_score
-        from sklearn.model_selection import GridSearchCV
-
-        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
-
-        grid_params = {"penalizer": 10.0 ** np.arange(-2, 3), "model_ancillary": [True, False]}
-        clf = GridSearchCV(base_model(), grid_params, cv=4)
-        clf.fit(X, Y)
-
-        assert clf.best_params_ == {"model_ancillary": True, "penalizer": 100.0}
-        assert clf.predict(X).shape[0] == X.shape[0]
-
-    def test_model_can_accept_things_like_strata(self, X, Y):
-        X["strata"] = np.random.randint(0, 2, size=X.shape[0])
-        base_model = sklearn_adapter(CoxPHFitter, event_col="E")
-        cph = base_model(strata="strata")
-        cph.fit(X, Y)
-
-    def test_we_can_user_other_prediction_methods(self, X, Y):
-
-        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E", predict_method="predict_median")
-        wf = base_model(strata="strata")
-        wf.fit(X, Y)
-        assert wf.predict(X).shape[0] == X.shape[0]
-
-    def test_dill(self, X, Y):
-        import dill
-
-        base_model = sklearn_adapter(CoxPHFitter, event_col="E")
-        cph = base_model()
-        cph.fit(X, Y)
-
-        s = dill.dumps(cph)
-        s = dill.loads(s)
-        assert cph.predict(X).shape[0] == X.shape[0]
-
-    def test_pickle(self, X, Y):
-        import pickle
-
-        base_model = sklearn_adapter(CoxPHFitter, event_col="E")
-        cph = base_model()
-        cph.fit(X, Y)
-
-        s = pickle.dumps(cph, protocol=-1)
-        s = pickle.loads(s)
-        assert cph.predict(X).shape[0] == X.shape[0]
-
-    def test_isinstance(self):
-        from sklearn.base import BaseEstimator, RegressorMixin, MetaEstimatorMixin, MultiOutputMixin
-
-        base_model = sklearn_adapter(CoxPHFitter, event_col="E")
-        assert isinstance(base_model(), BaseEstimator)
-        assert isinstance(base_model(), RegressorMixin)
-        assert isinstance(base_model(), MetaEstimatorMixin)
-
-    @pytest.mark.xfail
-    def test_sklearn_GridSearchCV_accept_model_with_parallelization(self, X, Y):
-        from sklearn.model_selection import cross_val_score
-        from sklearn.model_selection import GridSearchCV
-
-        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
-
-        grid_params = {"penalizer": 10.0 ** np.arange(-2, 3), "l1_ratio": [0.05, 0.5, 0.95], "model_ancillary": [True, False]}
-        # note the n_jobs
-        clf = GridSearchCV(base_model(), grid_params, cv=4, n_jobs=-1)
-        clf.fit(X, Y)
-
-        assert clf.best_params_ == {"l1_ratio": 0.5, "model_ancillary": False, "penalizer": 0.01}
-        assert clf.predict(X).shape[0] == X.shape[0]
-
-    def test_joblib(self, X, Y):
-        from joblib import dump, load
-
-        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
-
-        clf = base_model()
-        clf.fit(X, Y)
-        dump(clf, "filename.joblib")
-        clf = load("filename.joblib")
-
-    @pytest.mark.xfail
-    def test_sklearn_check(self):
-        from sklearn.utils.estimator_checks import check_estimator
-
-        base_model = sklearn_adapter(WeibullAFTFitter, event_col="E")
-        check_estimator(base_model())
-
-
 def test_rmst_works_at_kaplan_meier_edge_case():
 
     T = [1, 2, 3, 4, 10]
@@ -1025,7 +915,14 @@ def test_rmst_works_at_kaplan_meier_with_left_censoring():
     assert abs(results[1] - 0) < 0.0001
 
 
-def test_rmst_exactely_with_known_solution():
+def test_rmst_works_with_return_variance():
+    # issue 1578
+    T = [1, 2, 3, 4, 10]
+    kmf = KaplanMeierFitter().fit(T)
+    result = utils.restricted_mean_survival_time(kmf.survival_function_, t=10, return_variance=True)
+
+
+def test_rmst_exactly_with_known_solution():
     T = np.random.exponential(2, 100)
     exp = ExponentialFitter().fit(T)
     lambda_ = exp.lambda_

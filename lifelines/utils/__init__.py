@@ -311,7 +311,7 @@ def _expected_value_of_survival_squared_up_to_t(
 
     if isinstance(model_or_survival_function, pd.DataFrame):
         sf = model_or_survival_function.loc[:t]
-        sf = sf.append(pd.DataFrame([1], index=[0], columns=sf.columns)).sort_index()
+        sf = pd.concat((sf, pd.DataFrame([1], index=[0], columns=sf.columns))).sort_index()
         sf_tau = sf * sf.index.values[:, None]
         return 2 * trapz(y=sf_tau.values[:, 0], x=sf_tau.index)
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
@@ -561,7 +561,7 @@ def _group_event_table_by_intervals(event_table, intervals) -> pd.DataFrame:
     )
     # convert columns from multiindex
     event_table.columns = event_table.columns.droplevel(1)
-    return event_table.bfill()
+    return event_table.bfill().fillna(0)
 
 
 def survival_events_from_table(survival_table, observed_deaths_col="observed", censored_col="censored"):
@@ -744,9 +744,6 @@ def k_fold_cross_validation(
     results: list
       (k,1) list of scores for each fold. The scores can be anything.
 
-    See Also
-    ---------
-    lifelines.utils.sklearn_adapter.sklearn_adapter
 
     """
     # Make sure fitters is a list
@@ -884,6 +881,7 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
         population = events["at_risk"] - entrances
 
         estimate_ = np.cumsum(_additive_f(population, deaths))
+
         var_ = np.cumsum(_additive_var(population, deaths))
 
     timeline = sorted(timeline)

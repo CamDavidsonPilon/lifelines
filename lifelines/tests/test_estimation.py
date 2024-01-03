@@ -482,6 +482,19 @@ class TestUnivariateFitters:
             assert not isinstance(fitter.predict(1), Iterable)
             assert isinstance(fitter.predict([1, 2]), Iterable)
 
+    def test_cumulative_density_ci_is_ordered_correctly(self, positive_sample_lifetimes, univariate_fitters):
+        T = positive_sample_lifetimes[0]
+        for f in univariate_fitters:
+            fitter = f()
+            fitter.fit(T)
+            if not hasattr(fitter, "confidence_interval_cumulative_density_"):
+                continue
+            lower, upper = f"{fitter.label}_lower_0.95", f"{fitter.label}_upper_0.95"
+            assert np.all(
+                (fitter.confidence_interval_cumulative_density_[upper] - fitter.confidence_interval_cumulative_density_[lower])
+                >= 0
+            )
+
     def test_predict_method_returns_exact_value_if_given_an_observed_time(self):
         T = [1, 2, 3]
         kmf = KaplanMeierFitter()
@@ -581,9 +594,9 @@ class TestUnivariateFitters:
                     assert_frame_equal(with_list, with_array)
                     assert_frame_equal(with_tuple, with_array)
 
-                    with_array = fitter.fit_left_censoring(T, C).survival_function_
-                    with_list = fitter.fit_left_censoring(list(T), list(C)).survival_function_
-                    with_tuple = fitter.fit_left_censoring(tuple(T), tuple(C)).survival_function_
+                    with_array = fitter.fit_left_censoring(T).survival_function_
+                    with_list = fitter.fit_left_censoring(list(T)).survival_function_
+                    with_tuple = fitter.fit_left_censoring(tuple(T)).survival_function_
                     assert_frame_equal(with_list, with_array)
                     assert_frame_equal(with_tuple, with_array)
 
@@ -1613,6 +1626,13 @@ class TestNelsonAalenFitter:
         naf_w_weights = NelsonAalenFitter().fit(df_grouped["T"], df_grouped["E"], weights=df_grouped[0])
 
         assert_frame_equal(naf_w_weights.cumulative_hazard_, naf_no_weights.cumulative_hazard_)
+
+    def test_variance_calculation_does_not_overflow(self):
+
+        y = np.random.randint(1, 1000, 100000000)
+        naf = NelsonAalenFitter(nelson_aalen_smoothing=False)
+        naf.fit(y, event_observed=None, timeline=range(0, int(y.max())))
+        assert (naf._cumulative_sq >= 0).all()
 
 
 class TestBreslowFlemingHarringtonFitter:
@@ -2900,6 +2920,38 @@ class TestCoxPHFitter_SemiParametric:
 
         assert np.abs(newton(X, T, E, W, entries)[0] - -0.0335) < 0.0001
 
+    def test_baseline_prediction_with_extreme_means(self, rossi):
+        cph = CoxPHFitter()
+        cph.fit(rossi, "week", "arrest")
+
+        rossi_shifted = rossi.copy()
+        rossi_shifted["prio"] += 100
+        cph_shifted = CoxPHFitter()
+        cph_shifted.fit(rossi_shifted, "week", "arrest")
+
+        # make sure summary stats are equal
+        assert_frame_equal(cph_shifted.summary, cph.summary)
+
+        # confirm hazards are equal
+        assert_frame_equal(cph.baseline_hazard_, cph_shifted.baseline_hazard_)
+        assert_frame_equal(cph.baseline_cumulative_hazard_, cph_shifted.baseline_cumulative_hazard_)
+
+    def test_baseline_prediction_with_extreme_scaling(self, rossi):
+        cph = CoxPHFitter()
+        cph.fit(rossi, "week", "arrest")
+
+        rossi_scaled = rossi.copy()
+        rossi_scaled["prio"] *= 100
+        cph_scaled = CoxPHFitter()
+        cph_scaled.fit(rossi_scaled, "week", "arrest")
+
+        # make sure summary stats are equal - note that CI and coefs are unequal since we scaled params.
+        assert_frame_equal(cph_scaled.summary[["z", "p"]], cph.summary[["z", "p"]])
+
+        # confirm hazards are equal
+        assert_frame_equal(cph.baseline_hazard_, cph_scaled.baseline_hazard_)
+        assert_frame_equal(cph.baseline_cumulative_hazard_, cph_scaled.baseline_cumulative_hazard_)
+
 
 class TestCoxPHFitterPeices:
     @pytest.fixture
@@ -3034,7 +3086,7 @@ class TestCoxPHFitter:
     def test_formula_can_accept_numpy_functions(self, cph, rossi):
         cph.fit(rossi, "week", "arrest", formula="fin + log10(prio+1) + np.sqrt(age)")
         assert "fin" in cph.summary.index
-        assert "log10(prio+1)" in cph.summary.index
+        assert "log10(prio + 1)" in cph.summary.index
         assert "np.sqrt(age)" in cph.summary.index
 
     @pytest.mark.xfail
@@ -5705,6 +5757,4 @@ class TestMixtureCureFitter:
         T, E = load_kidney_transplant()["time"], load_kidney_transplant()["death"]
         wmc.fit(T, E)
         mcfitter.fit(T, E)
-        print(wmc.summary)
-        print(mcfitter.summary)
         assert_frame_equal(wmc.summary.reset_index(drop=True), mcfitter.summary.reset_index(drop=True), rtol=0.25)

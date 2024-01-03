@@ -550,7 +550,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             minimizing_results, previous_results, minimizing_ll = None, None, np.inf
             for method, option in zip(
                 ["Nelder-Mead", self._scipy_fit_method],
-                [{"maxiter": 100}, {**{"disp": show_progress}, **self._scipy_fit_options, **fit_options}],
+                [{"maxiter": 400}, {**{"disp": show_progress}, **self._scipy_fit_options, **fit_options}],
             ):
 
                 initial_value = self._initial_values if previous_results is None else utils._to_1d_array(previous_results.x)
@@ -1409,7 +1409,7 @@ class ParametricRegressionFitter(RegressionFitter):
     def _survival_function(self, params, T, Xs):
         return anp.clip(anp.exp(-self._cumulative_hazard(params, T, Xs)), 1e-12, 1 - 1e-12)
 
-    def _log_likelihood_right_censoring(self, params, Ts, E, W, entries, Xs) -> float:
+    def _log_likelihood_right_censoring(self, params, Ts: tuple, E, W, entries, Xs) -> float:
 
         T = Ts[0]
         non_zero_entries = entries > 0

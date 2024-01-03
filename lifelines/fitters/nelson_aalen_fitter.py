@@ -183,7 +183,7 @@ class NelsonAalenFitter(UnivariateFitter):
         )
 
     def _variance_f_discrete(self, population, deaths):
-        return (population - deaths) * deaths / population ** 3
+        return (1 - deaths / population) * (deaths / population) * (1.0 / population)
 
     def _additive_f_smooth(self, population, deaths):
         cum_ = np.cumsum(1.0 / np.arange(1, np.max(population) + 1))
@@ -239,7 +239,7 @@ class NelsonAalenFitter(UnivariateFitter):
         C = var_hazard_.values != 0.0  # only consider the points with jumps
         std_hazard_ = np.sqrt(
             1.0
-            / (bandwidth ** 2)
+            / (bandwidth**2)
             * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C])
         )
         values = {
