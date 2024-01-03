@@ -37,6 +37,7 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.napoleon",
     "nbsphinx",
+    "sphinxcontrib.jquery",
 ]
 
 exclude_patterns = ["_build", "jupyter_notebooks/.ipynb_checkpoints/*.ipynb"]
