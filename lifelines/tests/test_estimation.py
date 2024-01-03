@@ -587,9 +587,9 @@ class TestUnivariateFitters:
                     assert_frame_equal(with_list, with_array)
                     assert_frame_equal(with_tuple, with_array)
 
-                    with_array = fitter.fit_left_censoring(T, C).survival_function_
-                    with_list = fitter.fit_left_censoring(list(T), list(C)).survival_function_
-                    with_tuple = fitter.fit_left_censoring(tuple(T), tuple(C)).survival_function_
+                    with_array = fitter.fit_left_censoring(T).survival_function_
+                    with_list = fitter.fit_left_censoring(list(T)).survival_function_
+                    with_tuple = fitter.fit_left_censoring(tuple(T)).survival_function_
                     assert_frame_equal(with_list, with_array)
                     assert_frame_equal(with_tuple, with_array)
 
