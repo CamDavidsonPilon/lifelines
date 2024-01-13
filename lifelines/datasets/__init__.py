@@ -54,7 +54,7 @@ def load_multicenter_aids_cohort_study(**kwargs):
     """
     Originally in [1]::
 
-        Siz: (78, 4)
+        Size: (78, 4)
 
         AIDSY: date of AIDS diagnosis
         W: years from AIDS diagnosis to study entry

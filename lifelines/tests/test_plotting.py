@@ -360,12 +360,12 @@ class TestPlotting:
         self.plt.show(block=block)
         return
 
-    def test_naf_plot_cumulative_hazard_bandwith_1(self, block):
+    def test_naf_plot_cumulative_hazard_bandwidth_1(self, block):
         data1 = np.random.exponential(5, size=(2000, 1)) ** 2
         naf = NelsonAalenFitter()
         naf.fit(data1)
         naf.plot_hazard(bandwidth=5.0, iloc=slice(0, 1700))
-        self.plt.title("test_naf_plot_cumulative_hazard_bandwith_1")
+        self.plt.title("test_naf_plot_cumulative_hazard_bandwidth_1")
         self.plt.show(block=block)
         return
 

@@ -200,7 +200,7 @@ class NelsonAalenFitter(UnivariateFitter):
         Parameters
         -----------
         bandwidth: float
-            the bandwith used in the Epanechnikov kernel.
+            the bandwidth used in the Epanechnikov kernel.
 
         Returns
         -------

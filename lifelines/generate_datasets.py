@@ -172,7 +172,7 @@ def constant_coefficients(d, timelines, constant=True, independent=0):
     timelines: the observational times
     constant: True for constant coefficients
     independent: the number of coffients to set to 0 (covariate is ind of survival), or
-      a list of covariates to make indepent.
+      a list of covariates to make independent.
 
     returns a matrix (t,d+1) of coefficients
     """
@@ -187,7 +187,7 @@ def time_varying_coefficients(d, timelines, constant=False, independent=0, randg
     timelines: the observational times
     constant: True for constant coefficients
     independent: the number of coffients to set to 0 (covariate is ind of survival), or
-      a list of covariates to make indepent.
+      a list of covariates to make independent.
     randgen: how scalar coefficients (betas) are sampled.
 
     returns a matrix (t,d+1) of coefficients
@@ -221,7 +221,7 @@ def generate_hazard_rates(n, d, timelines, constant=False, independent=0, n_bina
       n: the number of instances
       d: the number of covariates
       lifelines: the observational times
-      constant: make the coeffients constant (not time dependent)
+      constant: make the coefficients constant (not time dependent)
       n_binary: the number of binary covariates
       model: from ["aalen", "cox"]
 
@@ -253,7 +253,7 @@ def generate_random_lifetimes(hazard_rates, timelines, size=1, censor=None):
       timelines: (t,) the observation times
       size: the number to return, per hardard rate
       censor: If True, adds uniform censoring between timelines.max() and  0
-              If a postive number, censors all events above that value.
+              If a positive number, censors all events above that value.
               If (n,) np.array >=0 , censor elementwise.
 
 

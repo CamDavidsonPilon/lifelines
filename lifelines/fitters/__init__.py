@@ -573,7 +573,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
             # convergence successful.
             # I still need to check for ~np.isnan(minimizing_results.x).any() since minimize will happily
-            # return nans even when criteria is satisified.
+            # return nans even when criteria is satisfied.
             if minimizing_results and minimizing_results.success and ~np.isnan(minimizing_results.x).any():
                 sol = utils._to_1d_array(minimizing_results.x)
                 # pylint: disable=no-value-for-parameter
@@ -876,7 +876,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
           length n, the end of the period the subject experienced the event in. If the value is equal to the corresponding value in lower_bound, then
           the individual's event was observed (not censored).
         event_observed: numpy array or pd.Series, optional
-          length n, if left optional, infer from ``lower_bound`` and ``upper_cound`` (if lower_bound==upper_bound then event observed, if lower_bound < upper_bound, then event censored)
+          length n, if left optional, infer from ``lower_bound`` and ``upper_bound`` (if lower_bound==upper_bound then event observed, if lower_bound < upper_bound, then event censored)
         timeline: list, optional
             return the estimate at the values in timeline (positively increasing)
         label: string, optional
@@ -1925,7 +1925,7 @@ class ParametricRegressionFitter(RegressionFitter):
     def _fit_model(
         self, likelihood, Ts, Xs, E, weights, entries, fit_options, show_progress=False, user_supplied_initial_point=None
     ):
-        inital_points_as_arrays, unflatten_array_to_dict = self._prepare_initial_points(
+        initial_points_as_arrays, unflatten_array_to_dict = self._prepare_initial_points(
             user_supplied_initial_point, Ts, E, entries, weights, Xs
         )
 
@@ -1939,7 +1939,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         minimum_ll = np.inf
         minimum_results = None
-        for _initial_point in inital_points_as_arrays:
+        for _initial_point in initial_points_as_arrays:
 
             if _initial_point.shape[0] != Xs.columns.size:
                 raise ValueError("initial_point is not the correct shape.")

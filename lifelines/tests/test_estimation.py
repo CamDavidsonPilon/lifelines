@@ -2953,7 +2953,7 @@ class TestCoxPHFitter_SemiParametric:
         assert_frame_equal(cph.baseline_cumulative_hazard_, cph_scaled.baseline_cumulative_hazard_)
 
 
-class TestCoxPHFitterPeices:
+class TestCoxPHFitterPieces:
     @pytest.fixture
     def cph(self):
         return CoxPHFitter(baseline_estimation_method="piecewise", breakpoints=[25])
@@ -3108,7 +3108,7 @@ class TestCoxPHFitter:
         cph.fit(df, "T", formula="C(cat)")
         assert cph.summary.shape[0] == 2
 
-    def test_trival_entry_col(self, rossi):
+    def test_trivial_entry_col(self, rossi):
         cph_without_entry_summary = CoxPHFitter().fit(rossi, "week", "arrest").summary
         cphs_without_entry_summary = (
             CoxPHFitter(baseline_estimation_method="spline", n_baseline_knots=2).fit(rossi, "week", "arrest").summary
@@ -3125,7 +3125,7 @@ class TestCoxPHFitter:
         assert_frame_equal(cph_without_entry_summary, cph_with_entry_summary)
         assert_frame_equal(cphs_without_entry_summary, cphs_with_entry_summary)
 
-    def test_trival_entry_col_with_strata(self, rossi):
+    def test_trivial_entry_col_with_strata(self, rossi):
         cph_without_entry_summary = CoxPHFitter().fit(rossi, "week", "arrest", strata=["fin"]).summary
 
         rossi["entry"] = 0
@@ -3466,7 +3466,7 @@ class TestCoxPHFitter:
         cph.fit(rossi, "week", "arrest")
         cph.check_assumptions(rossi)
 
-    def test_check_assumptions_thows_if_raise_on_fail_enalbed(self, cph, rossi):
+    def test_check_assumptions_throws_if_raise_on_fail_enabled(self, cph, rossi):
         cph.fit(rossi, "week", "arrest")
         with pytest.raises(ProportionalHazardAssumptionError):
             cph.check_assumptions(rossi, p_value_threshold=0.05, raise_on_fail=True)
@@ -4169,7 +4169,7 @@ log-likelihood ratio test = 33.27 on 7 df
         expected = pd.Series({"var": 0.643})
         assert_series_equal(cph.summary["se(coef)"], expected, atol=0.01, check_names=False)
 
-    def test_robust_errors_with_less_trival_weights_is_the_same_as_R(self, regression_dataset):
+    def test_robust_errors_with_less_trivial_weights_is_the_same_as_R(self, regression_dataset):
         """
         df <- data.frame(
             "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
@@ -4343,7 +4343,7 @@ log-likelihood ratio test = 33.27 on 7 df
             expected = 0.05
             assert abs(cph.log_likelihood_ratio_test().test_statistic - expected) < 0.01
 
-    def test_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
+    def test_trivial_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
         df <- data.frame(
             "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
@@ -4374,7 +4374,7 @@ log-likelihood ratio test = 33.27 on 7 df
             expected_ll = -1.142397
             assert abs(cph.log_likelihood_ - expected_ll) < 0.001
 
-    def test_less_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
+    def test_less_trivial_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
         df <- data.frame(
             "var1" = c(0.209325, 0.693919, 0.443804, 0.065636, 0.386294),
@@ -4402,7 +4402,7 @@ log-likelihood ratio test = 33.27 on 7 df
             expected = pd.Series({"var1": 6.690, "var2": 1.614})
             assert_series_equal(cph.summary["se(coef)"], expected, atol=0.01, check_names=False)
 
-    def test_non_trival_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
+    def test_non_trivial_float_weights_with_no_ties_is_the_same_as_R(self, regression_dataset):
         """
         df <- read.csv('.../lifelines/datasets/regression.csv')
         coxph(formula=Surv(T, E) ~ var1 + var2, data=df, weights=var3)
@@ -5588,7 +5588,7 @@ log-likelihood ratio test = 15.11 on 4 df
         ctv.fit(heart, id_col="id", event_col="event", strata=["transplant"], initial_point=0.1 * np.ones(3))
         npt.assert_allclose(ctv.log_likelihood_ratio_test().test_statistic, 15.68, atol=0.01)
 
-    def test_fitter_is_okay_with_trival_df(self, ctv):
+    def test_fitter_is_okay_with_trivial_df(self, ctv):
         # after all the necessary columns are removed, does this fitter still work with a trivial df?
         df = pd.DataFrame.from_records(
             [

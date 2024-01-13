@@ -1063,7 +1063,7 @@ New features
 -  new ``lifelines.plotting.rmst_plot`` for pretty figures of survival
    curves and RMSTs.
 -  new variance calculations for
-   ``lifelines.utils.resticted_mean_survival_time``
+   ``lifelines.utils.restricted_mean_survival_time``
 -  performance improvements on regression models’ preprocessing. Should
    make datasets with high number of columns more performant.
 
@@ -1760,7 +1760,7 @@ Bug fixes
 -------------------
 
 -  Some performance improvements to ``CoxPHFitter`` (about 30%). I know
-   it may seem silly, but we are now about the same or slighty faster
+   it may seem silly, but we are now about the same or slightly faster
    than the Cox model in R’s ``survival`` package (for some testing
    datasets and some configurations). This is a big deal, because 1)
    lifelines does more error checking prior, 2) R’s cox model is written
@@ -1800,7 +1800,7 @@ New features
 API changes
 ~~~~~~~~~~~
 
--  ``inital_beta`` in Cox model’s ``.fit`` is now ``initial_point``.
+-  ``initial_beta`` in Cox model’s ``.fit`` is now ``initial_point``.
 -  ``initial_point`` is now available in AFT models and
    ``CoxTimeVaryingFitter``
 -  the DataFrame ``confidence_intervals_`` for univariate models is
@@ -1853,7 +1853,7 @@ New features
 
 -  new AFT models: ``LogNormalAFTFitter`` and ``LogLogisticAFTFitter``.
 -  AFT models now accept a ``weights_col`` argument to ``fit``.
--  Robust errors (sandwich errors) are now avilable in AFT models using
+-  Robust errors (sandwich errors) are now available in AFT models using
    the ``robust=True`` kwarg in ``fit``.
 -  Performance increase to ``print_summary`` in the ``CoxPHFitter`` and
    ``CoxTimeVaryingFitter`` model.
@@ -2066,7 +2066,7 @@ Bug Fixes
    Series now (use to be numpy arrays)
 -  remove ``alpha`` keyword from all statistical functions. This was
    never being used.
--  Gone are astericks and dots in ``print_summary`` functions that
+-  Gone are asterisks and dots in ``print_summary`` functions that
    represent signficance thresholds.
 -  In models’ ``summary`` (including ``print_summary``), the ``log(p)``
    term has changed to ``-log2(p)``. This is known as the s-value. See
@@ -2105,7 +2105,7 @@ Bug Fixes
 -------------------
 
 -  Fix in ``compute_residuals`` when using ``schoenfeld`` and the
-   minumum duration has only censored subjects.
+   minimum duration has only censored subjects.
 
 .. _section-91:
 
@@ -2154,7 +2154,7 @@ Bug Fixes
    -  ``weights_col`` is added
    -  ``nn_cumulative_hazard`` is removed (may add back)
 
--  some plotting improvemnts to ``plotting.plot_lifetimes``
+-  some plotting improvements to ``plotting.plot_lifetimes``
 
 .. _section-94:
 
@@ -2203,7 +2203,7 @@ Bug Fixes
 -  ``statistics.pairwise_logrank_test`` now returns a
    ``StatisticalResult`` object instead of a nasty NxN DataFrame 💗
 -  Display log(p-values) as well as p-values in ``print_summary``. Also,
-   p-values below thesholds will be truncated. The orignal p-values are
+   p-values below thresholds will be truncated. The original p-values are
    still recoverable using ``.summary``.
 -  Floats ``print_summary`` is now displayed to 2 decimal points. This
    can be changed using the ``decimal`` kwarg.
@@ -2275,7 +2275,7 @@ Bug Fixes
    https://www.cs.cmu.edu/~pradeepr/convexopt/Lecture_Slides/Newton_methods.pdf.
    Details about the Newton-decrement are added to the ``show_progress``
    statements.
--  Minimum suppport for scipy is 1.0
+-  Minimum support for scipy is 1.0
 -  Convergence errors in models that use Newton-Rhapson methods now
    throw a ``ConvergenceError``, instead of a ``ValueError`` (the former
    is a subclass of the latter, however).
@@ -2317,7 +2317,7 @@ Bug Fixes
    that people could compute the p-values by hand incorrectly, a worse
    outcome I think. So, this is my stance. P-values between 0.1 and 0.05
    offer *very* little information, so they are removed. There is a
-   growing movement in statistics to shift “signficant” findings to
+   growing movement in statistics to shift “significant” findings to
    p-values less than 0.01 anyways.
 -  New fitter for cumulative incidence of multiple risks
    ``AalenJohansenFitter``. Thanks @pzivich! See “Methodologic Issues
@@ -2458,7 +2458,7 @@ Bug Fixes
 -  added ``step_size`` param to ``CoxPHFitter.fit`` - the default is
    good, but for extremely large or small datasets this may want to be
    set manually.
--  added a warning to ``CoxPHFitter`` to check for complete seperation:
+-  added a warning to ``CoxPHFitter`` to check for complete separation:
    https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqwhat-is-complete-or-quasi-complete-separation-in-logisticprobit-regression-and-how-do-we-deal-with-them/
 -  Additional functionality to ``utils.survival_table_from_events`` to
    bin the index to make the resulting table more readable.
@@ -2480,7 +2480,7 @@ Bug Fixes
 0.11.2
 ------
 
--  Changing liscense to valilla MIT.
+-  Changing license to valilla MIT.
 -  Speed up ``NelsonAalenFitter.fit`` considerably.
 
 .. _section-114:
@@ -2555,7 +2555,7 @@ Bug Fixes
 -----
 
 -  deprecates Pandas versions before 0.18.
--  throw an error if no admissable pairs in the c-index calculation.
+-  throw an error if no admissible pairs in the c-index calculation.
    Previously a NaN was returned.
 
 .. _section-120:
@@ -2749,7 +2749,7 @@ Bug Fixes
    Also some good speed improvements.
 -  KaplanMeierFitter and NelsonAalenFitter now have a ``_label``
    property that is passed in during the fit.
--  KaplanMeierFitter/NelsonAalenFitter’s inital ``alpha`` value is
+-  KaplanMeierFitter/NelsonAalenFitter’s initial ``alpha`` value is
    overwritten if a new ``alpha`` value is passed in during the ``fit``.
 -  New method for KaplanMeierFitter: ``conditional_time_to``. This
    returns a DataFrame of the estimate: med(S(t \| T>s)) - s, human

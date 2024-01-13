@@ -78,7 +78,7 @@ The new dataset looks like:
     +--+-----+----+----+-----+
 
 
-You'll also have secondary dataset that references future measurements. This could come in two "types". The first is when you have a variable that changes over time (ex: administering varying medication over time, or taking a tempature over time). The second types is an event-based dataset: an event happens at some time in the future (ex: an organ transplant occurs, or an intervention). We will address this second type later. The first type of dataset may look something like:
+You'll also have secondary dataset that references future measurements. This could come in two "types". The first is when you have a variable that changes over time (ex: administering varying medication over time, or taking a temperature over time). The second types is an event-based dataset: an event happens at some time in the future (ex: an organ transplant occurs, or an intervention). We will address this second type later. The first type of dataset may look something like:
 
 Example:
 
