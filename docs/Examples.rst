@@ -941,7 +941,7 @@ In both cases, the reported standard errors from a unadjusted Cox model will be 
     rossi = load_rossi()
 
     # this may come from a database, or other libraries that specialize in matching
-    mathed_pairs = [
+    matched_pairs = [
         (156, 230),
         (275, 228),
         (61, 252),

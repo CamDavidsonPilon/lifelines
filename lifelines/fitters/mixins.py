@@ -110,7 +110,7 @@ class ProportionalHazardMixin:
         axes = []
 
         for variable in self.params_.index.intersection(columns or self.params_.index):
-            minumum_observed_p_value = test_results.summary.loc[variable, "p"].min()
+            minimum_observed_p_value = test_results.summary.loc[variable, "p"].min()
 
             # plot is done (regardless of test result) whenever `show_plots = True`
             if show_plots:
@@ -154,7 +154,7 @@ class ProportionalHazardMixin:
                 plt.tight_layout()
                 plt.subplots_adjust(top=0.90)
 
-            if np.round(minumum_observed_p_value, 2) > p_value_threshold:
+            if np.round(minimum_observed_p_value, 2) > p_value_threshold:
                 continue
 
             counter += 1
@@ -182,7 +182,7 @@ class ProportionalHazardMixin:
             print()
             print(
                 "%d. Variable '%s' failed the non-proportional test: p-value is %s."
-                % (counter, variable, format_p_value(4)(minumum_observed_p_value)),
+                % (counter, variable, format_p_value(4)(minimum_observed_p_value)),
                 end="\n\n",
             )
 

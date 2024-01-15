@@ -24,8 +24,8 @@ If you are new to survival analysis, wondering why it is useful, or are interest
 
 ## Contact
  - Start a conversation in our [Discussions room](https://github.com/CamDavidsonPilon/lifelines/discussions).
- - Some users have posted common questions at [stats.stackexchange.com](https://stats.stackexchange.com/search?tab=votes&q=%22lifelines%22%20is%3aquestion)
- - creating an issue in the [Github repository](https://github.com/camdavidsonpilon/lifelines).
+ - Some users have posted common questions at [stats.stackexchange.com](https://stats.stackexchange.com/search?tab=votes&q=%22lifelines%22%20is%3aquestion).
+ - Creating an issue in the [Github repository](https://github.com/camdavidsonpilon/lifelines).
 
 ## Development
 

@@ -111,7 +111,7 @@ New in v0.25.0, We can also use ✨formulas✨ to handle the right-hand-side of 
 
     cph.fit(rossi, duration_col='week', event_col='arrest', formula="fin + wexp + age * prio")
 
-is analgous to the linear model with interaction term:
+is analogous to the linear model with interaction term:
 
 .. math::
    \beta_1\text{fin} + \beta_2\text{wexp} + \beta_3 \text{age} + \beta_4 \text{prio} + \beta_5 \text{age} \cdot \text{prio}
@@ -513,7 +513,7 @@ Below we compare the non-parametric and the fully parametric baseline survivals:
 
     ax = cph_spline.baseline_cumulative_hazard_[bch_key].plot(label="spline")
     cph_semi.baseline_cumulative_hazard_[bch_key].plot(ax=ax, drawstyle="steps-post", label="semi")
-    cph_piecewise.baseline_cumulative_hazard_[bch_key].plot(ax=ax, label="peicewise[20,35]")
+    cph_piecewise.baseline_cumulative_hazard_[bch_key].plot(ax=ax, label="piecewise[20,35]")
     plt.legend()
 
 
