@@ -1,5 +1,0 @@
-[default.extend-words]
-# Don't correct the surname "Teh"
-lik = "lik"
-numer = "numer"
-Nam = "Nam"
