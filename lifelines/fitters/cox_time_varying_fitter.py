@@ -801,7 +801,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             hazards = self.predict_partial_hazard(tv_data).values
 
         unique_death_times = np.unique(stop[events.values])
-        baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times), index=unique_death_times, columns=["baseline hazard"])
+        baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times).astype(float), index=unique_death_times, columns=["baseline hazard"])
 
         for t in unique_death_times:
             ix = (start.values < t) & (t <= stop.values)
