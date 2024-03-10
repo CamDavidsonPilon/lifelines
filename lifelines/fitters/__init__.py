@@ -88,6 +88,23 @@ class BaseFitter:
         """
         return self.fit(*args, **kwargs)
 
+    @property
+    def event_table(self) -> t.Union[pd.DataFrame, None]:
+        if hasattr(self, "_event_table"):
+            return self._event_table
+        else:
+            if utils.CensoringType.is_right_censoring(self):
+                self._event_table = utils.survival_table_from_events(
+                    self.durations, self.event_observed, self.entry, weights=self.weights
+                )
+            else:
+                self._event_table = None
+            return self.event_table
+
+    @event_table.setter
+    def event_table(self, et):
+        self._event_table = et
+
 
 class UnivariateFitter(BaseFitter):
 
@@ -1039,19 +1056,6 @@ class ParametricUnivariateFitter(UnivariateFitter):
             raise ValueError(
                 "_bounds must be the same shape as _fitted_parameter_names must be the same shape as _initial_values.\n"
             )
-
-    @property
-    def event_table(self) -> t.Union[pd.DataFrame, None]:
-        if hasattr(self, "_event_table"):
-            return self._event_table
-        else:
-            if utils.CensoringType.is_right_censoring(self):
-                self._event_table = utils.survival_table_from_events(
-                    self.durations, self.event_observed, self.entry, weights=self.weights
-                )
-            else:
-                self._event_table = None
-            return self.event_table
 
     def survival_function_at_times(self, times, label: t.Optional[str] = None) -> pd.Series:
         """
