@@ -12,10 +12,10 @@ import sys
 from numpy.linalg import inv, pinv
 import numpy as np
 
-from autograd import hessian, value_and_grad, elementwise_grad as egrad, grad
+from jax import hessian, value_and_grad, grad, vmap, vjp
 from autograd.differential_operators import make_jvp_reversemode
-from autograd.misc import flatten
-import autograd.numpy as anp
+from jax.flatten_util import ravel_pytree as flatten
+import jax.numpy as jnp
 
 from scipy.optimize import minimize, root_scalar
 from scipy.integrate import trapz
@@ -37,6 +37,16 @@ __all__ = [
     "UnivariateFitter",
     "BaseFitter",
 ]
+
+
+def egrad(g):
+    # assumes grad w.r.t argnum=1
+    def wrapped(params, times):
+        y, g_vjp = vjp(lambda times: g(params, times), times)
+        (x_bar,) = g_vjp(jnp.ones_like(y))
+        return x_bar
+
+    return wrapped
 
 
 class BaseFitter:
@@ -384,30 +394,30 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 yield (lb + self._MIN_PARAMETER_VALUE, ub - self._MIN_PARAMETER_VALUE)
 
     def _cumulative_hazard(self, params, times):
-        return -anp.log(self._survival_function(params, times))
+        return -jnp.log(self._survival_function(params, times))
 
     def _hazard(self, *args, **kwargs):
         # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
-        return egrad(self._cumulative_hazard, argnum=1)(*args, **kwargs)
+        return egrad(self._cumulative_hazard)(*args, **kwargs)
 
     def _density(self, *args, **kwargs):
         # pylint: disable=no-value-for-parameter,unexpected-keyword-arg
-        return egrad(self._cumulative_density, argnum=1)(*args, **kwargs)
+        return egrad(self._cumulative_density)(*args, **kwargs)
 
     def _survival_function(self, params, times):
-        return anp.exp(-self._cumulative_hazard(params, times))
+        return jnp.exp(-self._cumulative_hazard(params, times))
 
     def _cumulative_density(self, params, times):
         return 1 - self._survival_function(params, times)
 
     def _log_hazard(self, params, times):
         hz = self._hazard(params, times)
-        hz = anp.clip(hz, 1e-50, np.inf)
-        return anp.log(hz)
+        hz = jnp.clip(hz, 1e-50, np.inf)
+        return jnp.log(hz)
 
     def _log_1m_sf(self, params, times):
         # equal to log(cdf), but often easier to express with sf.
-        return anp.log1p(-self._survival_function(params, times))
+        return jnp.log1p(-self._survival_function(params, times))
 
     def _negative_log_likelihood_left_censoring(self, params, Ts, E, entry, weights) -> float:
         T = Ts[1]
@@ -449,8 +459,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
             ll
             + (
                 censored_weights
-                * anp.log(
-                    anp.clip(
+                * jnp.log(
+                    jnp.clip(
                         self._survival_function(params, censored_starts) - self._survival_function(params, censored_stops),
                         1e-25,
                         1 - 1e-25,
@@ -1391,23 +1401,23 @@ class ParametricRegressionFitter(RegressionFitter):
             utils.check_entry_times(T, entries)
 
     def _cumulative_hazard(self, params, T, Xs):
-        return -anp.log(self._survival_function(params, T, Xs))
+        return -jnp.log(self._survival_function(params, T, Xs))
 
     def _hazard(self, params, T, Xs):
-        return egrad(self._cumulative_hazard, argnum=1)(params, T, Xs)  # pylint: disable=unexpected-keyword-arg
+        return egrad(self._cumulative_hazard)(params, T, Xs)  # pylint: disable=unexpected-keyword-arg
 
     def _log_hazard(self, params, T, Xs):
         # can be overwritten to improve convergence, see example in WeibullAFTFitter
         hz = self._hazard(params, T, Xs)
-        hz = anp.clip(hz, 1e-20, np.inf)
-        return anp.log(hz)
+        hz = jnp.clip(hz, 1e-20, np.inf)
+        return jnp.log(hz)
 
     def _log_1m_sf(self, params, T, Xs):
         # equal to log(cdf), but often easier to express with sf.
-        return anp.log1p(-self._survival_function(params, T, Xs))
+        return jnp.log1p(-self._survival_function(params, T, Xs))
 
     def _survival_function(self, params, T, Xs):
-        return anp.clip(anp.exp(-self._cumulative_hazard(params, T, Xs)), 1e-12, 1 - 1e-12)
+        return jnp.clip(jnp.exp(-self._cumulative_hazard(params, T, Xs)), 1e-12, 1 - 1e-12)
 
     def _log_likelihood_right_censoring(self, params, Ts: tuple, E, W, entries, Xs) -> float:
 
@@ -1422,7 +1432,7 @@ class ParametricRegressionFitter(RegressionFitter):
         ll = ll + (W * E * log_hz).sum()
         ll = ll + -(W * cum_hz).sum()
         ll = ll + (W[non_zero_entries] * delayed_entries).sum()
-        ll = ll / anp.sum(W)
+        ll = ll / jnp.sum(W)
         return ll
 
     def _log_likelihood_left_censoring(self, params, Ts, E, W, entries, Xs) -> float:
@@ -1438,7 +1448,7 @@ class ParametricRegressionFitter(RegressionFitter):
         ll = 0
         ll = (W * E * (log_hz - cum_haz - log_1m_sf)).sum() + (W * log_1m_sf).sum()
         ll = ll + (W[non_zero_entries] * delayed_entries).sum()
-        ll = ll / anp.sum(W)
+        ll = ll / jnp.sum(W)
         return ll
 
     def _log_likelihood_interval_censoring(self, params, Ts, E, W, entries, Xs) -> float:
@@ -1446,8 +1456,8 @@ class ParametricRegressionFitter(RegressionFitter):
         start, stop = Ts
         non_zero_entries = entries > 0
         observed_deaths = self._log_hazard(params, stop[E], Xs.filter(E)) - self._cumulative_hazard(params, stop[E], Xs.filter(E))
-        censored_interval_deaths = anp.log(
-            anp.clip(
+        censored_interval_deaths = jnp.log(
+            jnp.clip(
                 self._survival_function(params, start[~E], Xs.filter(~E))
                 - self._survival_function(params, stop[~E], Xs.filter(~E)),
                 1e-25,
@@ -1460,7 +1470,7 @@ class ParametricRegressionFitter(RegressionFitter):
         ll = ll + (W[E] * observed_deaths).sum()
         ll = ll + (W[~E] * censored_interval_deaths).sum()
         ll = ll + (W[non_zero_entries] * delayed_entries).sum()
-        ll = ll / anp.sum(W)
+        ll = ll / jnp.sum(W)
         return ll
 
     @utils.CensoringType.left_censoring
@@ -1885,7 +1895,7 @@ class ParametricRegressionFitter(RegressionFitter):
         params_array = params_array[~self._cols_to_not_penalize]
         if (isinstance(self.penalizer, np.ndarray) or self.penalizer > 0) and self.l1_ratio > 0:
             penalty = (
-                self.l1_ratio * (self.penalizer * anp.abs(params_array)).sum()
+                self.l1_ratio * (self.penalizer * jnp.abs(params_array)).sum()
                 + 0.5 * (1.0 - self.l1_ratio) * (self.penalizer * (params_array) ** 2).sum()
             )
 

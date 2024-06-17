@@ -1149,8 +1149,8 @@ class TestGeneralizedGammaFitter:
 
 class TestExponentialFitter:
     def test_fit_computes_correct_lambda_(self):
-        T = np.array([10, 10, 10, 10], dtype=float)
-        E = np.array([1, 1, 1, 0], dtype=float)
+        T = np.array([10, 20, 10, 10, 5, 10], dtype=float)
+        E = np.array([1, 1, 1, 0, 0, 1], dtype=float)
         enf = ExponentialFitter()
         enf.fit(T, E)
         assert abs(enf.lambda_ - (T.sum() / E.sum())) < 1e-4

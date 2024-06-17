@@ -30,7 +30,7 @@ class ProportionalHazardMixin:
         plot_n_bootstraps: int = 15,
         columns: Optional[List[str]] = None,
         raise_on_fail: bool = False,
-    ) -> None:
+    ) -> list:
         """
         Use this function to test the proportional hazards assumption. See usage example at
         https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Proportional%20hazard%20assumption.html

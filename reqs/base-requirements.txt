@@ -1,7 +1,6 @@
-numpy>=1.14.0,<2.0
+numpy>=1.14.0
 scipy>=1.2.0
 pandas>=1.2.0
 matplotlib>=3.0
-autograd>=1.5
-autograd-gamma>=0.3
 formulaic>=0.2.2
+jax[cpu]>=0.4.0

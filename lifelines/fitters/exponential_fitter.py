@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from autograd import numpy as anp
+from jax import numpy as jnp
 from lifelines.fitters import KnownModelParametricUnivariateFitter
 
 
@@ -77,4 +77,4 @@ class ExponentialFitter(KnownModelParametricUnivariateFitter):
 
     def _log_hazard(self, params, times):
         lambda_ = params[0]
-        return -anp.log(lambda_)
+        return -jnp.log(lambda_)
