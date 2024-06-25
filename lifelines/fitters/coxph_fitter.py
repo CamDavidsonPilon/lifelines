@@ -9,7 +9,7 @@ import time
 from numpy import dot, einsum, log, exp, zeros, arange, multiply, ndarray
 import numpy as np
 from scipy.linalg import solve as spsolve, LinAlgError, norm, inv
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid
 from scipy import stats
 from pandas import DataFrame, Series, Index
 import pandas as pd
@@ -2514,7 +2514,7 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         """
         subjects = utils._get_index(X)
         v = self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
-        return pd.Series(trapz(v.values.T, v.index), index=subjects)
+        return pd.Series(trapezoid(v.values.T, v.index), index=subjects)
 
     def _compute_baseline_hazard(self, partial_hazards: DataFrame, name: Any) -> pd.DataFrame:
         # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard

@@ -18,7 +18,7 @@ from autograd.misc import flatten
 import autograd.numpy as anp
 
 from scipy.optimize import minimize, root_scalar
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid
 from scipy import stats
 
 import pandas as pd
@@ -2507,7 +2507,7 @@ class ParametricRegressionFitter(RegressionFitter):
         warnings.warn("""Approximating the expected value using trapezoid rule.\n""", exceptions.ApproximationWarning)
         subjects = utils._get_index(X)
         v = self.predict_survival_function(X, conditional_after=conditional_after)[subjects]
-        return pd.Series(trapz(v.values.T, v.index), index=subjects).squeeze()
+        return pd.Series(trapezoid(v.values.T, v.index), index=subjects).squeeze()
 
     @property
     def median_survival_time_(self):
