@@ -6,7 +6,7 @@ import time
 import numpy as np
 import pandas as pd
 from numpy.linalg import LinAlgError
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid
 
 from lifelines.fitters import RegressionFitter
 from lifelines.utils.printer import Printer
@@ -396,7 +396,7 @@ It's important to know that the naive variance estimates of the coefficients are
         """
         index = _get_index(X)
         t = self._index
-        return pd.Series(trapz(self.predict_survival_function(X)[index].values.T, t), index=index)
+        return pd.Series(trapezoid(self.predict_survival_function(X)[index].values.T, t), index=index)
 
     def _compute_confidence_intervals(self):
         ci = 100 * (1 - self.alpha)
