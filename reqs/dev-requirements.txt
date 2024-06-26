@@ -16,6 +16,7 @@ dill>=0.3.6
 statsmodels
 flaky
 Jinja2
+joblib
 
 # ex: `py.test` in the docs/ folder. See conftest.py in docs/ first
 sybil
