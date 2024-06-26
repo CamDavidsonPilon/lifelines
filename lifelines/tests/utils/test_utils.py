@@ -347,7 +347,7 @@ def test_survival_table_from_events_at_risk_column():
         1.0,
     ]
     df = utils.survival_table_from_events(df["T"], df["E"])
-    assert list(df["at_risk"][1:]) == expected  # skip the first event as that is the birth time, 0.
+    assert list(df["at_risk"].loc[1:]) == expected  # skip the first event as that is the birth time, 0.
 
 
 def test_survival_table_to_events_casts_to_float():

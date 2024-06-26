@@ -490,6 +490,7 @@ class TestUnivariateFitters:
             if not hasattr(fitter, "confidence_interval_cumulative_density_"):
                 continue
             lower, upper = f"{fitter.label}_lower_0.95", f"{fitter.label}_upper_0.95"
+            print(fitter.confidence_interval_cumulative_density_)
             assert np.all(
                 (fitter.confidence_interval_cumulative_density_[upper] - fitter.confidence_interval_cumulative_density_[lower])
                 >= 0
@@ -2008,7 +2009,7 @@ class TestRegressionFitters:
     def test_fit_will_accept_object_dtype_as_event_col(self, regression_models_sans_strata_model, rossi):
         # issue #638
         rossi["arrest"] = rossi["arrest"].astype(object)
-        rossi["arrest"].iloc[0] = None
+        rossi.loc[0, "arrest"] = None
 
         assert rossi["arrest"].dtype == object
         rossi = rossi.dropna()
