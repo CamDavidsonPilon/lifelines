@@ -3222,7 +3222,6 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
             cumulative_hazard = pd.DataFrame()
 
             for stratum, stratified_X in df.groupby(self.strata):
-                print(self.params_)
                 log_lambdas_ = anp.array(
                     [0] + [self.params_.loc[self._strata_labeler(stratum, i)].iloc[0] for i in range(2, self.n_breakpoints + 2)]
                 )

@@ -490,7 +490,6 @@ class TestUnivariateFitters:
             if not hasattr(fitter, "confidence_interval_cumulative_density_"):
                 continue
             lower, upper = f"{fitter.label}_lower_0.95", f"{fitter.label}_upper_0.95"
-            print(fitter.confidence_interval_cumulative_density_)
             assert np.all(
                 (fitter.confidence_interval_cumulative_density_[upper] - fitter.confidence_interval_cumulative_density_[lower])
                 >= 0
