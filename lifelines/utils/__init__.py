@@ -556,7 +556,7 @@ def _group_event_table_by_intervals(event_table, intervals) -> pd.DataFrame:
 
         intervals = np.arange(0, event_max + bin_width, bin_width)
 
-    event_table = event_table.groupby(pd.cut(event_table["event_at"], intervals, include_lowest=True)).agg(
+    event_table = event_table.groupby(pd.cut(event_table["event_at"], intervals, include_lowest=True), observed=False).agg(
         {"removed": ["sum"], "observed": ["sum"], "censored": ["sum"], "at_risk": ["max"]}
     )
     # convert columns from multiindex
@@ -648,7 +648,7 @@ def datetimes_to_durations(
         the units of time to use.  See Pandas 'freq'. Default 'D' for days.
     dayfirst: bool, optional (default=False)
         see Pandas `to_datetime`
-    na_values : list, optional
+    na_values : list[str], optional
         list of values to recognize as NA/NaN. Ex: ['', 'NaT']
     format:
         see Pandas `to_datetime`
@@ -679,7 +679,7 @@ def datetimes_to_durations(
     start_times = pd.Series(start_times).copy()
     end_times = pd.Series(end_times).copy()
 
-    C = ~(pd.isnull(end_times).values | end_times.isin(na_values or [""]))
+    C = ~(pd.isnull(end_times).values | end_times.astype(str).isin(na_values or [""]))
     end_times[~C] = fill_date_
     start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst, format=format)
     end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce", format=format)
@@ -1464,7 +1464,7 @@ def add_covariate_to_timeline(
     cv = cv.sort_values([id_col, duration_col])
     cvs = cv.pipe(remove_redundant_rows).pipe(transform_cv_to_long_format).groupby(id_col, sort=True)
 
-    long_form_df = long_form_df.groupby(id_col, group_keys=False, sort=True).apply(expand, cvs=cvs)
+    long_form_df = long_form_df.groupby(id_col, group_keys=False, sort=True)[long_form_df.columns].apply(expand, cvs=cvs)
     return long_form_df.reset_index(drop=True)
 
 
@@ -1506,7 +1506,7 @@ def covariates_from_event_matrix(df, id_col) -> pd.DataFrame:
     """
     df = df.set_index(id_col)
     df = df.fillna(np.inf)
-    df = df.stack(dropna=False).reset_index()
+    df = df.stack(future_stack=True).reset_index()
     df.columns = [id_col, "event", "duration"]
     df["_counter"] = 1
     return (

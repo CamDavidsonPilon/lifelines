@@ -2008,7 +2008,7 @@ class TestRegressionFitters:
     def test_fit_will_accept_object_dtype_as_event_col(self, regression_models_sans_strata_model, rossi):
         # issue #638
         rossi["arrest"] = rossi["arrest"].astype(object)
-        rossi["arrest"].iloc[0] = None
+        rossi.loc[0, "arrest"] = None
 
         assert rossi["arrest"].dtype == object
         rossi = rossi.dropna()

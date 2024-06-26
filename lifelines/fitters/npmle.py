@@ -291,7 +291,7 @@ def reconstruct_survival_function(
 
     # First backfill at events between known observations
     # Second fill all events _outside_ known obs with running_sum
-    return full_dataframe.combine_first(df).bfill().fillna(running_sum).clip(lower=0.0)
+    return full_dataframe.combine_first(df).astype(float).bfill().fillna(running_sum).clip(lower=0.0)
 
 
 def npmle_compute_confidence_intervals(left, right, mle_, alpha=0.05, samples=1000):
