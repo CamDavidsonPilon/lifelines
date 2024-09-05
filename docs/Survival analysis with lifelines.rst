@@ -237,7 +237,7 @@ we rule that the series have different generators.
            260.47  <0.005    192.23
     """
 
-There are alternative (and sometimes better) tests of survival functions, and we explain more here: `Statistically compare two populations`_
+There are alternative (and sometimes better) tests of survival functions, and we explain more here: `Statistically compare two populations <https://github.com/CamDavidsonPilon/lifelines/blob/master/docs/Examples.rst#statistically-compare-two-populations>`_
 
 
 Lets compare the different *types* of regimes present in the dataset:
