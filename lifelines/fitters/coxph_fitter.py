@@ -1249,7 +1249,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             utils.normalize(X.values, self._norm_mean.values, self._norm_std.values), index=X.index, columns=X.columns
         )
 
-        params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_, model = self._fit_model(
+        params_, ll_, variance_matrix_, model = self._fit_model(
             X_norm,
             T,
             E,
@@ -1264,8 +1264,14 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         self.model = model
         self.variance_matrix_ = variance_matrix_
         self.params_ = pd.Series(params_, index=pd.Index(X.columns, name="covariate"), name="coef")
-        self.baseline_hazard_ = baseline_hazard_
-        self.baseline_cumulative_hazard_ = baseline_cumulative_hazard_
+
+        # LN: Must use the unstandardized dataframe X to calculate the correct baseline hazards.
+        predicted_partial_hazards_ = (
+            pd.DataFrame(np.exp(dot(X.values, self.params_)), columns=["P"]).assign(T=T.values, E=E.values,
+                                                                                    W=weights.values).set_index(X.index)
+        )
+        self.baseline_hazard_ = self._compute_baseline_hazards(predicted_partial_hazards_)
+        self.baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(self.baseline_hazard_)
         self.timeline = utils.coalesce(timeline, self.baseline_cumulative_hazard_.index)
 
         with warnings.catch_warnings():
@@ -1388,13 +1394,6 @@ estimate the variances. See paper "Variance estimation when using inverse probab
             **fit_options,
         )
 
-        # compute the baseline hazard here.
-        predicted_partial_hazards_ = (
-            pd.DataFrame(np.exp(dot(X, beta_)), columns=["P"]).assign(T=T.values, E=E.values, W=weights.values).set_index(X.index)
-        )
-        baseline_hazard_ = self._compute_baseline_hazards(predicted_partial_hazards_)
-        baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(baseline_hazard_)
-
         # rescale parameters back to original scale.
         params_ = beta_ / self._norm_std.values
         if hessian_.size > 0:
@@ -1405,7 +1404,7 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         else:
             variance_matrix_ = pd.DataFrame(index=X.columns, columns=X.columns)
 
-        return params_, ll_, variance_matrix_, baseline_hazard_, baseline_cumulative_hazard_, None
+        return params_, ll_, variance_matrix_, None
 
     def _choose_gradient_calculator(self, T, X, entries):
 
