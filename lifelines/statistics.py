@@ -77,7 +77,7 @@ class StatisticalResult:
         kwargs["test_name"] = test_name
         self._kwargs = kwargs
 
-    def _print_specific_style(self, style, decimals=2, **kwargs):
+    def _print_specific_style(self, style, **kwargs):
         """
         Parameters
         -----------
@@ -87,11 +87,11 @@ class StatisticalResult:
 
         """
         if style == "html":
-            return self._html_print(decimals=decimals, **kwargs)
+            return self._html_print(**kwargs)
         elif style == "ascii":
-            return self._ascii_print(decimals=decimals, **kwargs)
+            return self._ascii_print(**kwargs)
         elif style == "latex":
-            return self._latex_print(decimals=decimals, **kwargs)
+            return self._latex_print(**kwargs)
         else:
             raise ValueError("style not available.")
 
@@ -110,6 +110,7 @@ class StatisticalResult:
             multiple outputs.
 
         """
+        self.decimals=decimals
         if style is not None:
             self._print_specific_style(style)
         else:
@@ -120,16 +121,16 @@ class StatisticalResult:
             except ImportError:
                 self._ascii_print()
 
-    def _html_print(self, decimals=2, **kwargs):
-        print(self.to_html(decimals, **kwargs))
+    def _html_print(self, **kwargs):
+        print(self.to_html(**kwargs))
 
-    def _latex_print(self, decimals=2, **kwargs):
-        print(self.to_latex(decimals, **kwargs))
+    def _latex_print(self, **kwargs):
+        print(self.to_latex(**kwargs))
 
-    def _ascii_print(self, decimals=2, **kwargs):
-        print(self.to_ascii(decimals, **kwargs))
+    def _ascii_print(self, **kwargs):
+        print(self.to_ascii(**kwargs))
 
-    def to_html(self, decimals=2, **kwargs):
+    def to_html(self, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         summary_df = self.summary
 
@@ -140,14 +141,14 @@ class StatisticalResult:
         header_df = pd.DataFrame.from_records(headers).set_index(0)
         header_html = header_df.to_html(header=False, notebook=True, index_names=False)
 
-        summary_html = summary_df.to_html(float_format=format_floats(decimals), formatters={**{"p": format_p_value(decimals)}})
+        summary_html = summary_df.to_html(float_format=format_floats(self.decimals), formatters={**{"p": format_p_value(self.decimals)}})
 
         return header_html + summary_html
 
-    def to_latex(self, decimals=2, **kwargs):
+    def to_latex(self, **kwargs):
         # This is using the new Style object in Pandas. Previously df.to_latex was giving a warning.
         s = self.summary.style
-        s = s.format(precision=decimals)
+        s = s.format(precision=self.decimals)
         return s.to_latex()
 
     @property
@@ -172,7 +173,7 @@ class StatisticalResult:
         df["-log2(p)"] = -utils.quiet_log2(df["p"])
         return df
 
-    def to_ascii(self, decimals=2, **kwargs):
+    def to_ascii(self, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
 
@@ -182,7 +183,7 @@ class StatisticalResult:
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
-            float_format=format_floats(decimals), index=self.name is not None, formatters={"p": format_p_value(decimals)}
+            float_format=format_floats(self.decimals), index=self.name is not None, formatters={"p": format_p_value(self.decimals)}
         )
 
         return s
