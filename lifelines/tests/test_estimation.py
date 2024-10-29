@@ -3320,7 +3320,7 @@ class TestCoxPHFitter:
 
         assert_frame_equal(
             cph.summary.loc[[("beta_", "Intercept"), ("phi1_", "Intercept")]].reset_index(drop=True),
-            trivial_strata_cph.summary.loc[[("beta_", "Intercept"), ("sa_phi1_", "Intercept")]].reset_index(drop=True),
+            trivial_strata_cph.summary.loc[[("beta_", "Intercept"), ("s('a',)_phi1_", "Intercept")]].reset_index(drop=True),
             atol=0.05,
         )
 
