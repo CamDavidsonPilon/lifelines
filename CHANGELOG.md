@@ -1,7 +1,8 @@
 ## Changelog
 
-#### 0.30.0 - 2024-06-25
+#### 0.30.0 - 2024-10-29
  - update dependencies (numpy >= 1.14.0)
+ - fix for `decimal` kwarg not working in StatisticalResult
 
 
 #### 0.29.0 - 2024-06-25
