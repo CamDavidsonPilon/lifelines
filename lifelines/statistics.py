@@ -77,7 +77,7 @@ class StatisticalResult:
         kwargs["test_name"] = test_name
         self._kwargs = kwargs
 
-    def _print_specific_style(self, style, **kwargs):
+    def _print_specific_style(self, style, decimals=2, **kwargs):
         """
         Parameters
         -----------
@@ -87,11 +87,11 @@ class StatisticalResult:
 
         """
         if style == "html":
-            return self._html_print(**kwargs)
+            return self._html_print(decimals=decimals, **kwargs)
         elif style == "ascii":
-            return self._ascii_print(**kwargs)
+            return self._ascii_print(decimals=decimals, **kwargs)
         elif style == "latex":
-            return self._latex_print(**kwargs)
+            return self._latex_print(decimals=decimals, **kwargs)
         else:
             raise ValueError("style not available.")
 
@@ -110,27 +110,26 @@ class StatisticalResult:
             multiple outputs.
 
         """
-        self.decimals=decimals
         if style is not None:
-            self._print_specific_style(style)
+            self._print_specific_style(style, decimals=decimals, **kwargs)
         else:
             try:
                 from IPython.display import display
 
                 display(self)
             except ImportError:
-                self._ascii_print()
+                self._ascii_print(decimals=decimals, **kwargs)
 
-    def _html_print(self, **kwargs):
-        print(self.to_html(**kwargs))
+    def _html_print(self, decimals=2, **kwargs):
+        print(self.to_html(decimals, **kwargs))
 
-    def _latex_print(self, **kwargs):
-        print(self.to_latex(**kwargs))
+    def _latex_print(self, decimals=2, **kwargs):
+        print(self.to_latex(decimals, **kwargs))
 
-    def _ascii_print(self, **kwargs):
-        print(self.to_ascii(**kwargs))
+    def _ascii_print(self, decimals=2, **kwargs):
+        print(self.to_ascii(decimals, **kwargs))
 
-    def to_html(self, **kwargs):
+    def to_html(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         summary_df = self.summary
 
@@ -141,14 +140,14 @@ class StatisticalResult:
         header_df = pd.DataFrame.from_records(headers).set_index(0)
         header_html = header_df.to_html(header=False, notebook=True, index_names=False)
 
-        summary_html = summary_df.to_html(float_format=format_floats(self.decimals), formatters={**{"p": format_p_value(self.decimals)}})
+        summary_html = summary_df.to_html(float_format=format_floats(decimals), formatters={**{"p": format_p_value(decimals)}})
 
         return header_html + summary_html
 
-    def to_latex(self, **kwargs):
+    def to_latex(self, decimals=2, **kwargs):
         # This is using the new Style object in Pandas. Previously df.to_latex was giving a warning.
         s = self.summary.style
-        s = s.format(precision=self.decimals)
+        s = s.format(precision=decimals)
         return s.to_latex()
 
     @property
@@ -173,7 +172,7 @@ class StatisticalResult:
         df["-log2(p)"] = -utils.quiet_log2(df["p"])
         return df
 
-    def to_ascii(self, **kwargs):
+    def to_ascii(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
 
@@ -183,7 +182,7 @@ class StatisticalResult:
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
-            float_format=format_floats(self.decimals), index=self.name is not None, formatters={"p": format_p_value(self.decimals)}
+            float_format=format_floats(decimals), index=self.name is not None, formatters={"p": format_p_value(decimals)}
         )
 
         return s
@@ -836,7 +835,7 @@ def multivariate_logrank_test(
     assert abs(Z_j.sum()) < 10e-8, "Sum is not zero."  # this should move to a test eventually.
 
     # compute covariance matrix
-    factor = (((n_i - d_i) / (n_i - 1)).replace([np.inf, np.nan], 1)) * d_i / n_i ** 2
+    factor = (((n_i - d_i) / (n_i - 1)).replace([np.inf, np.nan], 1)) * d_i / n_i**2
     n_ij["_"] = n_i.values
     V_ = (n_ij.mul(w_i, axis=0)).mul(np.sqrt(factor), axis="index").fillna(0)  # weighted V_
     V = -np.dot(V_.T, V_)
@@ -924,7 +923,7 @@ def proportional_hazard_test(
     def compute_statistic(times, resids, n_deaths):
         demeaned_times = times - times.mean()
         T = (demeaned_times.values[:, None] * resids.values).sum(0) ** 2 / (
-            n_deaths * (fitted_cox_model.standard_errors_ ** 2) * (demeaned_times ** 2).sum()
+            n_deaths * (fitted_cox_model.standard_errors_**2) * (demeaned_times**2).sum()
         )
         return T
 

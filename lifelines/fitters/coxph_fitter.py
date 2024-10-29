@@ -2991,7 +2991,11 @@ class ParametricSplinePHFitter(ParametricCoxModelFitter, SplineFitterMixin):
 
     @staticmethod
     def _strata_labeler(stratum, i):
-        return "s%s_phi%d_" % (stratum, i)
+        try:
+            return "s%s_phi%d_" % (tuple(str(s) for s in stratum), i)
+        except:
+            # singleton
+            return "s%s_phi%d_" % (stratum, i)
 
     @property
     def _fitted_parameter_names(self):
@@ -3112,7 +3116,11 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
 
     @staticmethod
     def _strata_labeler(stratum, i):
-        return "s%s_lambda%d_" % (stratum, i)
+        try:
+            return "s%s_lambda%d_" % (tuple(str(s) for s in stratum), i)
+        except:
+            # singleton
+            return "s%s_lambda%d_" % (stratum, i)
 
     @property
     def _fitted_parameter_names(self):
