@@ -1,9 +1,12 @@
 ## Changelog
 
+#### 0.30.0 - 2024-06-25
+ - update dependencies (numpy >= 1.14.0)
+
+
 #### 0.29.0 - 2024-06-25
  - update dependencies (pandas >= 2.1)
  - update dependencies (scipy >= 1.7)
-
 
 
 #### 0.28.0 - 2024-01-03
