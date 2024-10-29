@@ -111,14 +111,14 @@ class StatisticalResult:
 
         """
         if style is not None:
-            self._print_specific_style(style)
+            self._print_specific_style(style, decimals=decimals, **kwargs)
         else:
             try:
                 from IPython.display import display
 
                 display(self)
             except ImportError:
-                self._ascii_print()
+                self._ascii_print(decimals=decimals, **kwargs)
 
     def _html_print(self, decimals=2, **kwargs):
         print(self.to_html(decimals, **kwargs))
@@ -835,7 +835,7 @@ def multivariate_logrank_test(
     assert abs(Z_j.sum()) < 10e-8, "Sum is not zero."  # this should move to a test eventually.
 
     # compute covariance matrix
-    factor = (((n_i - d_i) / (n_i - 1)).replace([np.inf, np.nan], 1)) * d_i / n_i ** 2
+    factor = (((n_i - d_i) / (n_i - 1)).replace([np.inf, np.nan], 1)) * d_i / n_i**2
     n_ij["_"] = n_i.values
     V_ = (n_ij.mul(w_i, axis=0)).mul(np.sqrt(factor), axis="index").fillna(0)  # weighted V_
     V = -np.dot(V_.T, V_)
@@ -923,7 +923,7 @@ def proportional_hazard_test(
     def compute_statistic(times, resids, n_deaths):
         demeaned_times = times - times.mean()
         T = (demeaned_times.values[:, None] * resids.values).sum(0) ** 2 / (
-            n_deaths * (fitted_cox_model.standard_errors_ ** 2) * (demeaned_times ** 2).sum()
+            n_deaths * (fitted_cox_model.standard_errors_**2) * (demeaned_times**2).sum()
         )
         return T
 
