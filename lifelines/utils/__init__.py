@@ -520,17 +520,17 @@ def survival_table_from_events(
 
     # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
-    df[removed] = np.asarray(weights)
-    df[observed] = np.asarray(weights) * (np.asarray(event_observed).astype(bool))
+    df.loc[:, removed] = np.asarray(weights)
+    df.loc[:, observed] = np.asarray(weights) * (np.asarray(event_observed).astype(bool))
     death_table = df.groupby("event_at").sum()
-    death_table[censored] = (death_table[removed] - death_table[observed]).astype(int)
+    death_table.loc[:, censored] = (death_table[removed] - death_table[observed]).astype(int)
 
     # deal with late births
     births = pd.DataFrame(birth_times, columns=["event_at"])
-    births[entrance] = np.asarray(weights)
+    births.loc[:, entrance] = np.asarray(weights)
     births_table = births.groupby("event_at").sum()
     event_table = death_table.join(births_table, how="outer", sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
-    event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
+    event_table.loc[:, at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
 
     # group by intervals
     if (collapse) or (intervals is not None):
@@ -760,7 +760,7 @@ def k_fold_cross_validation(
 
     if event_col is None:
         event_col = "E"
-        df[event_col] = 1.0
+        df.loc[:, event_col] = 1.0
 
     df = df.reindex(np.random.permutation(df.index)).sort_values(event_col)
 
@@ -1438,17 +1438,17 @@ def add_covariate_to_timeline(
 
         n = expanded_df.shape[0]
         expanded_df = expanded_df.reset_index()
-        expanded_df[stop_col] = expanded_df[start_col].shift(-1)
-        expanded_df[id_col] = id_
-        expanded_df[event_col] = False
+        expanded_df.loc[:, stop_col] = expanded_df[start_col].shift(-1)
+        expanded_df.loc[:, id_col] = id_
+        expanded_df.loc[:, event_col] = False
         expanded_df.at[n - 1, event_col] = final_state
         expanded_df.at[n - 1, stop_col] = final_stop_time
 
         if add_enum:
-            expanded_df["enum"] = np.arange(1, n + 1)
+            expanded_df.loc[:, "enum"] = np.arange(1, n + 1)
 
         if cumulative_sum:
-            expanded_df[cv.columns] = expanded_df[cv.columns].ffill().fillna(0)
+            expanded_df.loc[:, cv.columns] = expanded_df[cv.columns].ffill().fillna(0)
 
         return expanded_df.ffill()
 
@@ -1508,7 +1508,7 @@ def covariates_from_event_matrix(df, id_col) -> pd.DataFrame:
     df = df.fillna(np.inf)
     df = df.stack(future_stack=True).reset_index()
     df.columns = [id_col, "event", "duration"]
-    df["_counter"] = 1
+    df.loc[:, "_counter"] = 1
     return (
         df.pivot_table(index=[id_col, "duration"], columns="event", fill_value=0)["_counter"]
         .reset_index()
@@ -1899,7 +1899,7 @@ class CovariateParameterMappings:
     @classmethod
     def add_intercept_col(cls, df):
         df = df.copy()
-        df[cls.INTERCEPT_COL] = 1
+        df.loc[:, cls.INTERCEPT_COL] = 1
         return df
 
     def transform_df(self, df: pd.DataFrame):

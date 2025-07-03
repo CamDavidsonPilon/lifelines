@@ -526,8 +526,8 @@ class ParametricUnivariateFitter(UnivariateFitter):
             ci_labels = ["%s_lower_%g" % (self.label, 1 - alpha), "%s_upper_%g" % (self.label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = transform(self._fitted_parameters_, timeline) - z * std_of_transform
-        df[ci_labels[1]] = transform(self._fitted_parameters_, timeline) + z * std_of_transform
+        df.loc[:, ci_labels[0]] = transform(self._fitted_parameters_, timeline) - z * std_of_transform
+        df.loc[:, ci_labels[1]] = transform(self._fitted_parameters_, timeline) + z * std_of_transform
         return df
 
     def _create_initial_point(self, *args) -> np.ndarray:
@@ -659,14 +659,14 @@ class ParametricUnivariateFitter(UnivariateFitter):
             ci = (1 - self.alpha) * 100
             lower_upper_bounds = self._compute_confidence_bounds_of_parameters()
             df = pd.DataFrame(index=self._fitted_parameter_names)
-            df["coef"] = self._fitted_parameters_
-            df["se(coef)"] = self._compute_standard_errors().loc["se"]
-            df["coef lower %g%%" % ci] = lower_upper_bounds["lower-bound"]
-            df["coef upper %g%%" % ci] = lower_upper_bounds["upper-bound"]
-            df["cmp to"] = self._compare_to_values
-            df["z"] = self._compute_z_values()
-            df["p"] = self._compute_p_values()
-            df["-log2(p)"] = -utils.quiet_log2(df["p"])
+            df.loc[:, "coef"] = self._fitted_parameters_
+            df.loc[:, "se(coef)"] = self._compute_standard_errors().loc["se"]
+            df.loc[:, "coef lower %g%%" % ci] = lower_upper_bounds["lower-bound"]
+            df.loc[:, "coef upper %g%%" % ci] = lower_upper_bounds["upper-bound"]
+            df.loc[:, "cmp to"] = self._compare_to_values
+            df.loc[:, "z"] = self._compute_z_values()
+            df.loc[:, "p"] = self._compute_p_values()
+            df.loc[:, "-log2(p)"] = -utils.quiet_log2(df["p"])
         return df
 
     def print_summary(self, decimals=2, style=None, columns=None, **kwargs):
@@ -1641,7 +1641,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         if event_col is None:
             event_col = "E_lifelines_added"
-            df[event_col] = self.lower_bound == self.upper_bound
+            df.loc[:, event_col] = self.lower_bound == self.upper_bound
 
         if ((self.lower_bound == self.upper_bound) != df[event_col]).any():
             raise ValueError(
@@ -2160,7 +2160,9 @@ class ParametricRegressionFitter(RegressionFitter):
             except:
                 initial_point[name] = 0.0001
 
-        df = pd.DataFrame({"entry": self.entry, "w": self.weights})
+        df = pd.DataFrame()
+        df.loc[:, "entry"] = self.entry
+        df.loc[:, "w"] = self.weights
 
         # some fitters will have custom __init__ fields that need to be provided (Piecewise, Spline...)
         args_to_provide = {k: getattr(self, k) for k in getfullargspec(self.__class__.__init__).args if k != "self"}
@@ -2171,17 +2173,17 @@ class ParametricRegressionFitter(RegressionFitter):
             warnings.simplefilter("ignore")
 
             if utils.CensoringType.is_right_censoring(self):
-                df["T"], df["E"] = self.durations, self.event_observed
+                df.loc[:, "T"], df.loc[:, "E"] = self.durations, self.event_observed
                 model.fit_right_censoring(
                     df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors, initial_point=initial_point
                 )
             elif utils.CensoringType.is_interval_censoring(self):
-                df["lb"], df["ub"], df["E"] = self.lower_bound, self.upper_bound, self.event_observed
+                df.loc[:, "lb"], df.loc[:, "ub"], df.loc[:, "E"] = self.lower_bound, self.upper_bound, self.event_observed
                 model.fit_interval_censoring(
                     df, "lb", "ub", "E", entry_col="entry", weights_col="w", regressors=regressors, initial_point=initial_point
                 )
             if utils.CensoringType.is_left_censoring(self):
-                df["T"], df["E"] = self.durations, self.event_observed
+                df.loc[:, "T"], df.loc[:, "E"] = self.durations, self.event_observed
                 model.fit_left_censoring(
                     df, "T", "E", entry_col="entry", weights_col="w", regressors=regressors, initial_point=initial_point
                 )
@@ -2223,17 +2225,17 @@ class ParametricRegressionFitter(RegressionFitter):
         z = utils.inv_normal_cdf(1 - self.alpha / 2)
         with np.errstate(invalid="ignore", divide="ignore", over="ignore", under="ignore"):
             df = pd.DataFrame(index=self.params_.index)
-            df["coef"] = self.params_
-            df["exp(coef)"] = np.exp(self.params_)
-            df["se(coef)"] = self.standard_errors_
-            df["coef lower %g%%" % ci] = self.confidence_intervals_["%g%% lower-bound" % ci]
-            df["coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
-            df["exp(coef) lower %g%%" % ci] = np.exp(self.params_) * np.exp(-z * self.standard_errors_)
-            df["exp(coef) upper %g%%" % ci] = np.exp(self.params_) * np.exp(z * self.standard_errors_)
-            df["cmp to"] = self._compare_to_values
-            df["z"] = self._compute_z_values()
-            df["p"] = self._compute_p_values()
-            df["-log2(p)"] = -utils.quiet_log2(df["p"])
+            df.loc[:, "coef"] = self.params_
+            df.loc[:, "exp(coef)"] = np.exp(self.params_)
+            df.loc[:, "se(coef)"] = self.standard_errors_
+            df.loc[:, "coef lower %g%%" % ci] = self.confidence_intervals_["%g%% lower-bound" % ci]
+            df.loc[:, "coef upper %g%%" % ci] = self.confidence_intervals_["%g%% upper-bound" % ci]
+            df.loc[:, "exp(coef) lower %g%%" % ci] = np.exp(self.params_) * np.exp(-z * self.standard_errors_)
+            df.loc[:, "exp(coef) upper %g%%" % ci] = np.exp(self.params_) * np.exp(z * self.standard_errors_)
+            df.loc[:, "cmp to"] = self._compare_to_values
+            df.loc[:, "z"] = self._compute_z_values()
+            df.loc[:, "p"] = self._compute_p_values()
+            df.loc[:, "-log2(p)"] = -utils.quiet_log2(df["p"])
             return df
 
     def print_summary(self, decimals: int = 2, style: t.Optional[str] = None, columns: t.Optional[list] = None, **kwargs) -> None:
@@ -3009,7 +3011,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
 
         if event_col is None:
             event_col = "E_lifelines_added"
-            df[event_col] = self.lower_bound == self.upper_bound
+            df.loc[:, event_col] = self.lower_bound == self.upper_bound
 
         self.event_col = event_col
 
@@ -3560,7 +3562,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         if isinstance(ancillary, pd.DataFrame):
             assert ancillary.shape[0] == df.shape[0], "ancillary must be the same shape[0] as df"
             for c in ancillary.columns.difference(df.columns):
-                df[c] = ancillary[c]
+                df.loc[:, c] = ancillary[c]
 
         Xs = utils.DataframeSlicer(self.regressors.transform_df(df))
 
