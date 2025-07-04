@@ -195,7 +195,10 @@ def scipy_minimize_fit(turnbull_interval_lookup, turnbull_intervals, weights, to
     def negative_log_likelihood(p, turnbull_interval_lookup, weights):
         P = cumulative_sum(p)
         ix = anp.array(list(turnbull_interval_lookup.values()))
-        return -(weights * anp.log(P[ix[:, 1] + 1] - P[ix[:, 0]])).sum()
+        # Clip the argument to log to avoid log(0) or log(negative number)
+        probabilities_in_interval = P[ix[:, 1] + 1] - P[ix[:, 0]]
+        safe_probabilities = anp.clip(probabilities_in_interval, 1e-12, None) # Ensure at least a small positive number
+        return -(weights * anp.log(safe_probabilities)).sum()
 
     def con(p):
         return p.sum() - 1
@@ -205,16 +208,50 @@ def scipy_minimize_fit(turnbull_interval_lookup, turnbull_intervals, weights, to
     p = 1 / T * np.ones(T)
 
     cons = {"type": "eq", "fun": con}
+    if verbose:
+        print(f"Initial p for scipy: {p}")
+        print(f"T (number of turnbull intervals): {T}")
+        print(f"turnbull_intervals: {turnbull_intervals}")
+
+    if verbose:
+        print(f"Initial p for scipy: {p}")
+        print(f"T (number of turnbull intervals): {T}")
+        print(f"turnbull_intervals: {turnbull_intervals}")
+
+    epsilon = 1e-9
+    strict_bounds = [(epsilon, 1 - epsilon)] * T
+
     results = minimize(
         value_and_grad(negative_log_likelihood),
         args=(turnbull_interval_lookup, weights),
         x0=p,
-        bounds=[(0, 1)] * T,
+        method='trust-constr', # Changed method
+        bounds=strict_bounds, # Use stricter bounds
         jac=True,
         constraints=cons,
-        tol=tol,
-        options={"disp": verbose},
+        tol=tol if tol is not None else 1e-7, # pass existing tol
+        options={"disp": verbose, "maxiter": 1000, "gtol": 1e-4}, # Increased maxiter, added gtol
     )
+    if verbose:
+        print(f"Scipy optimization results (trust-constr): {results}")
+
+    if not results.success:
+        if verbose:
+            print("Retrying with SLSQP due to trust-constr failure.")
+        results = minimize(
+            value_and_grad(negative_log_likelihood),
+            args=(turnbull_interval_lookup, weights),
+            x0=p,
+            method='SLSQP',
+            bounds=strict_bounds, # Use stricter bounds here too
+            jac=True,
+            constraints=cons,
+            tol=tol,
+            options={"disp": verbose, "maxiter": 500}, # Increased maxiter for SLSQP too
+        )
+        if verbose:
+            print(f"Scipy optimization results (SLSQP fallback): {results}")
+
     return results.x
 
 
