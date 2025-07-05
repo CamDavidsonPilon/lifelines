@@ -5,7 +5,7 @@ import pandas as pd
 import warnings
 
 from lifelines.fitters import NonParametricUnivariateFitter
-from lifelines.utils import _preprocess_inputs, inv_normal_cdf, CensoringType, coalesce
+from lifelines.utils import _preprocess_inputs, inv_normal_cdf, CensoringType, coalesce, LinearAccumulator, QuadraticAccumulator
 from lifelines import KaplanMeierFitter
 from lifelines.plotting import _plot_estimate
 
@@ -219,22 +219,28 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
             ci_labels = ["%s_upper_%g" % (self._label, ci), "%s_lower_%g" % (self._label, ci)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        # Have to loop through each time independently. Don't think there is a faster way
+        # Use prefix sum algorithm to reduce time complexity to O(n), by cumulatively updating terms.
+        first_term_function = QuadraticAccumulator()
+        second_term = 0
+        third_term_function = LinearAccumulator()
         all_vars = []
         for _, r in df.iterrows():
-            sf = df.loc[df.index <= r.name].copy()
             F_t = float(r["Ft"])
-            first_term = np.sum((F_t - sf["Ft"]) ** 2 * sf["observed"] / sf["at_risk"] / (sf["at_risk"] - sf["observed"]))
-            second_term = np.sum(
-                sf["lagS"] ** 2
-                / sf["at_risk"]
-                * sf[self.label_cmprisk]
-                / sf["at_risk"]
-                * (sf["at_risk"] - sf[self.label_cmprisk])
-                / sf["at_risk"]
+
+            first_term_coefficient = r["observed"] / r["at_risk"] / (r["at_risk"] - r["observed"])
+            first_term_function.add_quadratic_term(a = first_term_coefficient, b = F_t)
+    
+            second_term += (
+                (r["lagS"] ** 2)
+                * r[self.label_cmprisk]
+                * (r["at_risk"] - r[self.label_cmprisk])
+                / (r["at_risk"] ** 3)
             )
-            third_term = np.sum((F_t - sf["Ft"]) / sf["at_risk"] * sf["lagS"] * sf[self.label_cmprisk] / sf["at_risk"])
-            variance = first_term + second_term - 2 * third_term
+            
+            third_term_coefficient = r["lagS"] * r[self.label_cmprisk] / (r["at_risk"] ** 2)
+            third_term_function.add_linear_term(a = third_term_coefficient, b = F_t)
+
+            variance = first_term_function.evaluate(F_t) + second_term - 2 * third_term_function.evaluate(F_t)
             all_vars.append(variance)
         df["variance"] = all_vars
 
