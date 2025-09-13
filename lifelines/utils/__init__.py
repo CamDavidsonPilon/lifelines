@@ -11,7 +11,7 @@ import warnings
 from numpy import ndarray
 import numpy as np
 
-from scipy.integrate import quad, trapz
+from scipy.integrate import quad, trapezoid
 from scipy.linalg import solve
 from scipy import stats
 
@@ -266,7 +266,7 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
         )
         sf = model_or_survival_function.loc[:t]
         sf = pd.concat((sf, pd.DataFrame([1], index=[0], columns=sf.columns))).sort_index()
-        return trapz(y=sf.values[:, 0], x=sf.index)
+        return trapezoid(y=sf.values[:, 0], x=sf.index)
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
         # lifelines model
         model = model_or_survival_function
@@ -313,7 +313,7 @@ def _expected_value_of_survival_squared_up_to_t(
         sf = model_or_survival_function.loc[:t]
         sf = sf.append(pd.DataFrame([1], index=[0], columns=sf.columns)).sort_index()
         sf_tau = sf * sf.index.values[:, None]
-        return 2 * trapz(y=sf_tau.values[:, 0], x=sf_tau.index)
+        return 2 * trapezoid(y=sf_tau.values[:, 0], x=sf_tau.index)
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
         # lifelines model
         model = model_or_survival_function
