@@ -3239,39 +3239,8 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
                 cumulative_hazard_.columns = stratified_X["index"]
                 cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
 
-<<<<<<< Updated upstream
+
             return cumulative_hazard
-=======
-        Compute the expected lifetime, E[T], using covarites X.
-        """
-        subjects = _get_index(X)
-        v = self.predict_survival_function(X)[subjects]
-        return pd.DataFrame(trapezoid(v.values.T, v.index), index=subjects)
-
-    def _compute_baseline_hazard(self, data, durations, event_observed, name):
-        # http://courses.nus.edu.sg/course/stacar/internet/st3242/handouts/notes3.pdf
-        ind_hazards = self.predict_partial_hazard(data)
-        ind_hazards['event_at'] = durations
-        ind_hazards_summed_over_durations = ind_hazards.groupby('event_at')[0].sum().sort_index(ascending=False).cumsum()
-        ind_hazards_summed_over_durations.name = 'hazards'
-
-        event_table = survival_table_from_events(durations, event_observed)
-        event_table = event_table.join(ind_hazards_summed_over_durations)
-        baseline_hazard = pd.DataFrame(event_table['observed'] / event_table['hazards'], columns=[name]).fillna(0)
-        return baseline_hazard
-
-    def _compute_baseline_hazards(self, df, T, E):
-        if self.strata:
-            index = self.durations.unique()
-            baseline_hazards_ = pd.DataFrame(index=index)
-            for stratum in df.index.unique():
-                baseline_hazards_ = baseline_hazards_.merge(
-                    self._compute_baseline_hazard(data=df.loc[[stratum]], durations=T.loc[[stratum]], event_observed=E.loc[[stratum]], name=stratum),
-                    left_index=True,
-                    right_index=True,
-                    how='left')
-            return baseline_hazards_.fillna(0)
->>>>>>> Stashed changes
 
         else:
             log_lambdas_ = np.array([0] + [self.params_[param][0] for param in self._fitted_parameter_names if param != "beta_"])
