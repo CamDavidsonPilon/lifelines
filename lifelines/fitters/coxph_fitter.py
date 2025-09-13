@@ -8,22 +8,13 @@ import time
 
 from numpy import dot, einsum, log, exp, zeros, arange, multiply, ndarray
 import numpy as np
-<<<<<<< Updated upstream
 from scipy.linalg import solve as spsolve, LinAlgError, norm, inv
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid
 from scipy import stats
 from pandas import DataFrame, Series, Index
 import pandas as pd
 from autograd import elementwise_grad
 from autograd import numpy as anp
-=======
-import pandas as pd
-
-from numpy import dot, exp
-from numpy.linalg import solve, norm, inv
-from scipy.integrate import trapezoid
-import scipy.stats as stats
->>>>>>> Stashed changes
 
 from lifelines.utils.concordance import _concordance_summary_statistics, _concordance_ratio, concordance_index
 from lifelines.fitters import RegressionFitter, SemiParametricRegressionFitter, ParametricRegressionFitter
