@@ -114,9 +114,7 @@ def cdf_plot(model, timeline=None, ax=None, **plot_kwargs):
 
     dist = get_distribution_name_of_lifelines_model(model)
     dist_object = create_scipy_stats_model_from_lifelines_model(model)
-    ax.plot(
-        timeline, dist_object.cdf(timeline), label="fitted %s" % dist, **plot_kwargs
-    )
+    ax.plot(timeline, dist_object.cdf(timeline), label="fitted %s" % dist, **plot_kwargs)
     ax.legend()
     return ax
 
@@ -214,14 +212,11 @@ def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_
         ax.text(
             text_position[0],
             text_position[1],
-            "RMST(%s) -\n   RMST(%s)=%.3f"
-            % (model._label, model2._label, rmst - rmst2),
+            "RMST(%s) -\n   RMST(%s)=%.3f" % (model._label, model2._label, rmst - rmst2),
         )  # dynamically pick this.
     else:
         rmst = restricted_mean_survival_time(model, t=t)
-        sf_exp_at_limit = (
-            model.predict(np.append(model.timeline, t)).sort_index().loc[:t]
-        )
+        sf_exp_at_limit = model.predict(np.append(model.timeline, t)).sort_index().loc[:t]
         ax.fill_between(
             sf_exp_at_limit.index,
             sf_exp_at_limit.values,
@@ -229,9 +224,7 @@ def rmst_plot(model, model2=None, t=np.inf, ax=None, text_position=None, **plot_
             color=c,
             alpha=0.25,
         )
-        ax.text(
-            text_position[0], text_position[1], "RMST=%.3f" % rmst
-        )  # dynamically pick this.
+        ax.text(text_position[0], text_position[1], "RMST=%.3f" % rmst)  # dynamically pick this.
     ax.axvline(t, ls="--", color="k")
     ax.set_ylim(0, 1)
     return ax
@@ -321,9 +314,7 @@ def qq_plot(model, ax=None, scatter_color="k", **plot_kwargs):
 
     max_, min_ = quantiles[COL_EMP].max(), quantiles[COL_EMP].min()
 
-    quantiles.plot.scatter(
-        COL_THEO, COL_EMP, c="none", edgecolor=scatter_color, lw=0.5, ax=ax
-    )
+    quantiles.plot.scatter(COL_THEO, COL_EMP, c="none", edgecolor=scatter_color, lw=0.5, ax=ax)
     ax.plot([min_, max_], [min_, max_], c="k", ls=":", lw=1.0)
     ax.set_ylim(min_, max_)
     ax.set_xlim(min_, max_)
@@ -497,9 +488,7 @@ def add_at_risk_counts(
     ax2 = plt.twiny(ax=ax)
     # Move the ticks below existing axes
     # Appropriate length scaled for 6 inches. Adjust for figure size.
-    ax_height = (
-        ax.get_position().y1 - ax.get_position().y0
-    ) * fig.get_figheight()  # axis height
+    ax_height = (ax.get_position().y1 - ax.get_position().y0) * fig.get_figheight()  # axis height
     ax2_ypos = ypos / ax_height
 
     move_spines(ax2, ["bottom"], [ax2_ypos])
@@ -532,9 +521,7 @@ def add_at_risk_counts(
             if at_risk_count_from_start_of_period:
                 event_table_slice = f.event_table.assign(at_risk=lambda x: x.at_risk)
             else:
-                event_table_slice = f.event_table.assign(
-                    at_risk=lambda x: x.at_risk - x.removed
-                )
+                event_table_slice = f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed)
             if not event_table_slice.loc[:tick].empty:
                 event_table_slice = (
                     event_table_slice.loc[:tick, ["at_risk", "censored", "observed"]]
@@ -563,23 +550,11 @@ def add_at_risk_counts(
                 for i, c in enumerate(counts):
                     if i % n_rows == 0:
                         if is_latex_enabled():
-                            lbl += (
-                                ("\n" if i > 0 else "")
-                                + r"\textbf{%s}" % labels[int(i / n_rows)]
-                                + "\n"
-                            )
+                            lbl += ("\n" if i > 0 else "") + r"\textbf{%s}" % labels[int(i / n_rows)] + "\n"
                         else:
-                            lbl += (
-                                ("\n" if i > 0 else "")
-                                + r"%s" % labels[int(i / n_rows)]
-                                + "\n"
-                            )
+                            lbl += ("\n" if i > 0 else "") + r"%s" % labels[int(i / n_rows)] + "\n"
                     l = rows_to_show[i % n_rows]
-                    s = (
-                        "{}".format(l.rjust(10, " "))
-                        + (" " * (max_length - len(str(c)) + 3))
-                        + "{{:>{}d}}\n".format(max_length)
-                    )
+                    s = "{}".format(l.rjust(10, " ")) + (" " * (max_length - len(str(c)) + 3)) + "{{:>{}d}}\n".format(max_length)
 
                     lbl += s.format(c)
             else:
@@ -669,15 +644,11 @@ def plot_interval_censored_lifetimes(
     if ax is None:
         ax = plt.gca()
     # If lower_bounds is pd.Series with non-default index, then use index values as y-axis labels.
-    label_plot_bars = (
-        type(lower_bound) is pd.Series and type(lower_bound.index) is not pd.RangeIndex
-    )
+    label_plot_bars = type(lower_bound) is pd.Series and type(lower_bound.index) is not pd.RangeIndex
 
     N = lower_bound.shape[0]
     if N > 25:
-        warnings.warn(
-            "For less visual clutter, you may want to subsample to less than 25 individuals."
-        )
+        warnings.warn("For less visual clutter, you may want to subsample to less than 25 individuals.")
     assert upper_bound.shape[0] == N
 
     if sort_by_lower_bound:
@@ -764,15 +735,11 @@ def plot_lifetimes(
     if ax is None:
         ax = plt.gca()
     # If durations is pd.Series with non-default index, then use index values as y-axis labels.
-    label_plot_bars = (
-        type(durations) is pd.Series and type(durations.index) is not pd.RangeIndex
-    )
+    label_plot_bars = type(durations) is pd.Series and type(durations.index) is not pd.RangeIndex
 
     N = durations.shape[0]
     if N > 25:
-        warnings.warn(
-            "For less visual clutter, you may want to subsample to less than 25 individuals."
-        )
+        warnings.warn("For less visual clutter, you may want to subsample to less than 25 individuals.")
     if event_observed is None:
         event_observed = np.ones(N, dtype=bool)
     if entry is None:
@@ -825,19 +792,13 @@ def create_dataframe_slicer(iloc, loc, timeline):
     if (loc is not None) and (iloc is not None):
         raise ValueError("Cannot set both loc and iloc in call to .plot().")
     user_did_not_specify_certain_indexes = (iloc is None) and (loc is None)
-    user_submitted_slice = (
-        slice(timeline.min(), timeline.max())
-        if user_did_not_specify_certain_indexes
-        else coalesce(loc, iloc)
-    )
+    user_submitted_slice = slice(timeline.min(), timeline.max()) if user_did_not_specify_certain_indexes else coalesce(loc, iloc)
 
     get_method = "iloc" if iloc is not None else "loc"
     return lambda df: getattr(df, get_method)[user_submitted_slice]
 
 
-def loglogs_plot(
-    cls, loc=None, iloc=None, show_censors=False, censor_styles=None, ax=None, **kwargs
-):
+def loglogs_plot(cls, loc=None, iloc=None, show_censors=False, censor_styles=None, ax=None, **kwargs):
     """
     Specifies a plot of the log(-log(SV)) versus log(time) where SV is the estimated survival function.
     """
@@ -864,9 +825,7 @@ def loglogs_plot(
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "|", "ms": 12, "mew": 1}
         cs.update(censor_styles)
-        times = dataframe_slicer(
-            cls.event_table.loc[(cls.event_table["censored"] > 0)]
-        ).index.values.astype(float)
+        times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = cls.predict(times)
         ax.plot(np.log(times), loglog(v), linestyle="None", color=colour, **cs)
     # plot estimate
@@ -955,25 +914,19 @@ def _plot_estimate(
     if "point_in_time" in kwargs:  # marker for given point
         point_in_time = kwargs["point_in_time"]
         kwargs.pop("point_in_time")
-    plot_estimate_config = PlotEstimateConfig(
-        cls, estimate, loc, iloc, show_censors, censor_styles, logx, ax, **kwargs
-    )
+    plot_estimate_config = PlotEstimateConfig(cls, estimate, loc, iloc, show_censors, censor_styles, logx, ax, **kwargs)
 
     dataframe_slicer = create_dataframe_slicer(iloc, loc, cls.timeline)
 
     if show_censors and cls.event_table["censored"].sum() > 0:
         cs = {"marker": "+", "ms": 12, "mew": 1}
         cs.update(plot_estimate_config.censor_styles)
-        censored_times = dataframe_slicer(
-            cls.event_table.loc[(cls.event_table["censored"] > 0)]
-        ).index.values.astype(float)
+        censored_times = dataframe_slicer(cls.event_table.loc[(cls.event_table["censored"] > 0)]).index.values.astype(float)
         v = plot_estimate_config.predict_at_times(censored_times).values
-        plot_estimate_config.ax.plot(
-            censored_times, v, linestyle="None", color=plot_estimate_config.colour, **cs
-        )
-    dataframe_slicer(plot_estimate_config.estimate_).rename(
-        columns=lambda _: plot_estimate_config.kwargs.pop("label")
-    ).plot(logx=plot_estimate_config.logx, **plot_estimate_config.kwargs)
+        plot_estimate_config.ax.plot(censored_times, v, linestyle="None", color=plot_estimate_config.colour, **cs)
+    dataframe_slicer(plot_estimate_config.estimate_).rename(columns=lambda _: plot_estimate_config.kwargs.pop("label")).plot(
+        logx=plot_estimate_config.logx, **plot_estimate_config.kwargs
+    )
 
     # plot confidence intervals
     if ci_show:
@@ -995,15 +948,9 @@ def _plot_estimate(
                     )
                 )
         else:
-            x = dataframe_slicer(
-                plot_estimate_config.confidence_interval_
-            ).index.values.astype(float)
-            lower = dataframe_slicer(
-                plot_estimate_config.confidence_interval_.iloc[:, [0]]
-            ).values[:, 0]
-            upper = dataframe_slicer(
-                plot_estimate_config.confidence_interval_.iloc[:, [1]]
-            ).values[:, 0]
+            x = dataframe_slicer(plot_estimate_config.confidence_interval_).index.values.astype(float)
+            lower = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [0]]).values[:, 0]
+            upper = dataframe_slicer(plot_estimate_config.confidence_interval_.iloc[:, [1]]).values[:, 0]
 
             if plot_estimate_config.kwargs["drawstyle"] == "default":
                 step = None
@@ -1022,25 +969,12 @@ def _plot_estimate(
         add_at_risk_counts(cls, ax=plot_estimate_config.ax)
         plt.tight_layout()
     if "point_in_time" in locals():
-        plot_estimate_config.ax.scatter(
-            point_in_time, cls.survival_function_at_times(point_in_time)
-        )
+        plot_estimate_config.ax.scatter(point_in_time, cls.survival_function_at_times(point_in_time))
     return plot_estimate_config.ax
 
 
 class PlotEstimateConfig:
-    def __init__(
-        self,
-        cls,
-        estimate: Union[str, pd.DataFrame],
-        loc,
-        iloc,
-        show_censors,
-        censor_styles,
-        logx,
-        ax,
-        **kwargs
-    ):
+    def __init__(self, cls, estimate: Union[str, pd.DataFrame], loc, iloc, show_censors, censor_styles, logx, ax, **kwargs):
         from matplotlib import pyplot as plt
 
         self.censor_styles = coalesce(censor_styles, {})

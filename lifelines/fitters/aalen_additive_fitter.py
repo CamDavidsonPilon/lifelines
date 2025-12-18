@@ -33,7 +33,6 @@ from lifelines.utils import (
 
 
 class AalenAdditiveFitter(RegressionFitter):
-
     r"""
     This class fits the regression model:
 
@@ -78,6 +77,7 @@ class AalenAdditiveFitter(RegressionFitter):
     weights: array
         The event_observed variable provided
     """
+
     _KNOWN_MODEL = True
 
     def __init__(self, fit_intercept=True, alpha=0.05, coef_penalizer=0.0, smoothing_penalizer=0.0):
@@ -244,7 +244,7 @@ class AalenAdditiveFitter(RegressionFitter):
 
             hazards_[i, :] = v
 
-            variance_hazards_[i, :] = (V ** 2).sum(1)
+            variance_hazards_[i, :] = (V**2).sum(1)
 
             X[exits, :] = 0
 
@@ -500,7 +500,7 @@ It's important to know that the naive variance estimates of the coefficients are
             # normally (weights * X).dot(Y) / X.dot(weights * X), but we have a slightly different form here.
             beta = X.dot(Y) / X.dot(weights * X)
             errors = Y.values - np.outer(X, beta)
-            var = (errors ** 2).sum(0) / (Y.shape[0] - 2) / X.dot(weights * X)
+            var = (errors**2).sum(0) / (Y.shape[0] - 2) / X.dot(weights * X)
             return beta, np.sqrt(var)
 
         weights = survival_table_from_events(self.durations, self.event_observed).loc[self._index, "at_risk"].values

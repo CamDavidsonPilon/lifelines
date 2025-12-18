@@ -1609,7 +1609,7 @@ def format_exp_floats(decimals) -> Callable:
     sometimes the exp. column can be too large
     """
     threshold = 10**5
-    return lambda n: "{:.{prec}e}".format(n, prec=decimals) if n > threshold else "{:4.{prec}f}".format(n, prec=decimals)
+    return lambda n: ("{:.{prec}e}".format(n, prec=decimals) if n > threshold else "{:4.{prec}f}".format(n, prec=decimals))
 
 
 def format_floats(decimals) -> Callable:

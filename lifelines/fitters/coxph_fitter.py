@@ -645,7 +645,10 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
         strata = utils._to_list_or_singleton(kwargs.pop("strata"))
 
         if strata is None:
-            regressors = {**{"beta_": formula}, **{"log_lambda%d_" % i: "1" for i in range(2, len(self.breakpoints) + 2)}}
+            regressors = {
+                **{"beta_": formula},
+                **{"log_lambda%d_" % i: "1" for i in range(2, len(self.breakpoints) + 2)},
+            }
             strata_values = None
         elif isinstance(strata, (list, str)):
             strata_namer = ParametricPiecewiseBaselinePHFitter._strata_labeler
@@ -1069,6 +1072,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
     baseline_cumulative_hazard_: DataFrame
     baseline_survival_: DataFrame
     """
+
     _KNOWN_MODEL = True
 
     def __init__(
@@ -1612,7 +1616,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         elif not success:
             self._check_values_post_fitting(X, T, E, weights)
             warnings.warn(
-                "Newton-Raphson failed to converge sufficiently. {0}".format(CONVERGENCE_DOCS), exceptions.ConvergenceWarning
+                "Newton-Raphson failed to converge sufficiently. {0}".format(CONVERGENCE_DOCS),
+                exceptions.ConvergenceWarning,
             )
 
         return beta, ll_, hessian
@@ -1876,9 +1881,13 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
     def _partition_by_strata_and_apply(
         self, X: DataFrame, T: Series, E: Series, entries: Optional[Series], weights: Series, function: Callable, *args
     ):
-        for (stratified_X, stratified_T, stratified_E, stratified_W, stratified_entries), _ in self._partition_by_strata(
-            X, T, E, weights, entries
-        ):
+        for (
+            stratified_X,
+            stratified_T,
+            stratified_E,
+            stratified_W,
+            stratified_entries,
+        ), _ in self._partition_by_strata(X, T, E, weights, entries):
             yield function(stratified_X, stratified_T, stratified_E, stratified_W, stratified_entries, *args)
 
     def _compute_martingale(
@@ -2230,7 +2239,11 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             degrees_freedom=degrees_freedom,
         )
 
-    def predict_partial_hazard(self, X: Union[ndarray, DataFrame]) -> pd.Series:
+    def predict_partial_hazard(
+        self,
+        X: Union[ndarray, DataFrame],
+        return_se: bool = False,
+    ) -> Union[pd.Series, Tuple[pd.Series, pd.Series]]:
         r"""
         Returns the partial hazard for the individuals, partial since the
         baseline hazard is not included. Equal to :math:`\exp{(x - mean(x_{train}))'\beta}`
@@ -2241,6 +2254,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        return_se: bool
+            return standard errors of predictions
 
         Notes
         -----
@@ -2248,9 +2263,20 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if X is an array, then the column ordering is assumed to be the
         same as the training dataset.
         """
-        return exp(self.predict_log_partial_hazard(X))
+        hazard = self.predict_log_partial_hazard(
+            X,
+            return_se,
+        )
+        if not return_se:
+            return exp(hazard)
+        else:
+            return exp(hazard[0]), hazard[1] * np.sqrt(np.exp(hazard[0]))
 
-    def predict_log_partial_hazard(self, X: Union[ndarray, DataFrame]) -> pd.Series:
+    def predict_log_partial_hazard(
+        self,
+        X: Union[ndarray, DataFrame],
+        return_se: bool = False,
+    ) -> Union[pd.Series, Tuple[pd.Series, pd.Series]]:
         r"""
         This is equivalent to R's linear.predictors.
         Returns the log of the partial hazard for the individuals, partial since the
@@ -2263,6 +2289,8 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
             a (n,d) covariate numpy array or DataFrame. If a DataFrame, columns
             can be in any order. If a numpy array, columns must be in the
             same order as the training data.
+        return_se: bool
+            return standard errors of predictions
 
         Notes
         -----
@@ -2289,7 +2317,18 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
         X = X.astype(float)
         X = utils.normalize(X, self._norm_mean.values, 1)
-        return pd.Series(dot(X, self.params_), index=index)
+
+        hazard = pd.Series(dot(X, self.params_), index=index)
+        if not return_se:
+            return hazard
+        else:
+            se = np.sqrt(
+                np.sum(
+                    np.matmul(X, self.variance_matrix_.to_numpy()) * X,
+                    axis=1,
+                )
+            )
+            return hazard, pd.Series(se)
 
     def predict_cumulative_hazard(
         self,
@@ -2364,7 +2403,10 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
                     c_0_ = utils.interpolate_at_times(strata_c_0, times_to_evaluate_at).T
 
                 cumulative_hazard_ = cumulative_hazard_.merge(
-                    pd.DataFrame(c_0_ * v.values, columns=col, index=times_), how="outer", right_index=True, left_index=True
+                    pd.DataFrame(c_0_ * v.values, columns=col, index=times_),
+                    how="outer",
+                    right_index=True,
+                    left_index=True,
                 )
         else:
 

@@ -76,6 +76,7 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
         Count of breakpoints
 
     """
+
     _scipy_fit_method = "SLSQP"
     _scipy_fit_options = {"maxiter": 1000}
 
@@ -100,7 +101,10 @@ class SplineFitter(KnownModelParametricUnivariateFitter, SplineFitterMixin):
             cum_haz = cum_haz * anp.exp(
                 phis[i]
                 * self.basis(
-                    lT, anp.log(self.knot_locations[i - 1]), anp.log(self.knot_locations[0]), anp.log(self.knot_locations[-1])
+                    lT,
+                    anp.log(self.knot_locations[i - 1]),
+                    anp.log(self.knot_locations[0]),
+                    anp.log(self.knot_locations[-1]),
                 )
             )
 

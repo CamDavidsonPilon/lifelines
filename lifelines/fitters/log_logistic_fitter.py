@@ -6,7 +6,6 @@ from lifelines.utils import CensoringType
 
 
 class LogLogisticFitter(KnownModelParametricUnivariateFitter):
-
     r"""
     This class implements a Log-Logistic model for univariate data. The model has parameterized
     form:

@@ -272,9 +272,13 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             ), stratum
 
     def _partition_by_strata_and_apply(self, X, events, start, stop, weights, function, *args):
-        for ((stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W), _) in self._partition_by_strata(
-            X, events, start, stop, weights
-        ):
+        for (
+            stratified_X,
+            stratified_events,
+            stratified_start,
+            stratified_stop,
+            stratified_W,
+        ), _ in self._partition_by_strata(X, events, start, stop, weights):
             yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
 
     def _compute_z_values(self):
@@ -735,7 +739,11 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         degrees_freedom = self.params_.shape[0]
         p_value = _chisq_test_p_value(test_stat, degrees_freedom=degrees_freedom)
         return StatisticalResult(
-            p_value, test_stat, name="log-likelihood ratio test", degrees_freedom=degrees_freedom, null_distribution="chi squared"
+            p_value,
+            test_stat,
+            name="log-likelihood ratio test",
+            degrees_freedom=degrees_freedom,
+            null_distribution="chi squared",
         )
 
     def plot(self, columns=None, ax=None, **errorbar_kwargs):
@@ -801,7 +809,9 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             hazards = self.predict_partial_hazard(tv_data).values
 
         unique_death_times = np.unique(stop[events.values])
-        baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times).astype(float), index=unique_death_times, columns=["baseline hazard"])
+        baseline_hazard_ = pd.DataFrame(
+            np.zeros_like(unique_death_times).astype(float), index=unique_death_times, columns=["baseline hazard"]
+        )
 
         for t in unique_death_times:
             ix = (start.values < t) & (t <= stop.values)
