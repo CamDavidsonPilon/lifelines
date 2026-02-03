@@ -1,6 +1,6 @@
 numpy>=1.14.0
 scipy>=1.7.0
-pandas>=2.1
+pandas>=2.1,<3.0
 matplotlib>=3.0
 autograd>=1.5
 autograd-gamma>=0.3
