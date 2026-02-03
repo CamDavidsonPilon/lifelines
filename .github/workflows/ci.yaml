@@ -9,7 +9,11 @@ jobs:
       fail-fast: true
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        numpy-version: ["2.2.6", "2.3.5", "2.4.2"]
+        exclude:
+          - python-version: "3.14"
+            numpy-version: "2.2.6"
 
     steps:
       - name: Checkout source
@@ -22,6 +26,7 @@ jobs:
 
       - name: Install
         run: |
+          pip install "numpy==${{ matrix.numpy-version }}"
           pip install -e .
           pip install -r reqs/dev-requirements.txt
 
