@@ -540,7 +540,10 @@ def add_at_risk_counts(
                     event_table_slice.loc[:tick, ["at_risk", "censored", "observed"]]
                     .agg(
                         {
-                            "at_risk": lambda x: x.tail(1).values,
+                            # `Series.tail(1).values` is a 1D array of length 1. In NumPy>=2.4,
+                            # `int(np.array([1]))` raises `TypeError: only 0-dimensional arrays can be converted to Python scalars`.
+                            # Extract a Python scalar for compatibility.
+                            "at_risk": lambda x: x.tail(1).values.item(),
                             "censored": "sum",
                             "observed": "sum",
                         }
@@ -554,7 +557,7 @@ def add_at_risk_counts(
                     )
                     .fillna(0)
                 )
-                counts.extend([int(c) for c in event_table_slice.loc[rows_to_show]])
+                counts.extend([int(np.asarray(c).item()) for c in event_table_slice.loc[rows_to_show]])
             else:
                 counts.extend([0 for _ in range(n_rows)])
         if n_rows > 1:
