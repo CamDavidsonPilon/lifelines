@@ -2119,6 +2119,25 @@ class TestRegressionFitters:
                 formula = "%s" % subset[-1]
                 fitter.fit(df[subset], duration_col="t", formula=formula)
 
+    def test_categorical_prediction(self):
+        df = pd.DataFrame.from_dict(
+            {
+                "t": [1.0, 5.0, 3.0, 4.0, 6.0, 1.0],
+                "categoryb_": pd.Series(["a", "a", "b", "b", "c", "c"], dtype="category"),
+            }
+        )
+
+        df_to_predict = pd.DataFrame.from_dict(
+            {
+                "categoryb_": pd.Series(["a", "b", "c"], dtype="category"),
+            }
+        )
+
+        for fitter in [CoxPHFitter(), WeibullAFTFitter()]:
+            formula = "categoryb_"
+            fitter.fit(df, duration_col="t", formula=formula)
+            fitter.predict_survival_function(df_to_predict)
+
     @pytest.mark.xfail
     def test_regression_model_has_concordance_index_(self, regression_models, rossi):
 

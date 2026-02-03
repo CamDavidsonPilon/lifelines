@@ -561,3 +561,21 @@ def test_survival_difference_at_fixed_point_in_time_test_interval_censoring():
     wf2 = WeibullFitter().fit_interval_censoring(2 * T, 2 * T)
     result = stats.survival_difference_at_fixed_point_in_time_test(T.mean(), wf1, wf2)
     assert result.p_value < 0.05
+
+
+def test_statistical_result_has_correct_decimal():
+    import re
+    from lifelines.datasets import load_rossi
+
+    rossi = load_rossi()
+
+    results = stats.logrank_test(
+        durations_A=rossi.loc[rossi["fin"] == 0, "week"],
+        durations_B=rossi.loc[rossi["fin"] == 1, "week"],
+        event_observed_A=rossi.loc[rossi["fin"] == 0, "arrest"],
+        event_observed_B=rossi.loc[rossi["fin"] == 1, "arrest"],
+    )
+
+    output = results.to_ascii(decimals=10, test=1)
+    numbers = re.findall(r"\d+\.\d{10}\b", output)
+    assert len(numbers) >= 3

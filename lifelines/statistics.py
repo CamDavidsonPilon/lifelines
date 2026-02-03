@@ -114,9 +114,9 @@ class StatisticalResult:
             self._print_specific_style(style, decimals=decimals, **kwargs)
         else:
             try:
-                from IPython.display import display
+                from IPython.display import HTML, display
 
-                display(self)
+                display(HTML(self.to_html(decimals=decimals, **kwargs)))
             except ImportError:
                 self._ascii_print(decimals=decimals, **kwargs)
 
@@ -175,7 +175,6 @@ class StatisticalResult:
     def to_ascii(self, decimals=2, **kwargs):
         extra_kwargs = dict(list(self._kwargs.items()) + list(kwargs.items()))
         meta_data = self._stringify_meta_data(extra_kwargs)
-
         df = self.summary
 
         s = "<lifelines.StatisticalResult: {0}>".format(self.test_name)
