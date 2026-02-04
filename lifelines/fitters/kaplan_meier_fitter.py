@@ -25,7 +25,6 @@ from lifelines.fitters.npmle import npmle, reconstruct_survival_function, npmle_
 
 
 class KaplanMeierFitter(NonParametricUnivariateFitter):
-
     """
     Class for fitting the Kaplan-Meier estimate for the survival function.
 

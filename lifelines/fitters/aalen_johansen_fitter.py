@@ -117,7 +117,10 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
                 Warning,
             )
             durations = self._jitter(
-                durations=pd.Series(durations), event=pd.Series(event_observed), jitter_level=self._jitter_level, seed=self._seed
+                durations=pd.Series(durations),
+                event=pd.Series(event_observed),
+                jitter_level=self._jitter_level,
+                seed=self._seed,
             )
 
         alpha = alpha if alpha else self.alpha
@@ -169,8 +172,7 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
         return self
 
     def _jitter(self, durations, event, jitter_level, seed=None):
-        """Determine extent to jitter tied event times. Automatically called by fit if tied event times are detected
-        """
+        """Determine extent to jitter tied event times. Automatically called by fit if tied event times are detected"""
         np.random.seed(seed)
 
         if jitter_level <= 0:

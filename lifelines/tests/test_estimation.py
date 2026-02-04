@@ -82,8 +82,13 @@ from lifelines.datasets import (
     load_multicenter_aids_cohort_study,
     load_c_botulinum_lag_phase,
     load_diabetes,
+    load_lung,
 )
-from lifelines.generate_datasets import generate_hazard_rates, generate_random_lifetimes, piecewise_exponential_survival_data
+from lifelines.generate_datasets import (
+    generate_hazard_rates,
+    generate_random_lifetimes,
+    piecewise_exponential_survival_data,
+)
 
 
 @pytest.fixture
@@ -157,7 +162,17 @@ def data_pred2():
 @pytest.fixture
 def data_nus():
     data_nus = pd.DataFrame(
-        [[6, 31.4], [98, 21.5], [189, 27.1], [374, 22.7], [1002, 35.7], [1205, 30.7], [2065, 26.5], [2201, 28.3], [2421, 27.9]],
+        [
+            [6, 31.4],
+            [98, 21.5],
+            [189, 27.1],
+            [374, 22.7],
+            [1002, 35.7],
+            [1205, 30.7],
+            [2065, 26.5],
+            [2201, 28.3],
+            [2421, 27.9],
+        ],
         columns=["t", "x"],
     )
     data_nus["E"] = True
@@ -2546,7 +2561,8 @@ class TestLogLogisticAFTFitter:
         factor = aft.summary.loc[("alpha_", "prio"), "exp(coef)"]
         expon = aft.summary.loc[("beta_", "Intercept"), "exp(coef)"]
         npt.assert_allclose(
-            baseline_survival / (1 - baseline_survival) * factor**expon, accelerated_survival / (1 - accelerated_survival)
+            baseline_survival / (1 - baseline_survival) * factor**expon,
+            accelerated_survival / (1 - accelerated_survival),
         )
 
 
@@ -3541,14 +3557,19 @@ class TestCoxPHFitter:
         residuals(c, "schoen")
         """
         df = pd.DataFrame(
-            {"var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105], "T": [5, 6, 7, 8, 9], "E": [1, 1, 1, 1, 1]}
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [5, 6, 7, 8, 9],
+                "E": [1, 1, 1, 1, 1],
+            }
         )
 
         cph.fit(df, "T", "E")
 
         results = cph.compute_residuals(df, "schoenfeld")
         expected = pd.DataFrame(
-            [-0.2165282492, -0.4573005808, 1.1117589644, -0.4379301344, 0.0], columns=pd.Index(["var1"], name="covariate")
+            [-0.2165282492, -0.4573005808, 1.1117589644, -0.4379301344, 0.0],
+            columns=pd.Index(["var1"], name="covariate"),
         )
         assert_frame_equal(results, expected, atol=0.001)
 
@@ -3565,14 +3586,20 @@ class TestCoxPHFitter:
         residuals(c, "schoen")
         """
         df = pd.DataFrame(
-            {"var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105], "T": [6, 6, 7, 8, 9], "E": [1, 1, 1, 0, 1]}
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
+                "E": [1, 1, 1, 0, 1],
+            }
         )
 
         cph.fit(df, "T", "E")
         cph.print_summary()
         results = cph.compute_residuals(df, "schoenfeld")
         expected = pd.DataFrame(
-            [-0.3903793341, -0.5535578141, 0.9439371482, 0.0], columns=pd.Index(["var1"], name="covariate"), index=[0, 1, 2, 4]
+            [-0.3903793341, -0.5535578141, 0.9439371482, 0.0],
+            columns=pd.Index(["var1"], name="covariate"),
+            index=[0, 1, 2, 4],
         )
         assert_frame_equal(results, expected, atol=0.001)
 
@@ -3601,7 +3628,8 @@ class TestCoxPHFitter:
 
         results = cph.compute_residuals(df, "schoenfeld")
         expected = pd.DataFrame(
-            [-0.6633324862, -0.9107785234, 0.6176009038, -0.6103579448, 0.0], columns=pd.Index(["var1"], name="covariate")
+            [-0.6633324862, -0.9107785234, 0.6176009038, -0.6103579448, 0.0],
+            columns=pd.Index(["var1"], name="covariate"),
         )
         assert_frame_equal(results, expected, atol=0.001)
 
@@ -3692,7 +3720,11 @@ class TestCoxPHFitter:
     def test_original_index_is_respected_in_all_residual_tests(self, cph):
 
         df = pd.DataFrame(
-            {"var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105], "T": [6, 6, 7, 8, 9], "s": [1, 2, 2, 1, 1]}
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
+                "s": [1, 2, 2, 1, 1],
+            }
         )
         df.index = ["A", "B", "C", "D", "E"]
 
@@ -3705,7 +3737,11 @@ class TestCoxPHFitter:
     def test_original_index_is_respected_in_all_residual_tests_with_strata(self, cph):
 
         df = pd.DataFrame(
-            {"var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105], "T": [6, 6, 7, 8, 9], "s": [1, 2, 2, 1, 1]}
+            {
+                "var1": [-0.71163379, -0.87481227, 0.99557251, -0.83649751, 1.42737105],
+                "T": [6, 6, 7, 8, 9],
+                "s": [1, 2, 2, 1, 1],
+            }
         )
         df.index = ["A", "B", "C", "D", "E"]
 
@@ -4913,6 +4949,51 @@ log-likelihood ratio test = 33.27 on 7 df
         with pytest.raises(IndexError):
             cph.check_assumptions(rossi)
 
+    def test_se_calculation_predict_hazard(
+        self,
+    ):
+        """
+        Compared to the following R outputs
+        ``` R
+            df <- na.omit(read.csv("lung.csv"))
+            cph <- survival::coxph(
+                    Surv(time,status) ~ age + sex + ph.ecog + ph.karno, df
+                    )
+            X <- data.frame(
+              age = c(20,30,50),
+              sex = c(1,2,1),
+              ph.ecog = c(0,1,2),
+              ph.karno = c(90,60,80)
+              )
+            hazard_log <- predict(cph, X, se.fit=TRUE)
+            hazard <- predict(cph, X, type="risk", se.fit=TRUE)
+        ```
+        """
+        df = load_lung()
+        df = df[df.isnull().sum(axis=1) == 0]
+
+        cph = CoxPHFitter()
+        cph.fit(df, "time", event_col="status", formula="age + sex + ph.ecog + ph.karno")
+        X = pd.DataFrame(
+            {
+                "age": [20, 30, 50],
+                "sex": [1, 2, 1],
+                "ph.ecog": [0, 1, 2],
+                "ph.karno": [90, 60, 80],
+            }
+        )
+        hazard_log, se_log = cph.predict_log_partial_hazard(X, return_se=True)
+        hazard_log_r = pd.Series([-0.8966062, -1.1635142, 0.7709685])
+        se_log_r = pd.Series([0.4897607, 0.5004043, 0.2702260])
+        assert all(round(hazard_log, 5) == round(hazard_log_r, 5))
+        assert all(round(se_log, 5) == round(se_log_r, 5))
+
+        hazard, se = cph.predict_partial_hazard(X, return_se=True)
+        hazard_r = pd.Series([0.4079518, 0.3123865, 2.1618590])
+        se_r = pd.Series([0.3128156, 0.2796837, 0.3973204])
+        assert all(round(hazard, 5) == round(hazard_r, 5))
+        assert all(round(se, 5) == round(se_r, 5))
+
 
 class TestAalenAdditiveFitter:
     @pytest.fixture()
@@ -5671,13 +5752,69 @@ class TestAalenJohansenFitter:
 
         expected_event_table = pd.DataFrame.from_records(
             [
-                {"event_at": 0.0, "removed": 0, "observed": 0, "observed_2": 0, "censored": 0, "entrance": 6, "at_risk": 6},
-                {"event_at": 1.0, "removed": 1, "observed": 0, "observed_2": 0, "censored": 1, "entrance": 0, "at_risk": 6},
-                {"event_at": 2.0, "removed": 1, "observed": 1, "observed_2": 0, "censored": 0, "entrance": 0, "at_risk": 5},
-                {"event_at": 3.0, "removed": 1, "observed": 1, "observed_2": 0, "censored": 0, "entrance": 0, "at_risk": 4},
-                {"event_at": 4.0, "removed": 1, "observed": 1, "observed_2": 1, "censored": 0, "entrance": 0, "at_risk": 3},
-                {"event_at": 5.0, "removed": 1, "observed": 1, "observed_2": 1, "censored": 0, "entrance": 0, "at_risk": 2},
-                {"event_at": 6.0, "removed": 1, "observed": 0, "observed_2": 0, "censored": 1, "entrance": 0, "at_risk": 1},
+                {
+                    "event_at": 0.0,
+                    "removed": 0,
+                    "observed": 0,
+                    "observed_2": 0,
+                    "censored": 0,
+                    "entrance": 6,
+                    "at_risk": 6,
+                },
+                {
+                    "event_at": 1.0,
+                    "removed": 1,
+                    "observed": 0,
+                    "observed_2": 0,
+                    "censored": 1,
+                    "entrance": 0,
+                    "at_risk": 6,
+                },
+                {
+                    "event_at": 2.0,
+                    "removed": 1,
+                    "observed": 1,
+                    "observed_2": 0,
+                    "censored": 0,
+                    "entrance": 0,
+                    "at_risk": 5,
+                },
+                {
+                    "event_at": 3.0,
+                    "removed": 1,
+                    "observed": 1,
+                    "observed_2": 0,
+                    "censored": 0,
+                    "entrance": 0,
+                    "at_risk": 4,
+                },
+                {
+                    "event_at": 4.0,
+                    "removed": 1,
+                    "observed": 1,
+                    "observed_2": 1,
+                    "censored": 0,
+                    "entrance": 0,
+                    "at_risk": 3,
+                },
+                {
+                    "event_at": 5.0,
+                    "removed": 1,
+                    "observed": 1,
+                    "observed_2": 1,
+                    "censored": 0,
+                    "entrance": 0,
+                    "at_risk": 2,
+                },
+                {
+                    "event_at": 6.0,
+                    "removed": 1,
+                    "observed": 0,
+                    "observed_2": 0,
+                    "censored": 1,
+                    "entrance": 0,
+                    "at_risk": 1,
+                },
             ]
         ).set_index("event_at")[["removed", "observed", "observed_2", "censored", "entrance", "at_risk"]]
         # pandas util for checking if two dataframes are equal

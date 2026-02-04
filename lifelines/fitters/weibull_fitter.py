@@ -6,7 +6,6 @@ from lifelines import utils
 
 
 class WeibullFitter(KnownModelParametricUnivariateFitter):
-
     r"""
 
     This class implements a Weibull model for univariate data. The model has parameterized

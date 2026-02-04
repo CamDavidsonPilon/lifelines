@@ -3,7 +3,6 @@ import numpy as np
 
 
 class _BTree:
-
     """A simple balanced binary order statistic tree to help compute the concordance.
 
     When computing the concordance, we know all the values the tree will ever contain. That
@@ -56,7 +55,7 @@ class _BTree:
         # nth-last row is indices (2**n - 1)::(2**(n+1))
         values_start = 0
         values_space = 2
-        values_len = 2 ** last_full_row
+        values_len = 2**last_full_row
         while values_start < len(values):
             tree[values_len - 1 : 2 * values_len - 1] = values[values_start::values_space]
             values_start += int(values_space / 2)

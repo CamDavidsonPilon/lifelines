@@ -52,7 +52,21 @@ def test_npmle_with_weights():
     weights = np.array([2, 2, 2, 1, 1, 1, 1, 1, 1, 1])
     npt.assert_allclose(npmle(left, right, weights=weights)[0], sol, rtol=1e-4)
 
-    left, right = [1, 1, 8, 8, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 7, 8, 8, 10, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
+    left, right = [1, 1, 8, 8, 8, 8, 7, 7, 17, 37, 46, 46, 45], [
+        7,
+        7,
+        8,
+        8,
+        10,
+        10,
+        16,
+        14,
+        np.inf,
+        44,
+        np.inf,
+        np.inf,
+        np.inf,
+    ]
     npt.assert_allclose(npmle(left, right)[0], sol, rtol=1e-4)
 
 

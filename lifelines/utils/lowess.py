@@ -40,7 +40,7 @@ def lowess(x, y, f=2.0 / 3.0, iterations=1):
     r = int(ceil(f * n))
     h = np.clip([np.sort(np.abs(x - x[i]))[r] for i in range(n)], 1e-8, np.inf)
     w = np.clip(np.abs((x[:, None] - x[None, :]) / h), 0.0, 1.0)
-    w = (1 - w ** 3) ** 3
+    w = (1 - w**3) ** 3
     yest = np.zeros(n)
     delta = np.ones(n)
     for _ in range(iterations):
@@ -59,6 +59,6 @@ def lowess(x, y, f=2.0 / 3.0, iterations=1):
         residuals = y - yest
         s = np.median(np.abs(residuals))
         delta = np.clip(residuals / (6.0 * s), -1, 1)
-        delta = (1 - delta ** 2) ** 2
+        delta = (1 - delta**2) ** 2
 
     return yest
