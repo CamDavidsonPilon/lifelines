@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-from datetime import datetime
+from datetime import datetime, UTC
 import warnings
 import time
 from typing import Optional
@@ -172,7 +172,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         self.stop_col = stop_col
         self.start_col = start_col
         self.formula = formula
-        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+        self._time_fit_was_called = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S") + " UTC"
 
         df = df.copy()
 
@@ -801,7 +801,9 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             hazards = self.predict_partial_hazard(tv_data).values
 
         unique_death_times = np.unique(stop[events.values])
-        baseline_hazard_ = pd.DataFrame(np.zeros_like(unique_death_times).astype(float), index=unique_death_times, columns=["baseline hazard"])
+        baseline_hazard_ = pd.DataFrame(
+            np.zeros_like(unique_death_times).astype(float), index=unique_death_times, columns=["baseline hazard"]
+        )
 
         for t in unique_death_times:
             ix = (start.values < t) & (t <= stop.values)

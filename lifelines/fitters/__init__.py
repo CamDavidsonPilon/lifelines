@@ -2,7 +2,7 @@
 from __future__ import annotations
 from functools import partial, wraps
 from inspect import getfullargspec
-from datetime import datetime
+from datetime import datetime, UTC
 from textwrap import dedent
 import typing as t
 import collections
@@ -1229,11 +1229,15 @@ class ParametricUnivariateFitter(UnivariateFitter):
         # use numerical solver to find the value p = e^{-H(t)}. I think I could use `root` in scipy
         # instead of the scalar version. TODO
         def _find_root(_p):
-            f = lambda t: _p - self.survival_function_at_times(t).values
-            fprime = lambda t: self.survival_function_at_times(t).values * self.hazard_at_times(t).values
+            survival_at_t = lambda t: float(self.survival_function_at_times(t).values[0])
+            hazard_at_t = lambda t: float(self.hazard_at_times(t).values[0])
+            f = lambda t: _p - survival_at_t(t)
+            fprime = lambda t: survival_at_t(t) * hazard_at_t(t)
             return root_scalar(f, bracket=(1e-10, 2 * self.timeline[-1]), fprime=fprime, x0=1.0).root
 
         try:
+            if np.isscalar(p):
+                return float(_find_root(p))
             find_root = np.vectorize(_find_root, otypes=[float])
             return find_root(p)
         except ValueError:
@@ -1776,7 +1780,7 @@ class ParametricRegressionFitter(RegressionFitter):
         fit_options: Optional[dict] = None,
     ) -> ParametricRegressionFitter:
 
-        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+        self._time_fit_was_called = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self._n_examples = df.shape[0]
         self.weights_col = weights_col
         self.entry_col = entry_col

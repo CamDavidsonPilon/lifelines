@@ -2,7 +2,7 @@
 from __future__ import annotations
 from typing import Callable, Iterator, List, Optional, Tuple, Union, Any, Iterable
 from textwrap import dedent, fill
-from datetime import datetime
+from datetime import datetime, UTC
 import warnings
 import time
 
@@ -1214,7 +1214,7 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
             cph.predict_median(df)
 
         """
-        self._time_fit_was_called = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+        self._time_fit_was_called = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S") + " UTC"
         self.duration_col = duration_col
         self.event_col = event_col
         self.robust = robust
