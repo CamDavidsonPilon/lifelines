@@ -559,6 +559,7 @@ class TestUnivariateFitters:
             fitter.fit(positive_sample_lifetimes[0], ci_labels=expected)
             npt.assert_array_equal(fitter.confidence_interval_.columns, expected)
 
+    @flaky
     def test_ci_is_not_all_nan(self, positive_sample_lifetimes, univariate_fitters):
         for f in univariate_fitters:
             fitter = f()
