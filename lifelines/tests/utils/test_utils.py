@@ -1016,3 +1016,43 @@ def test_safe_exp():
     assert grad(safe_exp)(4.0) == np.exp(4.0)
     assert grad(safe_exp)(MAX) == np.exp(MAX)
     assert grad(safe_exp)(MAX + 1) == np.exp(MAX)
+
+class TestAccumulators:
+    EPSILON = 1e-10
+    
+    @staticmethod
+    def _check_equality(a: float, b: float) -> None:
+        assert abs(a - b) < TestAccumulators.EPSILON
+
+    def test_linear_accumulator(self):
+        function = utils.LinearAccumulator()
+        TestAccumulators._check_equality(float(0), function.evaluate(0))
+        TestAccumulators._check_equality(float(0), function.evaluate(1))
+        function.add_linear_term(0, 1)
+        TestAccumulators._check_equality(float(0), function.evaluate(0))
+        TestAccumulators._check_equality(float(0), function.evaluate(1))
+        function.add_linear_term(1, -1)
+        TestAccumulators._check_equality(float(1), function.evaluate(0))
+        TestAccumulators._check_equality(float(2), function.evaluate(1))
+        function.add_linear_term(-1, 2)
+        TestAccumulators._check_equality(float(3), function.evaluate(0))
+        TestAccumulators._check_equality(float(3), function.evaluate(1))
+    
+    def test_quadratic_accumulator(self):
+        function = utils.QuadraticAccumulator()
+        TestAccumulators._check_equality(float(0), function.evaluate(0))
+        TestAccumulators._check_equality(float(0), function.evaluate(1))
+        TestAccumulators._check_equality(float(0), function.evaluate(2))
+        function.add_quadratic_term(0, 1)
+        TestAccumulators._check_equality(float(0), function.evaluate(0))
+        TestAccumulators._check_equality(float(0), function.evaluate(1))
+        TestAccumulators._check_equality(float(0), function.evaluate(2))
+        function.add_quadratic_term(1, 2)
+        TestAccumulators._check_equality(float(4), function.evaluate(0))
+        TestAccumulators._check_equality(float(1), function.evaluate(1))
+        TestAccumulators._check_equality(float(0), function.evaluate(2))
+        function.add_quadratic_term(-1, -1)
+        TestAccumulators._check_equality(float(3), function.evaluate(0))
+        TestAccumulators._check_equality(float(-3), function.evaluate(1))
+        TestAccumulators._check_equality(float(-9), function.evaluate(2))
+

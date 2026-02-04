@@ -1955,3 +1955,54 @@ class CovariateParameterMappings:
         design_info = formulaic.ModelSpec.from_spec(formulaic.Formula(formula).get_model_matrix(df))
 
         return design_info
+    
+class LinearAccumulator:
+    """
+    This class represents a linear function F(x), which can be updated iteratively.
+    """
+    def __init__(self):
+        """
+        Initializes F(x) as 0.
+        """
+        self.const_term: float = 0.0
+        self.linear_term: float = 0.0
+    
+    def add_linear_term(self, a: float, b: float) -> None:
+        """
+        Adds a * (x - b) to F(x).
+        """
+        self.const_term -= a * b
+        self.linear_term += a
+
+    def evaluate(self, x: float) -> float:
+        """
+        Evaluates F(x) at the given value of x.
+        """
+        return self.const_term + self.linear_term * x
+
+class QuadraticAccumulator:
+    """
+    This class represents a quadratic function F(x), which can be updated iteratively.
+    """
+    def __init__(self):
+        """
+        Initializes F(x) as 0.
+        """
+        self.const_term: float = 0.0
+        self.linear_term: float = 0.0
+        self.quadratic_term: float = 0.0
+    
+    def add_quadratic_term(self, a: float, b: float) -> None:
+        """
+        Adds a * (x - b)^2 to F(x).
+        """
+        # a * (x - b)^2 = a * x^2 + (- 2 * a * b) * x + a * b^2
+        self.const_term += a * (b ** 2)
+        self.linear_term -= 2 * a * b
+        self.quadratic_term += a
+
+    def evaluate(self, x: float) -> float:
+        """
+        Evaluates F(x) at the given value of x.
+        """
+        return self.const_term + self.linear_term * x + self.quadratic_term * (x ** 2)
