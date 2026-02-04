@@ -5155,6 +5155,14 @@ class TestCoxTimeVaryingFitter:
         npt.assert_almost_equal(ctv.summary["se(coef)"].values, [1.229, 1.206], decimal=3)
         npt.assert_almost_equal(ctv.summary["p"].values, [0.14, 0.56], decimal=2)
 
+    def test_survival_function(self, ctv, dfcv):
+        sf_validation = [0.866, 0.866, 0.748, 0.866, 0.866, 0.277, 0.954,
+                         0.977, 0.902, 0.977, 0.977, 0.902, 0.977, 0.954]
+        ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
+        sf = ctv.calculate_survival_function(dfcv)
+        assert sf.index.values is dfcv.start.values
+        npt.assert_almost_equal(sf.values, sf_validation, decimal=2)
+
     def test_that_id_col_is_optional(self, dfcv):
 
         ctv_with_id = CoxTimeVaryingFitter().fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
