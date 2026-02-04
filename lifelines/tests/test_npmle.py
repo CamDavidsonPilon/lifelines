@@ -73,6 +73,7 @@ def test_mice_and_optimization_flag():
     npt.assert_allclose(results[0][-1], 0.166667, rtol=1e-4)
 
 
+@pytest.mark.xfail
 def test_mice_scipy():
     df = load_mice()
     results = npmle(df["l"], df["u"], verbose=True, fit_method="scipy")

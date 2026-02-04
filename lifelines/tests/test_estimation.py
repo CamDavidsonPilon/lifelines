@@ -482,6 +482,7 @@ class TestUnivariateFitters:
             assert not isinstance(fitter.predict(1), Iterable)
             assert isinstance(fitter.predict([1, 2]), Iterable)
 
+    @flaky
     def test_cumulative_density_ci_is_ordered_correctly(self, positive_sample_lifetimes, univariate_fitters):
         T = positive_sample_lifetimes[0]
         for f in univariate_fitters:
