@@ -1,5 +1,11 @@
 ## Changelog
 
+#### 0.30.1 - 2026-02-04
+ - Optimize `AalenJohansenFitter` variance calculation using prefix-sum accumulators; add `LinearAccumulator`/`QuadraticAccumulator` utilities and tests.
+ - Fix `CoxPHFitter` handling when `event_col=None` (sorting and default event vector).
+ - Fix `add_at_risk_counts` for NumPy >= 2.4 scalar conversion; add regression test.
+ - Support Python 3.13 and 3.14.
+
 #### 0.30.0 - 2024-10-29
  - update dependencies (numpy >= 1.14.0)
  - fix for `decimal` kwarg not working in StatisticalResult
