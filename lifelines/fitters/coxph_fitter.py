@@ -2693,9 +2693,13 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         if self.strata:
             df = df.set_index(self.strata)
 
-        df = df.sort_values([self.duration_col, self.event_col])
+        df = df.sort_values([col for col in [self.duration_col, self.event_col] if (col is not None)])
         T = df.pop(self.duration_col).astype(float)
-        E = df.pop(self.event_col).astype(bool)
+        E = (
+            df.pop(self.event_col)
+            if (self.event_col is not None)
+            else pd.Series(np.ones(len(df.index)), index=df.index, name="E")
+        ).astype(bool)
         W = df.pop(self.weights_col) if self.weights_col else pd.Series(np.ones_like(E), index=T.index)
         entries = df.pop(self.entry_col) if self.entry_col else None
 
