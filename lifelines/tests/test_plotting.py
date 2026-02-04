@@ -44,6 +44,23 @@ def waltons():
     return load_waltons()[["T", "E"]].iloc[:50]
 
 
+def test_add_at_risk_counts_is_numpy_scalar_compatible():
+    # Regression test for https://github.com/CamDavidsonPilon/lifelines/issues/1671:
+    # `add_at_risk_counts` previously produced 1D NumPy arrays (length 1) for "At risk" counts,
+    # which breaks `int(c)` on NumPy>=2.4 (`TypeError: only 0-dimensional arrays can be converted to Python scalars`).
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg", force=True)
+    from matplotlib import pyplot as plt
+
+    kmf = KaplanMeierFitter().fit(
+        np.random.exponential(10, size=(100,)),
+        np.random.binomial(1, 0.8, size=(100,)),
+    )
+    ax = kmf.plot_survival_function()
+    add_at_risk_counts(kmf, ax=ax)
+    plt.close(ax.figure)
+
+
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting:
     @pytest.fixture
