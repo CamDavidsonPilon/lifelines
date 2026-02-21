@@ -523,6 +523,31 @@ def test_proportional_hazard_test_with_list():
     assert results.summary.shape[0] == 2 * 2
 
 
+def test_restricted_mean_survival_time_nonparametric():
+    print("testing RMST")
+    df = load_waltons()
+    ix = df["group"] == "miR-137"
+    kmf1 = KaplanMeierFitter().fit(df.loc[ix]["T"], df.loc[ix]["E"])
+    result = stats.restricted_mean_survival_time(10, kmf1)
+    assert np.isclose(result.RMST, 9.794, rtol=1e-2, atol=1e-3)
+    assert np.isclose(result.RMST_SE, 0.123, rtol=1e-2, atol=1e-3)
+    assert np.isclose(result.RMST_LCI, 9.553, rtol=1e-2, atol=1e-3)
+    assert np.isclose(result.RMST_UCI, 10.036, rtol=1e-2, atol=1e-3)
+
+
+def test_difference_in_restricted_mean_survival_time_nonparametric():
+    print("testing diff in RMST")
+    df = load_waltons()
+    ix = df["group"] == "miR-137"
+    kmf1 = KaplanMeierFitter().fit(df.loc[ix]["T"], df.loc[ix]["E"])
+    kmf2 = KaplanMeierFitter().fit(df.loc[~ix]["T"], df.loc[~ix]["E"])
+    result = stats.difference_in_restricted_mean_survival_time(10, kmf1, kmf2)
+    assert np.isclose(result.RMST_DIFF_A_B, 0.183, rtol=1e-2, atol=1e-3)
+    assert np.isclose(result.RMST_DIFF_A_B_LCI, -0.063, rtol=1e-2, atol=1e-3)
+    assert np.isclose(result.RMST_DIFF_A_B_UCI, 0.428, rtol=1e-2, atol=1e-3)
+    assert np.isclose(result.RMST_DIFF_pval, 0.145, rtol=1e-2, atol=1e-3)
+
+
 def test_survival_difference_at_fixed_point_in_time_test_nonparametric():
     df = load_waltons()
     ix = df["group"] == "miR-137"
