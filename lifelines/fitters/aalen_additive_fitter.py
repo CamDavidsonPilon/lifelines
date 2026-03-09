@@ -33,7 +33,6 @@ from lifelines.utils import (
 
 
 class AalenAdditiveFitter(RegressionFitter):
-
     r"""
     This class fits the regression model:
 
@@ -78,6 +77,7 @@ class AalenAdditiveFitter(RegressionFitter):
     weights: array
         The event_observed variable provided
     """
+
     _KNOWN_MODEL = True
 
     def __init__(self, fit_intercept=True, alpha=0.05, coef_penalizer=0.0, smoothing_penalizer=0.0):

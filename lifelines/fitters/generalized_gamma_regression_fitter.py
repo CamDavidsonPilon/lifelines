@@ -108,6 +108,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
     entry: array or None
         The entry array provided, or None
     """
+
     _fitted_parameter_names = ["sigma_", "mu_", "lambda_"]
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
@@ -154,7 +155,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
         mu_ = Xs["mu_"] @ params["mu_"]
 
         Z = (log(T) - mu_) / sigma_
-        ilambda_2 = 1 / lambda_ ** 2
+        ilambda_2 = 1 / lambda_**2
         exp_term = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e25)
 
         return np.where(lambda_ > 0, gammaincc(ilambda_2, exp_term), gammainc(ilambda_2, exp_term))
@@ -164,7 +165,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
         sigma_ = safe_exp(Xs["sigma_"] @ params["sigma_"])
         mu_ = Xs["mu_"] @ params["mu_"]
 
-        ilambda_2 = 1 / lambda_ ** 2
+        ilambda_2 = 1 / lambda_**2
         Z = (log(T) - mu_) / np.clip(sigma_, 0, 1e20)
         exp_term = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e25)
 
@@ -175,7 +176,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
         ln_sigma_ = Xs["sigma_"] @ params["sigma_"]
         mu_ = Xs["mu_"] @ params["mu_"]
 
-        ilambda_2 = 1 / lambda_ ** 2
+        ilambda_2 = 1 / lambda_**2
         Z = (log(T) - mu_) / np.clip(safe_exp(ln_sigma_), 0, 1e20)
         exp_term = np.clip(safe_exp(lambda_ * Z) * ilambda_2, 1e-300, 1e25)
 

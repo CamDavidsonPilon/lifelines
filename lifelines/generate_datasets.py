@@ -77,7 +77,6 @@ def exponential_survival_data(n, cr=0.05, scale=1.0):
 
 
 class coeff_func:
-
     """This is a decorator class used later to construct nice names"""
 
     def __init__(self, f):

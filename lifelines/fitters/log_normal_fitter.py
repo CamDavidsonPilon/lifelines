@@ -84,7 +84,7 @@ class LogNormalFitter(KnownModelParametricUnivariateFitter):
         return np.exp(self.mu_)
 
     def percentile(self, p) -> float:
-        return np.exp(self.mu_ + np.sqrt(2 * self.sigma_ ** 2) * erfinv(1 - 2 * p))
+        return np.exp(self.mu_ + np.sqrt(2 * self.sigma_**2) * erfinv(1 - 2 * p))
 
     def _cumulative_hazard(self, params, times):
         mu_, sigma_ = params

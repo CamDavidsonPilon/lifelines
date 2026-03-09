@@ -362,7 +362,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
             )
 
     def _initial_values_from_bounds(self):
-        for (lb, ub) in self._bounds:
+        for lb, ub in self._bounds:
             if lb is None and ub is None:
                 yield 0.0
             elif lb is None:
@@ -373,7 +373,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
                 yield (ub - lb) / 2.0
 
     def _buffer_bounds(self, bounds: list[tuple[t.Optional[float], t.Optional[float]]]):
-        for (lb, ub) in bounds:
+        for lb, ub in bounds:
             if lb is None and ub is None:
                 yield (None, None)
             elif lb is None and ub is not None:
@@ -986,7 +986,12 @@ class ParametricUnivariateFitter(UnivariateFitter):
 
         # estimation
         self._fitted_parameters_, self.log_likelihood_, self._hessian_ = self._fit_model(
-            Ts, self.event_observed.astype(bool), self.entry, self.weights, show_progress=show_progress, fit_options=fit_options
+            Ts,
+            self.event_observed.astype(bool),
+            self.entry,
+            self.weights,
+            show_progress=show_progress,
+            fit_options=fit_options,
         )
 
         if not self._KNOWN_MODEL:
@@ -1226,6 +1231,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         -----------
         p: float
         """
+
         # use numerical solver to find the value p = e^{-H(t)}. I think I could use `root` in scipy
         # instead of the scalar version. TODO
         def _find_root(_p):
@@ -1873,7 +1879,7 @@ class ParametricRegressionFitter(RegressionFitter):
         s = pd.Series(False, index=index)
         for k, v in index.groupby(index.get_level_values(0)).items():
             if v.size > 1:
-                for (parameter_name, variable_name) in v:
+                for parameter_name, variable_name in v:
                     if norm_std.loc[parameter_name, variable_name] < 1e-8:
                         s.loc[(parameter_name, variable_name)] = True
 
@@ -1927,7 +1933,16 @@ class ParametricRegressionFitter(RegressionFitter):
         return initial_point_arrays, unflatten
 
     def _fit_model(
-        self, likelihood, Ts, Xs, E, weights, entries, fit_options, show_progress=False, user_supplied_initial_point=None
+        self,
+        likelihood,
+        Ts,
+        Xs,
+        E,
+        weights,
+        entries,
+        fit_options,
+        show_progress=False,
+        user_supplied_initial_point=None,
     ):
         initial_points_as_arrays, unflatten_array_to_dict = self._prepare_initial_points(
             user_supplied_initial_point, Ts, E, entries, weights, Xs
@@ -1974,7 +1989,11 @@ class ParametricRegressionFitter(RegressionFitter):
             )
             # See issue https://github.com/CamDavidsonPilon/lifelines/issues/801
             hessian_ = (hessian_ + hessian_.T) / 2
-            return (unflatten_array_to_dict(minimum_results.x), -sum_weights * minimum_results.fun, sum_weights * hessian_)
+            return (
+                unflatten_array_to_dict(minimum_results.x),
+                -sum_weights * minimum_results.fun,
+                sum_weights * hessian_,
+            )
         else:
             self._check_values_post_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
             raise exceptions.ConvergenceError(
@@ -2182,7 +2201,14 @@ class ParametricRegressionFitter(RegressionFitter):
             elif utils.CensoringType.is_interval_censoring(self):
                 df["lb"], df["ub"], df["E"] = self.lower_bound, self.upper_bound, self.event_observed
                 model.fit_interval_censoring(
-                    df, "lb", "ub", "E", entry_col="entry", weights_col="w", regressors=regressors, initial_point=initial_point
+                    df,
+                    "lb",
+                    "ub",
+                    "E",
+                    entry_col="entry",
+                    weights_col="w",
+                    regressors=regressors,
+                    initial_point=initial_point,
                 )
             if utils.CensoringType.is_left_censoring(self):
                 df["T"], df["E"] = self.durations, self.event_observed

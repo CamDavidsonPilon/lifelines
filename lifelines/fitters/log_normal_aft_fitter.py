@@ -69,6 +69,7 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
     score_: float
         the concordance index of the model.
     """
+
     _primary_parameter_name = "mu_"
     _ancillary_parameter_name = "sigma_"
 
@@ -160,7 +161,8 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
             S = norm.sf(Z)
 
             return pd.Series(
-                exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p * S) - 1)) - conditional_after, index=_get_index(df)
+                exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p * S) - 1)) - conditional_after,
+                index=_get_index(df),
             )
 
     def predict_expectation(self, df: pd.DataFrame, ancillary: Optional[pd.DataFrame] = None) -> pd.Series:
@@ -190,4 +192,4 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         predict_median
         """
         exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
-        return pd.Series(exp_mu_ * np.exp(sigma_ ** 2 / 2), index=_get_index(df))
+        return pd.Series(exp_mu_ * np.exp(sigma_**2 / 2), index=_get_index(df))

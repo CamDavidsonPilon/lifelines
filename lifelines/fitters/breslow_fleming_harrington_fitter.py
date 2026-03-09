@@ -10,7 +10,6 @@ from lifelines.utils import _to_1d_array, coalesce, CensoringType
 
 
 class BreslowFlemingHarringtonFitter(NonParametricUnivariateFitter):
-
     """
     Class for fitting the Breslow-Fleming-Harrington estimate for the survival function. This estimator
     is a biased estimator of the survival function but is more stable when the population is small and

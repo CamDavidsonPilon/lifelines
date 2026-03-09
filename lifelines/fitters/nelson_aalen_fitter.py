@@ -19,7 +19,6 @@ from lifelines.utils import (
 
 
 class NelsonAalenFitter(UnivariateFitter):
-
     """
     Class for fitting the Nelson-Aalen estimate for the cumulative hazard.
 

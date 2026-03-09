@@ -181,7 +181,9 @@ class StatisticalResult:
         s += "\n" + meta_data + "\n"
         s += "---\n"
         s += df.to_string(
-            float_format=format_floats(decimals), index=self.name is not None, formatters={"p": format_p_value(decimals)}
+            float_format=format_floats(decimals),
+            index=self.name is not None,
+            formatters={"p": format_p_value(decimals)},
         )
 
         return s
@@ -585,7 +587,6 @@ def logrank_test(
 def pairwise_logrank_test(
     event_durations, groups, event_observed=None, t_0=-1, weightings=None, **kwargs
 ) -> StatisticalResult:  # pylint: disable=too-many-locals
-
     r"""
     Perform the logrank test pairwise for all :math:`n \ge 2` unique groups.
 

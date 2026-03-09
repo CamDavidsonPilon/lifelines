@@ -272,9 +272,13 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             ), stratum
 
     def _partition_by_strata_and_apply(self, X, events, start, stop, weights, function, *args):
-        for ((stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W), _) in self._partition_by_strata(
-            X, events, start, stop, weights
-        ):
+        for (
+            stratified_X,
+            stratified_events,
+            stratified_start,
+            stratified_stop,
+            stratified_W,
+        ), _ in self._partition_by_strata(X, events, start, stop, weights):
             yield function(stratified_X, stratified_events, stratified_start, stratified_stop, stratified_W, *args)
 
     def _compute_z_values(self):
@@ -735,7 +739,11 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
         degrees_freedom = self.params_.shape[0]
         p_value = _chisq_test_p_value(test_stat, degrees_freedom=degrees_freedom)
         return StatisticalResult(
-            p_value, test_stat, name="log-likelihood ratio test", degrees_freedom=degrees_freedom, null_distribution="chi squared"
+            p_value,
+            test_stat,
+            name="log-likelihood ratio test",
+            degrees_freedom=degrees_freedom,
+            null_distribution="chi squared",
         )
 
     def plot(self, columns=None, ax=None, **errorbar_kwargs):

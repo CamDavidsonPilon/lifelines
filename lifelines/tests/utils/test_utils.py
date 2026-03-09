@@ -158,7 +158,8 @@ def test_qth_survival_times_with_multivariate_q():
         pd.DataFrame([[40, 28], [25, 15]], index=[0.2, 0.5], columns=["sf", "sf**2"]),
     )
     assert_frame_equal(
-        utils.qth_survival_times([0.2, 0.5], sf_multi_df["sf"]), pd.DataFrame([40, 25], index=[0.2, 0.5], columns=["sf"])
+        utils.qth_survival_times([0.2, 0.5], sf_multi_df["sf"]),
+        pd.DataFrame([40, 25], index=[0.2, 0.5], columns=["sf"]),
     )
     assert_frame_equal(utils.qth_survival_times(0.5, sf_multi_df), pd.DataFrame([[25, 15]], index=[0.5], columns=["sf", "sf**2"]))
     assert utils.qth_survival_times(0.5, sf_multi_df["sf"]) == 25
@@ -560,7 +561,16 @@ class TestLongDataFrameUtils(object):
         df = seed_df.pipe(utils.add_covariate_to_timeline, cv, "id", "t", "E", overwrite=False)
 
         expected = pd.DataFrame.from_records(
-            [{"E": True, "id": 1, "stop": 10.0, "start": 0, "var1": new_value_at_time_0 + old_value_at_time_0, "var2": 2.0}]
+            [
+                {
+                    "E": True,
+                    "id": 1,
+                    "stop": 10.0,
+                    "start": 0,
+                    "var1": new_value_at_time_0 + old_value_at_time_0,
+                    "var2": 2.0,
+                }
+            ]
         )
         assert_frame_equal(df, expected, check_like=True)
 
@@ -588,7 +598,9 @@ class TestLongDataFrameUtils(object):
             # Windows Numpy and Pandas sometimes have int32 or int64 as default dtype
             if os.name == "nt" and "int32" in str(e) and "int64" in str(e):
                 assert_series_equal(
-                    df["enum"].loc[idx], pd.Series(np.arange(1, n + 1), dtype=df["enum"].loc[idx].dtypes), check_names=False
+                    df["enum"].loc[idx],
+                    pd.Series(np.arange(1, n + 1), dtype=df["enum"].loc[idx].dtypes),
+                    check_names=False,
                 )
             else:
                 raise e
