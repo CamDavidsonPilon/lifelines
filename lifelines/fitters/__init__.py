@@ -1948,6 +1948,9 @@ class ParametricRegressionFitter(RegressionFitter):
             if _initial_point.shape[0] != Xs.columns.size:
                 raise ValueError("initial_point is not the correct shape.")
 
+            scipy_fit_options = {**self._scipy_fit_options, **fit_options}
+            bounds = scipy_fit_options.pop("bounds", getattr(self, "_bounds", None))
+
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 results = minimize(
@@ -1957,7 +1960,8 @@ class ParametricRegressionFitter(RegressionFitter):
                     method=self._scipy_fit_method,
                     jac=True,
                     args=(Ts, E, weights, entries, utils.DataframeSlicer(Xs)),
-                    options={**{"disp": show_progress}, **self._scipy_fit_options, **fit_options},
+                    bounds=bounds,
+                    options={**{"disp": show_progress}, **scipy_fit_options},
                     callback=self._scipy_fit_callback,
                 )
 

@@ -2201,6 +2201,15 @@ class TestPiecewiseExponentialRegressionFitter:
         pew = PiecewiseExponentialRegressionFitter(breakpoints=[25, 40]).fit(df, "week", "arrest")
         pew.print_summary()
 
+    def test_fit_options_bounds_are_passed_to_minimize(self):
+        df = pd.DataFrame({"T": [1.0, 2.0, 3.0, 4.0], "E": [1, 1, 0, 1]})
+        model = PiecewiseExponentialRegressionFitter(breakpoints=[2.0])
+        bounds = [(0.0, None)] * len(model._fitted_parameter_names)
+
+        fitted = model.fit(df, "T", "E", fit_options={"bounds": bounds})
+
+        assert fitted.params_.shape[0] == len(model._fitted_parameter_names)
+
     def test_inference(self):
 
         N, d = 80000, 2
