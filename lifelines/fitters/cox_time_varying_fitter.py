@@ -295,6 +295,15 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             index=self.params_.index,
         )
 
+    def calculate_survival_function(self, X: pd.DataFrame) -> pd.Series:
+        v = self.predict_partial_hazard(X)
+        col = utils._get_index(v)
+        times_ = X.start.values
+        c_0 = utils.interpolate_at_times(self.baseline_cumulative_hazard_, [times_]).T
+        cumulative_hazard_ = pd.DataFrame(c_0 * v.values, columns=col, index=times_)
+        surv_func = pd.Series(np.exp(-cumulative_hazard_).values.diagonal(), index=times_)
+        return surv_func
+        
     @property
     def summary(self):
         """Summary statistics describing the fit.
