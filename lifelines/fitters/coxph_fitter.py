@@ -3246,6 +3246,7 @@ class ParametricPiecewiseBaselinePHFitter(ParametricCoxModelFitter, Proportional
                 cumulative_hazard_.columns = stratified_X["index"]
                 cumulative_hazard = cumulative_hazard.merge(cumulative_hazard_, how="outer", right_index=True, left_index=True)
 
+
             return cumulative_hazard
 
         else:
