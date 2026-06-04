@@ -1,5 +1,8 @@
 ## Changelog
 
+#### unreleased
+ - Emit a `UserWarning` when `restricted_mean_survival_time(..., return_variance=True)` is called: the returned value is `Var[min(T, t)]` (variance of the truncated survival RV), not the sampling variance of the RMST estimator, and is unsuitable for confidence intervals or hypothesis testing. Docstring updated to match. (#1682)
+
 #### 0.30.3 - 2026-03-05
  - Revoke the 0.30.2 release and republish as 0.30.3.
  - Require Python >= 3.11 in package metadata.

@@ -3,6 +3,7 @@
 
 import pytest
 import os
+import warnings
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal
@@ -910,7 +911,8 @@ def test_rmst_works_at_kaplan_meier_with_left_censoring():
     T = [5]
     kmf = KaplanMeierFitter().fit_left_censoring(T)
 
-    results = utils.restricted_mean_survival_time(kmf, t=10, return_variance=True)
+    with pytest.warns(UserWarning, match="return_variance=True"):
+        results = utils.restricted_mean_survival_time(kmf, t=10, return_variance=True)
     assert abs(results[0] - 5) < 0.0001
     assert abs(results[1] - 0) < 0.0001
 
@@ -919,7 +921,27 @@ def test_rmst_works_with_return_variance():
     # issue 1578
     T = [1, 2, 3, 4, 10]
     kmf = KaplanMeierFitter().fit(T)
-    result = utils.restricted_mean_survival_time(kmf.survival_function_, t=10, return_variance=True)
+    with pytest.warns(UserWarning, match="return_variance=True"):
+        result = utils.restricted_mean_survival_time(kmf.survival_function_, t=10, return_variance=True)
+
+
+def test_rmst_return_variance_emits_warning_about_truncated_variance():
+    # issue 1682: return_variance=True returns Var[min(T, t)], not the sampling
+    # variance Var[RMST_hat]. Users were silently constructing wrong CIs and
+    # p-values; emit a UserWarning so the misuse cannot be silent.
+    T = [1, 2, 3, 4, 10]
+    kmf = KaplanMeierFitter().fit(T)
+
+    with pytest.warns(UserWarning, match=r"return_variance=True.*sampling variance"):
+        utils.restricted_mean_survival_time(kmf, t=4, return_variance=True)
+
+    with pytest.warns(UserWarning, match=r"return_variance=True.*sampling variance"):
+        utils.restricted_mean_survival_time(kmf.survival_function_, t=4, return_variance=True)
+
+    # default (return_variance=False) must stay silent
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        utils.restricted_mean_survival_time(kmf, t=4)
 
 
 def test_rmst_exactly_with_known_solution():
@@ -959,8 +981,10 @@ def test_rmst_variance():
     actual_mean = 1 / hazard * (1 - np.exp(-hazard * t))
     actual_var = sq - actual_mean**2
 
-    assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[0] - actual_mean) < 0.001
-    assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[1] - actual_var) < 0.001
+    with pytest.warns(UserWarning, match="return_variance=True"):
+        rmst_with_var = utils.restricted_mean_survival_time(expf, t=t, return_variance=True)
+    assert abs(rmst_with_var[0] - actual_mean) < 0.001
+    assert abs(rmst_with_var[1] - actual_var) < 0.001
 
 
 def test_find_best_parametric_model():
