@@ -224,6 +224,14 @@ def restricted_mean_survival_time(
         This can be a univariate model, or a pandas DataFrame. The former will provide a more accurate estimate however.
     t: float
         The upper limit of the integration in the RMST.
+    return_variance: bool, optional
+        If True, return a tuple ``(rmst, v)`` where ``v`` is
+        :math:`\operatorname{Var}[\min(T, t)]`, the variance of the truncated
+        survival random variable. This is **not** the sampling variance
+        :math:`\operatorname{Var}[\widehat{\text{RMST}}]` of the estimator and is
+        therefore unsuitable for constructing confidence intervals or hypothesis
+        tests on RMST. A ``UserWarning`` is emitted when this option is used.
+        See issue `#1682 <https://github.com/CamDavidsonPilon/lifelines/issues/1682>`_.
 
     Example
     --------
@@ -249,6 +257,14 @@ def restricted_mean_survival_time(
 
     mean = _expected_value_of_survival_up_to_t(model_or_survival_function, t)
     if return_variance:
+        warnings.warn(
+            "`return_variance=True` returns Var[min(T, t)], the variance of the truncated "
+            "survival random variable, NOT the sampling variance Var[RMST_hat] of the "
+            "estimator. Do not use this value to construct confidence intervals or perform "
+            "hypothesis tests on RMST. See https://github.com/CamDavidsonPilon/lifelines/issues/1682.",
+            UserWarning,
+            stacklevel=2,
+        )
         sq = _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t)
         return (mean, sq - mean**2)
     else:

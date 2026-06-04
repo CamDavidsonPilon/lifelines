@@ -3,6 +3,7 @@
 
 import pytest
 import os
+import warnings
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal
@@ -919,7 +920,27 @@ def test_rmst_works_with_return_variance():
     # issue 1578
     T = [1, 2, 3, 4, 10]
     kmf = KaplanMeierFitter().fit(T)
-    result = utils.restricted_mean_survival_time(kmf.survival_function_, t=10, return_variance=True)
+    with pytest.warns(UserWarning, match="return_variance=True"):
+        result = utils.restricted_mean_survival_time(kmf.survival_function_, t=10, return_variance=True)
+
+
+def test_rmst_return_variance_emits_warning_about_truncated_variance():
+    # issue 1682: return_variance=True returns Var[min(T, t)], not the sampling
+    # variance Var[RMST_hat]. Users were silently constructing wrong CIs and
+    # p-values; emit a UserWarning so the misuse cannot be silent.
+    T = [1, 2, 3, 4, 10]
+    kmf = KaplanMeierFitter().fit(T)
+
+    with pytest.warns(UserWarning, match=r"return_variance=True.*sampling variance"):
+        utils.restricted_mean_survival_time(kmf, t=4, return_variance=True)
+
+    with pytest.warns(UserWarning, match=r"return_variance=True.*sampling variance"):
+        utils.restricted_mean_survival_time(kmf.survival_function_, t=4, return_variance=True)
+
+    # default (return_variance=False) must stay silent
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        utils.restricted_mean_survival_time(kmf, t=4)
 
 
 def test_rmst_exactly_with_known_solution():
