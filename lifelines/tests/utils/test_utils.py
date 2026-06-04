@@ -911,7 +911,8 @@ def test_rmst_works_at_kaplan_meier_with_left_censoring():
     T = [5]
     kmf = KaplanMeierFitter().fit_left_censoring(T)
 
-    results = utils.restricted_mean_survival_time(kmf, t=10, return_variance=True)
+    with pytest.warns(UserWarning, match="return_variance=True"):
+        results = utils.restricted_mean_survival_time(kmf, t=10, return_variance=True)
     assert abs(results[0] - 5) < 0.0001
     assert abs(results[1] - 0) < 0.0001
 
@@ -980,8 +981,10 @@ def test_rmst_variance():
     actual_mean = 1 / hazard * (1 - np.exp(-hazard * t))
     actual_var = sq - actual_mean**2
 
-    assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[0] - actual_mean) < 0.001
-    assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[1] - actual_var) < 0.001
+    with pytest.warns(UserWarning, match="return_variance=True"):
+        rmst_with_var = utils.restricted_mean_survival_time(expf, t=t, return_variance=True)
+    assert abs(rmst_with_var[0] - actual_mean) < 0.001
+    assert abs(rmst_with_var[1] - actual_var) < 0.001
 
 
 def test_find_best_parametric_model():
