@@ -170,7 +170,7 @@ class AalenAdditiveFitter(RegressionFitter):
         self.event_observed = E.copy()
         self.weights = weights.copy()
 
-        self._norm_std = X.std(0)
+        self._norm_std = X.std(axis=0)
 
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:

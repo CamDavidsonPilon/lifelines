@@ -210,8 +210,8 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
 
         self._check_values(X, events, start, stop)
 
-        self._norm_mean = X.mean(0)
-        self._norm_std = X.std(0)
+        self._norm_mean = X.mean(axis=0)
+        self._norm_std = X.std(axis=0)
 
         beta_, self.log_likelihood_, self._hessian_ = self._newton_raphson_for_efron_model(
             normalize(X, self._norm_mean, self._norm_std),

@@ -76,8 +76,8 @@ def test_lstsq_returns_correct_values():
 
 def test_unnormalize():
     df = load_larynx()
-    m = df.mean(0)
-    s = df.std(0)
+    m = df.mean(axis=0)
+    s = df.std(axis=0)
 
     ndf = utils.normalize(df)
 
@@ -87,8 +87,8 @@ def test_unnormalize():
 def test_normalize():
     df = load_larynx()
     n, d = df.shape
-    npt.assert_almost_equal(utils.normalize(df).mean(0).values, np.zeros(d))
-    npt.assert_almost_equal(utils.normalize(df).std(0).values, np.ones(d))
+    npt.assert_almost_equal(utils.normalize(df).mean(axis=0).values, np.zeros(d))
+    npt.assert_almost_equal(utils.normalize(df).std(axis=0).values, np.ones(d))
 
 
 def test_median():

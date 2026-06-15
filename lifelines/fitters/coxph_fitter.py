@@ -1241,8 +1241,8 @@ class SemiParametricPHFitter(ProportionalHazardMixin, SemiParametricRegressionFi
         # TODO: doesn't handle weights, nor strata
         self._central_values = self._compute_central_values_of_raw_training_data(df, self.strata)
 
-        self._norm_mean = X.mean(0)
-        self._norm_std = X.std(0)
+        self._norm_mean = X.mean(axis=0)
+        self._norm_std = X.std(axis=0)
 
         # this is surprisingly faster to do...
         X_norm = pd.DataFrame(
@@ -2518,11 +2518,13 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
 
     def _compute_baseline_hazard(self, partial_hazards: DataFrame, name: Any) -> pd.DataFrame:
         # https://stats.stackexchange.com/questions/46532/cox-baseline-hazard
-        ind_hazards = partial_hazards.copy()
-        ind_hazards["P"] *= ind_hazards["W"]
-        ind_hazards["E"] *= ind_hazards["W"]
+        ind_hazards = partial_hazards.assign(
+            P=partial_hazards["P"] * partial_hazards["W"],
+            E=partial_hazards["E"] * partial_hazards["W"],
+        )
         ind_hazards_summed_over_durations = ind_hazards.groupby("T")[["P", "E"]].sum()
-        ind_hazards_summed_over_durations["P"] = ind_hazards_summed_over_durations["P"].loc[::-1].cumsum()
+        cumP = ind_hazards_summed_over_durations["P"].loc[::-1].cumsum()
+        ind_hazards_summed_over_durations = ind_hazards_summed_over_durations.assign(P=cumP)
         baseline_hazard = pd.DataFrame(
             ind_hazards_summed_over_durations["E"] / ind_hazards_summed_over_durations["P"], columns=[name]
         )

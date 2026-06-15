@@ -676,14 +676,14 @@ def datetimes_to_durations(
     """
     fill_date_ = pd.Series(fill_date).squeeze()
     freq_string = "timedelta64[%s]" % freq
-    start_times = pd.Series(start_times).copy()
-    end_times = pd.Series(end_times).copy()
+    start_times = pd.Series(start_times, dtype=object).copy()
+    end_times = pd.Series(end_times, dtype=object).copy()
 
-    C = ~(pd.isnull(end_times).values | end_times.astype(str).isin(na_values or [""]))
+    C = ~(pd.isnull(end_times).values | end_times.astype(str).isin(na_values or [""]).values)
     end_times[~C] = fill_date_
     start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst, format=format)
     end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce", format=format)
-    deaths_after_cutoff = end_times_ > pd.to_datetime(fill_date_)
+    deaths_after_cutoff = (end_times_ > pd.to_datetime(fill_date_)).values
     C[deaths_after_cutoff] = False
     # Avoid duration info leaking from beyond fill date
     end_times_[deaths_after_cutoff] = pd.to_datetime(fill_date_)
@@ -691,7 +691,7 @@ def datetimes_to_durations(
     T = (end_times_ - start_times_).values.astype(freq_string).astype(float)
     if (T < 0).sum():
         warnings.warn("Warning: some values of start_times are after end_times.\n", UserWarning)
-    return T, C.values
+    return T, C
 
 
 def coalesce(*args) -> Any:
@@ -792,8 +792,8 @@ def normalize(X, mean=None, std=None):
     X to have mean 0 and std 1.
     """
     if mean is None or std is None:
-        mean = X.mean(0)
-        std = X.std(0)
+        mean = X.mean(axis=0)
+        std = X.std(axis=0)
     return (X - mean) / std
 
 
@@ -1084,7 +1084,7 @@ def check_positivity(array):
 
 
 def _low_var(df):
-    return df.var(0) < 1e-4
+    return df.var(axis=0) < 1e-4
 
 
 def check_low_var(df, prescript="", postscript=""):
@@ -1257,7 +1257,7 @@ def to_episodic_format(df, duration_col, event_col, id_col=None, time_gaps=1) ->
         d_dftv = d
 
     # what dtype can I make it?
-    dtype_dftv = object if (df.dtypes == object).any() else float
+    dtype_dftv = float if all(pd.api.types.is_numeric_dtype(dt) for dt in df.dtypes) else object
 
     # how many rows/cols do I need?
     n_dftv = int(np.ceil(df[stop_col]).sum())

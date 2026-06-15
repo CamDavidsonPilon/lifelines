@@ -112,7 +112,7 @@ class GeneralizedGammaRegressionFitter(ParametricRegressionFitter):
 
     def _create_initial_point(self, Ts, E, entries, weights, Xs):
         # detect constant columns
-        constant_col = (Xs.var(0) < 1e-8).idxmax()
+        constant_col = (Xs.var(axis=0) < 1e-8).idxmax()
 
         uni_model = GeneralizedGammaFitter()
 

@@ -471,10 +471,10 @@ class TestPlotting:
         data1 = np.random.exponential(10, size=200)
         data2 = np.random.exponential(5, size=200)
         kmf.fit(data1, label="test label 1")
-        ax = kmf.plot_survival_function_loglogs()
+        ax = kmf.plot_loglogs()
 
         kmf.fit(data2, label="test label 2")
-        ax = kmf.plot_survival_function_loglogs(ax=ax)
+        ax = kmf.plot_loglogs(ax=ax)
 
         self.plt.title("test_loglogs_plot")
         self.plt.show(block=block)
@@ -564,7 +564,7 @@ class TestPlotting:
         churn_data = churn_data.set_index("customerID")
         churn_data = churn_data.drop(["TotalCharges"], axis=1)
 
-        churn_data = churn_data.applymap(lambda x: "No" if str(x).startswith("No ") else x)
+        churn_data = churn_data.map(lambda x: "No" if str(x).startswith("No ") else x)
         churn_data["Churn"] = churn_data["Churn"] == "Yes"
         strata_cols = ["InternetService"]
 
