@@ -319,6 +319,9 @@ def qq_plot(model, ax=None, scatter_color="k", **plot_kwargs):
     quantiles[COL_THEO] = dist_object.ppf(q)
     quantiles = quantiles.replace([-np.inf, 0, np.inf], np.nan).dropna()
 
+    if quantiles.empty:
+        return ax
+
     max_, min_ = quantiles[COL_EMP].max(), quantiles[COL_EMP].min()
 
     quantiles.plot.scatter(

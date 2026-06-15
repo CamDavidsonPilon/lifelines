@@ -457,12 +457,11 @@ class TestUnivariateFitters:
     def test_univariate_fitters_ok_if_given_timedelta(self, univariate_fitters):
         t = pd.Series([pd.to_datetime("2015-01-01 12:00"), pd.to_datetime("2015-01-02"), pd.to_datetime("2015-01-02 12:00")])
         T = pd.to_datetime("2015-01-03") - t
+        twelve_hours = pd.to_numeric(T).min()
         for fitter in univariate_fitters:
             f = fitter().fit(T)
-            try:
-                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([0, 1, 2, 3]))
-            except:
-                npt.assert_allclose(f.timeline, 1e9 * 12 * 60 * 60 * np.array([1, 2, 3]))
+            start = 0 if np.isclose(f.timeline[0], 0) else 1
+            npt.assert_allclose(f.timeline, twelve_hours * np.arange(start, start + len(f.timeline)))
 
     def test_univariate_fitters_okay_if_given_boolean_col_with_object_dtype(self, univariate_fitters):
         df = pd.DataFrame({"T": [1, 2, 3, 4, 5], "E": [True, True, True, True, None]})
@@ -5151,9 +5150,12 @@ class TestCoxTimeVaryingFitter:
 
         """
         ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event")
-        npt.assert_almost_equal(ctv.summary["coef"].values, [1.826757, 0.705963], decimal=4)
-        npt.assert_almost_equal(ctv.summary["se(coef)"].values, [1.229, 1.206], decimal=3)
-        npt.assert_almost_equal(ctv.summary["p"].values, [0.14, 0.56], decimal=2)
+        npt.assert_almost_equal(ctv.summary.loc["group", "coef"], 1.826757, decimal=4)
+        npt.assert_almost_equal(ctv.summary.loc["z", "coef"], 0.705963, decimal=4)
+        npt.assert_almost_equal(ctv.summary.loc["group", "se(coef)"], 1.229, decimal=3)
+        npt.assert_almost_equal(ctv.summary.loc["z", "se(coef)"], 1.206, decimal=3)
+        npt.assert_almost_equal(ctv.summary.loc["group", "p"], 0.14, decimal=2)
+        npt.assert_almost_equal(ctv.summary.loc["z", "p"], 0.56, decimal=2)
 
     def test_that_id_col_is_optional(self, dfcv):
 
@@ -5198,8 +5200,10 @@ class TestCoxTimeVaryingFitter:
             0.19246482703103884,
         ]
         ctv.fit(dfcv, id_col="id", start_col="start", stop_col="stop", event_col="event", weights_col="weights")
-        npt.assert_almost_equal(ctv.summary["coef"].values, [0.313, 0.423], decimal=3)
-        npt.assert_almost_equal(ctv.summary["se(coef)"].values, [1.542, 1.997], decimal=3)
+        npt.assert_almost_equal(ctv.summary.loc["group", "coef"], 0.313, decimal=3)
+        npt.assert_almost_equal(ctv.summary.loc["z", "coef"], 0.423, decimal=3)
+        npt.assert_almost_equal(ctv.summary.loc["group", "se(coef)"], 1.542, decimal=3)
+        npt.assert_almost_equal(ctv.summary.loc["z", "se(coef)"], 1.997, decimal=3)
 
     def test_fitter_will_raise_an_error_if_immediate_death_present(self, ctv):
         df = pd.DataFrame.from_records(
@@ -5243,6 +5247,7 @@ class TestCoxTimeVaryingFitter:
         with pytest.raises(ValueError):
             ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
 
+        df["stop"] = df["stop"].astype(float)
         df.loc[(df["start"] == df["stop"]) & (df["start"] == 0) & df["event"], "stop"] = 0.5
         ctv.fit(df, id_col="id", start_col="start", stop_col="stop", event_col="event")
         assert True

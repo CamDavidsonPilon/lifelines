@@ -1825,11 +1825,11 @@ class ParametricRegressionFitter(RegressionFitter):
 
         self._check_values_pre_fitting(Xs, utils.coalesce(Ts[1], Ts[0]), E, weights, entries)
 
-        _norm_std = Xs.std(0)
+        _norm_std = Xs.std(axis=0)
         _index = Xs.columns
 
         self._cols_to_not_penalize = self._find_cols_to_not_penalize(_norm_std)
-        self._norm_std = Xs.std(0)
+        self._norm_std = Xs.std(axis=0)
         _constant_cols = pd.Series(
             [_norm_std.loc[param_name, variable_name] < 1e-8 for (param_name, variable_name) in _index], index=_index
         )
@@ -3240,7 +3240,7 @@ class ParametericAFTRegressionFitter(ParametricRegressionFitter):
         """
         See https://github.com/CamDavidsonPilon/lifelines/issues/664
         """
-        constant_col = (Xs.std(0) < 1e-8).idxmax()
+        constant_col = (Xs.std(axis=0) < 1e-8).idxmax()
 
         def _transform_ith_param(param):
             if param <= 0:
