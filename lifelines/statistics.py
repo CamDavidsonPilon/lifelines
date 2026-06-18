@@ -819,7 +819,11 @@ def multivariate_logrank_test(
             raise ValueError("Must provide keyword argument q for Flemington-Harrington test statistic")
         kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Flemington-Harrington")
         kmf = KaplanMeierFitter().fit(event_durations, event_observed=event_observed)
-        s = kmf.survival_function_.to_numpy().flatten()[:-1]  # Left-continuous Kaplan-Meier survival estimate.
+        # Left-continuous Kaplan-Meier survival estimate S(t-) at each event time. Evaluating at
+        # obs.index and prepending the S=1 baseline keeps w_i aligned to obs whether or not an event
+        # occurs at t=0 (slicing survival_function_[:-1] drops a real weight in the latter case, see #1681).
+        sf = kmf.survival_function_at_times(obs.index).to_numpy()
+        s = np.insert(sf[:-1], 0, 1.0)
         w_i = np.power(s, p) * np.power(1.0 - s, q)
     else:
         raise ValueError("Invalid value for weightings.")

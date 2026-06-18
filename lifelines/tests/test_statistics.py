@@ -156,6 +156,26 @@ def test_peto_weighted_logrank_on_leukemia_dataset():
     assert result.test_name == "Peto_test"
 
 
+def test_fleming_harrington_weighted_logrank_handles_event_at_time_zero():
+    # See #1681: a Fleming-Harrington weighted log-rank test raised
+    # "Unable to coerce to Series" whenever an event time of 0 was present,
+    # because the survival estimate was one element short of the event table.
+    group_1 = np.array([2, 6, 1, 9, 0])
+    group_2 = np.array([3, 5, 4, 11])
+
+    result = stats.logrank_test(group_1, group_2, weightings="fleming-harrington", p=1, q=1)
+
+    assert result.test_name == "Flemington-Harrington_test"
+    assert np.isfinite(result.test_statistic)
+
+    # With p=q=0 every weight is 1, so Fleming-Harrington reduces to the standard log-rank
+    # test. This holds only when the weights stay aligned to the event table in the presence
+    # of an event at t=0, so it pins down the fix for #1681.
+    fh = stats.logrank_test(group_1, group_2, weightings="fleming-harrington", p=0, q=0)
+    plain = stats.logrank_test(group_1, group_2)
+    assert abs(fh.test_statistic - plain.test_statistic) < 10e-9
+
+
 def test_unequal_intensity_event_observed():
     data1 = np.random.exponential(5, size=(2000, 1))
     data2 = np.random.exponential(1, size=(2000, 1))
