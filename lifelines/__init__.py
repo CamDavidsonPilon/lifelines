@@ -22,6 +22,7 @@ from lifelines.fitters.generalized_gamma_regression_fitter import GeneralizedGam
 from lifelines.fitters.spline_fitter import SplineFitter
 from lifelines.fitters.mixture_cure_fitter import MixtureCureFitter
 from lifelines.fitters.crc_spline_fitter import CRCSplineFitter
+from lifelines.fitters.royston_parmar_fitter import FlexibleParametricPHFitter
 from lifelines import datasets
 
 from lifelines.version import __version__
