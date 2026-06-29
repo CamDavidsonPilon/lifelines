@@ -369,14 +369,17 @@ class TestFineGrayWeights:
         assert hasattr(fgf, "params_")
 
     def test_equal_weights_same_as_no_weights(self):
+        # fgf1 uses df without a weight column; fgf2 uses the same df plus an
+        # all-ones column passed as weights_col.  The two fits should agree.
         df = _minimal_df().copy()
-        df["w"] = 1.0
+        df_w = df.copy()
+        df_w["w"] = 1.0
         fgf1 = FineGrayFitter()
         fgf2 = FineGrayFitter()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             fgf1.fit(df, "T", "E", event_of_interest=1)
-            fgf2.fit(df, "T", "E", event_of_interest=1, weights_col="w")
+            fgf2.fit(df_w, "T", "E", event_of_interest=1, weights_col="w")
         np.testing.assert_allclose(fgf1.params_.values, fgf2.params_.values, atol=1e-8)
 
 

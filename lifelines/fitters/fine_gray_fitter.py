@@ -23,6 +23,7 @@ from lifelines.exceptions import ConvergenceWarning, ConvergenceError
 from lifelines.fitters import SemiParametricRegressionFitter
 from lifelines.utils import CensoringType, check_nans_or_infs
 from lifelines.utils.printer import Printer
+from lifelines.utils import string_rjustify
 
 
 __all__ = ["FineGrayFitter"]
@@ -445,6 +446,29 @@ class FineGrayFitter(SemiParametricRegressionFitter):
         return self
 
     @property
+    def summary(self) -> pd.DataFrame:
+        """Coefficient summary table (coef, exp(coef), se(coef), z, p, CI)."""
+        self._check_is_fitted()
+        p_vals = 2 * stats.norm.sf(np.abs(self.params_.values / self.standard_errors_.values))
+        ci = int(100 * (1 - self.alpha))
+        return pd.DataFrame(
+            {
+                "coef": self.params_,
+                "exp(coef)": np.exp(self.params_),
+                "se(coef)": self.standard_errors_,
+                "coef lower %d%%" % ci: self.confidence_intervals_.iloc[:, 0],
+                "coef upper %d%%" % ci: self.confidence_intervals_.iloc[:, 1],
+                "exp(coef) lower %d%%" % ci: np.exp(self.confidence_intervals_.iloc[:, 0]),
+                "exp(coef) upper %d%%" % ci: np.exp(self.confidence_intervals_.iloc[:, 1]),
+                "cmp to": np.zeros(len(self.params_)),
+                "z": self.params_ / self.standard_errors_,
+                "p": p_vals,
+                "-log2(p)": -np.log2(np.clip(p_vals, 1e-300, 1.0)),
+            },
+            index=self.params_.index,
+        )
+
+    @property
     def AIC_partial_(self) -> float:
         """Partial AIC: -2 * log_lik + 2 * n_params."""
         return -2 * self.log_likelihood_ + 2 * len(self.params_)
@@ -561,44 +585,25 @@ class FineGrayFitter(SemiParametricRegressionFitter):
             Subset of summary columns to display.
         """
         self._check_is_fitted()
+        justify = string_rjustify(25)
 
-        z = stats.norm.ppf(1 - self.alpha / 2)
-        p_vals = 2 * stats.norm.sf(np.abs(self.params_.values / self.standard_errors_.values))
+        headers = [
+            ("model", "FineGrayFitter"),
+            ("event of interest", str(self.event_of_interest)),
+            ("duration col", "'%s'" % self.duration_col),
+            ("event col", "'%s'" % self.event_col),
+            ("number of subjects", self._n_training_rows),
+            ("number of events of interest", self._n_events_k),
+            ("log-likelihood", round(self.log_likelihood_, decimals)),
+            ("converged", self._converged),
+        ]
 
-        summary = pd.DataFrame(
-            {
-                "coef": self.params_,
-                "exp(coef)": np.exp(self.params_),
-                "se(coef)": self.standard_errors_,
-                "z": self.params_ / self.standard_errors_,
-                "p": p_vals,
-                "%.2f lower-bound" % self.alpha: self.confidence_intervals_.iloc[:, 0],
-                "%.2f upper-bound" % self.alpha: self.confidence_intervals_.iloc[:, 1],
-            }
-        )
+        footers = [
+            ("partial AIC", round(self.AIC_partial_, decimals)),
+            ("partial BIC", round(self.BIC_partial_, decimals)),
+        ]
 
-        headers = {
-            "model": "FineGrayFitter",
-            "event_of_interest": str(self.event_of_interest),
-            "duration_col": "'%s'" % self.duration_col,
-            "event_col": "'%s'" % self.event_col,
-            "number_of_subjects": self._n_training_rows,
-            "number_of_events_of_interest": self._n_events_k,
-            "log-likelihood": round(self.log_likelihood_, decimals),
-            "partial_AIC": round(self.AIC_partial_, decimals),
-            "partial_BIC": round(self.BIC_partial_, decimals),
-            "converged": self._converged,
-        }
-
-        Printer(
-            self,
-            summary,
-            headers=headers,
-            footers={},
-            justify="left",
-            decimals=decimals,
-            columns=columns,
-        ).print(style=style)
+        Printer(self, headers, footers, justify, kwargs, decimals, columns).print(style=style)
 
     def plot_partial_effects_on_outcome(
         self,
