@@ -22,6 +22,7 @@ from lifelines.fitters.generalized_gamma_regression_fitter import GeneralizedGam
 from lifelines.fitters.spline_fitter import SplineFitter
 from lifelines.fitters.mixture_cure_fitter import MixtureCureFitter
 from lifelines.fitters.crc_spline_fitter import CRCSplineFitter
+from lifelines.fitters.fine_gray_fitter import FineGrayFitter
 from lifelines import datasets
 
 from lifelines.version import __version__
@@ -48,4 +49,5 @@ __all__ = [
     "PiecewiseExponentialRegressionFitter",
     "SplineFitter",
     "MixtureCureFitter",
+    "FineGrayFitter",
 ]
