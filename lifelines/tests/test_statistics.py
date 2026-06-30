@@ -9,6 +9,7 @@ from lifelines import statistics as stats
 from lifelines import CoxPHFitter, KaplanMeierFitter, WeibullFitter
 from lifelines.exceptions import StatisticalWarning
 from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset, load_leukemia
+from lifelines.statistics import sample_size_necessary_under_cph, power_under_cph
 
 
 def test_sample_size_necessary_under_cph():
@@ -579,3 +580,23 @@ def test_statistical_result_has_correct_decimal():
     output = results.to_ascii(decimals=10, test=1)
     numbers = re.findall(r"\d+\.\d{10}\b", output)
     assert len(numbers) >= 3
+
+
+
+@pytest.mark.parametrize("kwargs", [
+    dict(power=1.5, ratio_of_participants=1, p_exp=0.25, p_con=0.35, postulated_hazard_ratio=0.7),
+    dict(power=0.8, ratio_of_participants=1, p_exp=0.25, p_con=0.35, postulated_hazard_ratio=1.0),
+    dict(power=0.8, ratio_of_participants=1, p_exp=2.0,  p_con=0.35, postulated_hazard_ratio=0.7),
+])
+def test_sample_size_necessary_under_cph_rejects_invalid_input(kwargs):
+    with pytest.raises(ValueError):
+        sample_size_necessary_under_cph(**kwargs)
+
+
+def test_sample_size_necessary_under_cph_valid_unchanged():
+    assert sample_size_necessary_under_cph(0.8, 1, 0.25, 0.35, 0.7) == (421, 421)
+
+
+def test_power_under_cph_rejects_invalid_input():
+    with pytest.raises(ValueError):
+        power_under_cph(0, 100, 0.25, 0.35, 0.7)

@@ -270,7 +270,18 @@ def sample_size_necessary_under_cph(power, ratio_of_participants, p_exp, p_con, 
     --------
     power_under_cph
     """
-
+    if not (0 < power < 1):
+        raise ValueError("power must be between 0 and 1 (exclusive).")
+    if not (0 < alpha < 1):
+        raise ValueError("alpha must be between 0 and 1 (exclusive).")
+    if not (0 <= p_exp <= 1 and 0 <= p_con <= 1):
+        raise ValueError("p_exp and p_con must be probabilities in [0, 1].")
+    if ratio_of_participants <= 0:
+        raise ValueError("ratio_of_participants must be positive.")
+    if postulated_hazard_ratio <= 0:
+        raise ValueError("postulated_hazard_ratio must be positive.")
+    if postulated_hazard_ratio == 1:
+        raise ValueError("postulated_hazard_ratio cannot be 1 - there is no effect to size for.")
     def z(p):
         return stats.norm.ppf(p)
 
@@ -329,6 +340,14 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     --------
     sample_size_necessary_under_cph
     """
+    if n_exp <= 0 or n_con <= 0:
+        raise ValueError("n_exp and n_con must be positive.")
+    if not (0 <= p_exp <= 1 and 0 <= p_con <= 1):
+        raise ValueError("p_exp and p_con must be probabilities in [0, 1].")
+    if postulated_hazard_ratio <= 0:
+        raise ValueError("postulated_hazard_ratio must be positive.")
+    if not (0 < alpha < 1):
+        raise ValueError("alpha must be between 0 and 1 (exclusive).")
 
     def z(p):
         return stats.norm.ppf(p)
