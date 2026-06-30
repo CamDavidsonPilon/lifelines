@@ -89,7 +89,7 @@ class NelsonAalenFitter(UnivariateFitter):
         timeline: iterable
             return the best estimate at the values in timelines (positively increasing)
         event_observed: an array, or pd.Series, of length n
-            True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+            True if the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
         entry: an array, or pd.Series, of length n
            relative time when a subject entered the study. This is
            useful for left-truncated observations, i.e the birth event was not observed.

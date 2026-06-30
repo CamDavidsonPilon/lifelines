@@ -52,10 +52,10 @@ def concordance_index(event_times, predicted_scores, event_observed=None) -> flo
 
     The calculation internally done is
 
-    >>> (pairs_correct + 0.5 * pairs_tied) / admissable_pairs
+    >>> (pairs_correct + 0.5 * pairs_tied) / admissible_pairs
 
     where ``pairs_correct`` is the number of pairs s.t. if ``t_x > t_y``, then ``s_x > s_y``, pairs,
-    ``pairs_tied`` is the number of pairs where ``s_x = s_y``, and ``admissable_pairs`` is all possible pairs. The subtleties
+    ``pairs_tied`` is the number of pairs where ``s_x = s_y``, and ``admissible_pairs`` is all possible pairs. The subtleties
     are in how censored observation are handled (ex: not all pairs can be evaluated due to censoring).
 
 
@@ -96,7 +96,7 @@ def concordance_index(event_times, predicted_scores, event_observed=None) -> flo
 
 def _concordance_ratio(num_correct: int, num_tied: int, num_pairs: int) -> float:
     if num_pairs == 0:
-        raise ZeroDivisionError("No admissable pairs in the dataset.")
+        raise ZeroDivisionError("No admissible pairs in the dataset.")
     return (num_correct + num_tied / 2) / num_pairs
 
 

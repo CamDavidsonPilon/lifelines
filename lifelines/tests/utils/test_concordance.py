@@ -34,10 +34,10 @@ def test_both_concordance_index_with_only_censoring_fails_gracefully():
     actual_times = np.array([1, 2, 3])
     predicted_times = np.array([1, 2, 3])
     obs = np.zeros(3)
-    with pytest.raises(ZeroDivisionError, match="admissable pairs"):
+    with pytest.raises(ZeroDivisionError, match="admissible pairs"):
         fast_cindex(actual_times, predicted_times, obs)
 
-    with pytest.raises(ZeroDivisionError, match="admissable pairs"):
+    with pytest.raises(ZeroDivisionError, match="admissible pairs"):
         slow_cindex(actual_times, predicted_times, obs)
 
 
