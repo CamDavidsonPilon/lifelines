@@ -732,7 +732,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         durations: an array, or pd.Series
           length n, duration subject was observed for
         event_observed: numpy array or pd.Series, optional
-          length n, True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+          length n, True if the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
         timeline: list, optional
             return the estimate at the values in timeline (positively increasing)
         label: string, optional
@@ -803,7 +803,7 @@ class ParametricUnivariateFitter(UnivariateFitter):
         durations: an array, or pd.Series
           length n, duration subject was observed for
         event_observed: numpy array or pd.Series, optional
-          length n, True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+          length n, True if the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
         timeline: list, optional
             return the estimate at the values in timeline (positively increasing)
         label: string, optional
@@ -2484,7 +2484,7 @@ class ParametricRegressionFitter(RegressionFitter):
 
         Caution
         --------
-        If the survival function doesn't converge to 0, the the expectation is really infinity and the returned
+        If the survival function doesn't converge to 0, the expectation is really infinity and the returned
         values are meaningless/too large. In that case, using ``predict_median`` or ``predict_percentile`` would be better.
 
         Parameters

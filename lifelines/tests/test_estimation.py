@@ -979,7 +979,7 @@ class TestWeibullFitter:
         assert wf.summary.loc["lambda_", "coef lower 95%"] < 0.5 < wf.summary.loc["lambda_", "coef upper 95%"]
 
     def test_weibull_with_delayed_entries(self):
-        # note the the independence of entry and final time is really important
+        # note the independence of entry and final time is really important
         # (also called non-informative)
         # for example, the following doesn't work
         # D = np.random.rand(15000) * T

@@ -98,7 +98,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
           durations: an array, list, pd.DataFrame or pd.Series
             length n -- duration (relative to subject's birth) the subject was alive for.
           event_observed: an array, list, pd.DataFrame, or pd.Series, optional
-             True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+             True if the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
           timeline: an array, list, pd.DataFrame, or pd.Series, optional
             return the best estimate at the values in timelines (positively increasing)
           entry: an array, list, pd.DataFrame, or pd.Series, optional
@@ -164,7 +164,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
           upper_bound: an array, list, pd.DataFrame or pd.Series
             length n -- upper bound of observations
           event_observed: an array, list, pd.DataFrame, or pd.Series, optional
-             True if the the death was observed, False if the event was lost (right-censored). This can be computed from
+             True if the death was observed, False if the event was lost (right-censored). This can be computed from
              the lower_bound and upper_bound, and can be left blank.
           timeline: an array, list, pd.DataFrame, or pd.Series, optional
             return the best estimate at the values in timelines (positively increasing)
@@ -257,7 +257,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
           durations: an array, list, pd.DataFrame or pd.Series
             length n -- duration subject was observed for
           event_observed: an array, list, pd.DataFrame, or pd.Series, optional
-             True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+             True if the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
           timeline: an array, list, pd.DataFrame, or pd.Series, optional
             return the best estimate at the values in timelines (positively increasing)
           entry: an array, list, pd.DataFrame, or pd.Series, optional
@@ -300,7 +300,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
           durations: an array, list, pd.DataFrame or pd.Series
             length n -- duration subject was observed for
           event_observed: an array, list, pd.DataFrame, or pd.Series, optional
-             True if the the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
+             True if the death was observed, False if the event was lost (right-censored). Defaults all True if event_observed==None
           timeline: an array, list, pd.DataFrame, or pd.Series, optional
             return the best estimate at the values in timelines (positively increasing)
           entry: an array, list, pd.DataFrame, or pd.Series, optional
