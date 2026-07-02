@@ -3,7 +3,7 @@ from autograd import numpy as np
 from autograd.builtins import DictBox
 from autograd.numpy.numpy_boxes import ArrayBox
 from typing import Dict, List, Optional, Union
-from scipy.special import gamma
+from scipy.special import gamma, gammaincc
 import pandas as pd
 
 from lifelines.utils import _get_index
@@ -93,7 +93,10 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         super(WeibullAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept, model_ancillary)
 
     def _cumulative_hazard(
-        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSlicer
+        self,
+        params: Union[DictBox, Dict[str, np.array]],
+        T: Union[float, np.array],
+        Xs: DataframeSlicer,
     ) -> Union[np.array, ArrayBox]:
         lambda_params = params["lambda_"]
         log_lambda_ = Xs["lambda_"] @ lambda_params
@@ -104,13 +107,19 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         return safe_exp(rho_ * (np.log(np.clip(T, 1e-100, np.inf)) - log_lambda_))
 
     def _survival_function(
-        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSlicer
+        self,
+        params: Union[DictBox, Dict[str, np.array]],
+        T: Union[float, np.array],
+        Xs: DataframeSlicer,
     ) -> Union[np.array, ArrayBox]:
         ch = self._cumulative_hazard(params, T, Xs)
         return safe_exp(-ch)
 
     def _log_hazard(
-        self, params: Union[DictBox, Dict[str, np.array]], T: Union[float, np.array], Xs: DataframeSlicer
+        self,
+        params: Union[DictBox, Dict[str, np.array]],
+        T: Union[float, np.array],
+        Xs: DataframeSlicer,
     ) -> Union[np.array, ArrayBox]:
         lambda_params = params["lambda_"]
         log_lambda_ = Xs["lambda_"] @ lambda_params
@@ -168,7 +177,12 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
             index=_get_index(df),
         )
 
-    def predict_expectation(self, df: pd.DataFrame, ancillary: Optional[pd.DataFrame] = None) -> pd.Series:
+    def predict_expectation(
+        self,
+        df: pd.DataFrame,
+        ancillary: Optional[pd.DataFrame] = None,
+        conditional_after: Optional[np.array] = None,
+    ) -> pd.Series:
         """
         Predict the expectation of lifetimes, :math:`E[T | x]`.
 
@@ -194,4 +208,23 @@ class WeibullAFTFitter(ParametericAFTRegressionFitter, ProportionalHazardMixin):
         predict_median, predict_percentile
         """
         lambda_, rho_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
-        return pd.Series((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(df))
+
+        if conditional_after is None:
+            return pd.Series((lambda_ * gamma(1 + 1 / rho_)), index=_get_index(df))
+
+        cumulative_hazard_at_conditional_after = self._cumulative_hazard(
+            params={name: self.params_.loc[name].values for name in self._fitted_parameter_names},
+            T=conditional_after,
+            Xs=self.regressors.transform_df(df),
+        )
+
+        return pd.Series(
+            (
+                lambda_
+                * np.exp(cumulative_hazard_at_conditional_after)
+                * gamma(1 + 1 / rho_)
+                * gammaincc(1 + 1 / rho_, cumulative_hazard_at_conditional_after)
+            )
+            - conditional_after,
+            index=_get_index(df),
+        )
