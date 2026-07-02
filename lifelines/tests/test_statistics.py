@@ -588,7 +588,7 @@ def test_weibull_aft_fitter_predict_expectation():
 
     predicted_expectations = aft.predict_expectation(df)
 
-    # Check that all expectations are nonmegative
+    # Check that all expectations are nonnegative
     assert (predicted_expectations >= 0).all()
 
     # Check that using the conditional after argument gives the same result as the unconditional expectation when the conditional after times are all zero
