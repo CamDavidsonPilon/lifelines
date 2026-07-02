@@ -582,14 +582,13 @@ def test_statistical_result_has_correct_decimal():
 
 
 def test_weibull_aft_fitter_predict_expectation():
-
     aft = WeibullAFTFitter()
     df = load_regression_dataset()
     aft.fit(df, duration_col="T", event_col="E")
 
     predicted_expectations = aft.predict_expectation(df)
 
-    # Check that all expectations are positive
+    # Check that all expectations are nonmegative
     assert (predicted_expectations >= 0).all()
 
     # Check that using the conditional after argument gives the same result as the unconditional expectation when the conditional after times are all zero
