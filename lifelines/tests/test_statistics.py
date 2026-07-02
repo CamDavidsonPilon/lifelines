@@ -6,7 +6,7 @@ import pytest
 
 from pandas.testing import assert_frame_equal
 from lifelines import statistics as stats
-from lifelines import CoxPHFitter, KaplanMeierFitter, WeibullFitter
+from lifelines import CoxPHFitter, KaplanMeierFitter, WeibullFitter, WeibullAFTFitter
 from lifelines.exceptions import StatisticalWarning
 from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset, load_leukemia
 
@@ -579,3 +579,19 @@ def test_statistical_result_has_correct_decimal():
     output = results.to_ascii(decimals=10, test=1)
     numbers = re.findall(r"\d+\.\d{10}\b", output)
     assert len(numbers) >= 3
+
+
+def test_weibull_aft_fitter_predict_expectation():
+
+    aft = WeibullAFTFitter()
+    df = load_regression_dataset()
+    aft.fit(df, duration_col="T", event_col="E")
+
+    predicted_expectations = aft.predict_expectation(df)
+
+    # Check that all expectations are positive
+    assert (predicted_expectations >= 0).all()
+
+    # Check that using the conditional after argument gives the same result as the unconditional expectation when the conditional after times are all zero
+    conditional_expectations = aft.predict_expectation(df, conditional_after=np.zeros(df.shape[0]))
+    assert np.isclose(predicted_expectations, conditional_expectations).all()
