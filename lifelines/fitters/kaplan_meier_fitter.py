@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 import warnings
+from typing import Any
 import numpy as np
 import pandas as pd
 import typing as t
@@ -76,6 +77,24 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
     event_table: DataFrame
         A summary of the life table
     """
+    durations: np.ndarray
+    event_observed: np.ndarray
+    timeline: np.ndarray
+    entry: np.ndarray
+    event_table: pd.DataFrame
+    weights: np.ndarray
+    _label: str
+    cumulative_density_: pd.DataFrame
+    survival_function_: pd.DataFrame
+    confidence_interval_: pd.DataFrame
+    confidence_interval_survival_function_: pd.DataFrame
+    confidence_interval_cumulative_density_: pd.DataFrame
+    _median: float
+    _cumulative_sq_: pd.Series
+    _estimation_method: str
+    _estimate_name: str
+    upper_bound: np.ndarray
+    lower_bound: np.ndarray
 
     @CensoringType.right_censoring
     def fit(
@@ -197,15 +216,15 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         if weights is None:
             weights = np.ones_like(upper_bound)
 
-        self.weights = np.asarray(weights)
+        setattr(self, "weights", np.asarray(weights))
 
-        self.upper_bound = np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(upper_bound))
-        self.lower_bound = np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(lower_bound))
+        setattr(self, "upper_bound", np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(upper_bound)))
+        setattr(self, "lower_bound", np.atleast_1d(pass_for_numeric_dtypes_or_raise_array(lower_bound)))
         check_nans_or_infs(self.lower_bound)
 
-        self.event_observed = self.lower_bound == self.upper_bound
+        setattr(self, "event_observed", self.lower_bound == self.upper_bound)
 
-        self.timeline = coalesce(timeline, np.unique(np.concatenate((self.upper_bound, self.lower_bound))))
+        setattr(self, "timeline", coalesce(timeline, np.unique(np.concatenate((self.upper_bound, self.lower_bound)))))
 
         if (self.upper_bound < self.lower_bound).any():
             raise ValueError("All upper_bound times must be greater than or equal to lower_bound times.")
@@ -218,13 +237,13 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
                 "For all rows, lower_bound == upper_bound if and only if event observed = 1 (uncensored). Likewise, lower_bound < upper_bound if and only if event observed = 0 (censored)"
             )
 
-        self._label = coalesce(label, self._label, "NPMLE_estimate")
+        setattr(self, "_label", coalesce(label, self._label, "NPMLE_estimate"))
 
         results = npmle(self.lower_bound, self.upper_bound, verbose=show_progress, tol=tol, weights=weights, **kwargs)
-        self.survival_function_ = reconstruct_survival_function(*results, self.timeline, label=self._label).loc[self.timeline]
-        self.cumulative_density_ = 1 - self.survival_function_
+        setattr(self, "survival_function_", reconstruct_survival_function(*results, self.timeline, label=self._label).loc[self.timeline])
+        setattr(self, "cumulative_density_", 1 - self.survival_function_)
 
-        self._median = median_survival_times(self.survival_function_)
+        setattr(self, "_median", median_survival_times(self.survival_function_))
 
         """
         self.confidence_interval_ = npmle_compute_confidence_intervals(self.lower_bound, self.upper_bound, self.survival_function_, self.alpha)
@@ -232,8 +251,8 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         self.confidence_interval_cumulative_density_ = 1 - self.confidence_interval_
         """
         # estimation methods
-        self._estimation_method = "survival_function_"
-        self._estimate_name = "survival_function_"
+        setattr(self, "_estimation_method", "survival_function_")
+        setattr(self, "_estimate_name", "survival_function_")
         return self
 
     @CensoringType.left_censoring
@@ -330,7 +349,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
             event_observed = np.asarray(event_observed)
             self._check_values(event_observed)
 
-        self._label = coalesce(label, self._label, "KM_estimate")
+        setattr(self, "_label", coalesce(label, self._label, "KM_estimate"))
 
         if weights is not None:
             weights = np.asarray(weights)
@@ -351,14 +370,13 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         primary_estimate_name = "survival_function_"
         secondary_estimate_name = "cumulative_density_"
 
-        (
-            self.durations,
-            self.event_observed,
-            self.timeline,
-            self.entry,
-            self.event_table,
-            self.weights,
-        ) = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
+        _durations, _event_observed, _timeline, _entry, _event_table, _weights = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
+        setattr(self, "durations", _durations)
+        setattr(self, "event_observed", _event_observed)
+        setattr(self, "timeline", _timeline)
+        setattr(self, "entry", _entry)
+        setattr(self, "event_table", _event_table)
+        setattr(self, "weights", _weights)
 
         alpha = alpha if alpha else self.alpha
         log_estimate, cumulative_sq_ = _additive_estimate(
@@ -380,24 +398,24 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
 
         # estimation
         if is_left_censoring:
-            self.cumulative_density_ = pd.DataFrame(np.exp(log_estimate), columns=[self._label])
-            self.survival_function_ = 1 - self.cumulative_density_
-            self.confidence_interval_ = 1 - self._bounds(self.cumulative_density_, cumulative_sq_, alpha, ci_labels)
+            setattr(self, "cumulative_density_", pd.DataFrame(np.exp(log_estimate), columns=[self._label]))
+            setattr(self, "survival_function_", 1 - self.cumulative_density_)
+            setattr(self, "confidence_interval_", 1 - self._bounds(self.cumulative_density_, cumulative_sq_, alpha, ci_labels))
 
         else:
-            self.survival_function_ = pd.DataFrame(np.exp(log_estimate), columns=[self._label])
-            self.cumulative_density_ = 1 - self.survival_function_
-            self.confidence_interval_ = self._bounds(self.survival_function_, cumulative_sq_, alpha, ci_labels)
+            setattr(self, "survival_function_", pd.DataFrame(np.exp(log_estimate), columns=[self._label]))
+            setattr(self, "cumulative_density_", 1 - self.survival_function_)
+            setattr(self, "confidence_interval_", self._bounds(self.survival_function_, cumulative_sq_, alpha, ci_labels))
 
-        self.confidence_interval_survival_function_ = self.confidence_interval_
-        self.confidence_interval_cumulative_density_ = 1 - self.confidence_interval_
+        setattr(self, "confidence_interval_survival_function_", self.confidence_interval_)
+        setattr(self, "confidence_interval_cumulative_density_", 1 - self.confidence_interval_)
         self.confidence_interval_cumulative_density_[:] = np.fliplr(self.confidence_interval_cumulative_density_.values)
-        self._median = median_survival_times(self.survival_function_)
-        self._cumulative_sq_ = cumulative_sq_
+        setattr(self, "_median", median_survival_times(self.survival_function_))
+        setattr(self, "_cumulative_sq_", cumulative_sq_)
 
         # estimation methods
-        self._estimation_method = "survival_function_"
-        self._estimate_name = "survival_function_"
+        setattr(self, "_estimation_method", "survival_function_")
+        setattr(self, "_estimate_name", "survival_function_")
 
         return self
 

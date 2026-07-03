@@ -4,7 +4,7 @@
 from datetime import datetime, UTC
 import warnings
 import time
-from typing import Optional
+from typing import Optional, Any
 
 import numpy as np
 import pandas as pd
@@ -84,15 +84,77 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
     baseline_cumulative_hazard_: DataFrame
     baseline_survival_: DataFrame
     """
+    penalizer: float
+    strata: Any
+    l1_ratio: float
+    weights_col: str
+    robust: bool
+    event_col: str
+    id_col: str
+    stop_col: str
+    start_col: str
+    formula: Any
+    _time_fit_was_called: str
+    regressors: Any
+    _norm_mean: pd.Series
+    _norm_std: pd.Series
+    log_likelihood_: float
+    _hessian_: np.ndarray
+    params_: pd.Series
+    variance_matrix_: pd.DataFrame
+    standard_errors_: pd.Series
+    confidence_intervals_: pd.DataFrame
+    baseline_cumulative_hazard_: pd.DataFrame
+    baseline_survival_: pd.DataFrame
+    event_observed: np.ndarray
+    start_stop_and_events: pd.DataFrame
+    weights: np.ndarray
+    _n_examples: int
+    _n_unique: int
+    cluster_col: str
+    _clusters: Any
 
     _KNOWN_MODEL = True
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio: float = 0.0, strata=None):
         super(CoxTimeVaryingFitter, self).__init__(alpha=alpha)
-        self.alpha = alpha
-        self.penalizer = penalizer
-        self.strata = utils._to_list_or_singleton(strata)
-        self.l1_ratio = l1_ratio
+        setattr(self, "alpha", alpha)
+        setattr(self, "penalizer", penalizer)
+        setattr(self, "strata", utils._to_list_or_singleton(strata))
+        setattr(self, "l1_ratio", l1_ratio)
+
+    def _preprocess_dataframe(self, df, event_col, start_col, stop_col, weights_col):
+        df = df.copy()
+
+        if not (event_col in df and start_col in df and stop_col in df):
+            raise KeyError("A column specified in the call to `fit` does not exist in the DataFrame provided.")
+
+        if weights_col is None:
+            setattr(self, "weights_col", None)
+            assert "__weights" not in df.columns, "__weights is an internal lifelines column, please rename your column first."
+            df["__weights"] = 1.0
+        else:
+            setattr(self, "weights_col", weights_col)
+            if (df[weights_col] <= 0).any():
+                raise ValueError("values in weights_col must be positive.")
+
+        df = df.rename(columns={event_col: "event", start_col: "start", stop_col: "stop", weights_col: "__weights"})
+
+        if self.strata is not None and self.id_col is not None:
+            df = df.set_index(_to_list(self.strata) + [self.id_col])
+            df = df.sort_index()
+        elif self.strata is not None and self.id_col is None:
+            df = df.set_index(_to_list(self.strata))
+        elif self.strata is None and self.id_col is not None:
+            df = df.set_index([self.id_col])
+
+        events, start, stop = (
+            pass_for_numeric_dtypes_or_raise_array(df.pop("event")).astype(bool),
+            df.pop("start"),
+            df.pop("stop"),
+        )
+        weights = df.pop("__weights").astype(float)
+        return df, events, start, stop, weights
 
     def fit(
         self,
@@ -108,7 +170,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         initial_point=None,
         formula: str = None,
         fit_options: Optional[dict] = None,
-    ):  # pylint: disable=too-many-arguments
+    ):
         """
         Fit the Cox Proportional Hazard model to a time varying dataset. Tied survival times
         are handled using Efron's tie-method.
@@ -162,58 +224,29 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             self, with additional properties like ``hazards_`` and ``print_summary``
 
         """
-        self.strata = utils._to_list_or_singleton(coalesce(strata, self.strata))
-        self.robust = robust
+        setattr(self, "strata", utils._to_list_or_singleton(coalesce(strata, self.strata)))
+        setattr(self, "robust", robust)
         if self.robust:
             raise NotImplementedError("Not available yet.")
 
-        self.event_col = event_col
-        self.id_col = id_col
-        self.stop_col = stop_col
-        self.start_col = start_col
-        self.formula = formula
-        self._time_fit_was_called = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+        setattr(self, "event_col", event_col)
+        setattr(self, "id_col", id_col)
+        setattr(self, "stop_col", stop_col)
+        setattr(self, "start_col", start_col)
+        setattr(self, "formula", formula)
+        setattr(self, "_time_fit_was_called", datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S") + " UTC")
 
-        df = df.copy()
+        df, events, start, stop, weights = self._preprocess_dataframe(df, event_col, start_col, stop_col, weights_col)
 
-        if not (event_col in df and start_col in df and stop_col in df):
-            raise KeyError("A column specified in the call to `fit` does not exist in the DataFrame provided.")
-
-        if weights_col is None:
-            self.weights_col = None
-            assert "__weights" not in df.columns, "__weights is an internal lifelines column, please rename your column first."
-            df["__weights"] = 1.0
-        else:
-            self.weights_col = weights_col
-            if (df[weights_col] <= 0).any():
-                raise ValueError("values in weights_col must be positive.")
-
-        df = df.rename(columns={event_col: "event", start_col: "start", stop_col: "stop", weights_col: "__weights"})
-
-        if self.strata is not None and self.id_col is not None:
-            df = df.set_index(_to_list(self.strata) + [id_col])
-            df = df.sort_index()
-        elif self.strata is not None and self.id_col is None:
-            df = df.set_index(_to_list(self.strata))
-        elif self.strata is None and self.id_col is not None:
-            df = df.set_index([id_col])
-
-        events, start, stop = (
-            pass_for_numeric_dtypes_or_raise_array(df.pop("event")).astype(bool),
-            df.pop("start"),
-            df.pop("stop"),
-        )
-        weights = df.pop("__weights").astype(float)
-
-        self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True)
+        setattr(self, "regressors", utils.CovariateParameterMappings({"beta_": self.formula}, df, force_no_intercept=True))
         X = self.regressors.transform_df(df)["beta_"]
 
         self._check_values(X, events, start, stop)
 
-        self._norm_mean = X.mean(0)
-        self._norm_std = X.std(0)
+        setattr(self, "_norm_mean", X.mean(0))
+        setattr(self, "_norm_std", X.std(0))
 
-        beta_, self.log_likelihood_, self._hessian_ = self._newton_raphson_for_efron_model(
+        beta_, log_likelihood_, _hessian_ = self._newton_raphson_for_efron_model(
             normalize(X, self._norm_mean, self._norm_std),
             events,
             start,
@@ -223,27 +256,27 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
             show_progress=show_progress,
             **utils.coalesce(fit_options, {}),
         )
+        setattr(self, "log_likelihood_", log_likelihood_)
+        setattr(self, "_hessian_", _hessian_)
 
-        self.params_ = pd.Series(beta_, index=pd.Index(X.columns, name="covariate"), name="coef") / self._norm_std
+        setattr(self, "params_", pd.Series(beta_, index=pd.Index(X.columns, name="covariate"), name="coef") / self._norm_std)
         if self._hessian_.size > 0:
-            # possible if the df is trivial (no covariate columns)
-            self.variance_matrix_ = pd.DataFrame(-inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns)
-
+            setattr(self, "variance_matrix_", pd.DataFrame(-inv(self._hessian_) / np.outer(self._norm_std, self._norm_std), index=X.columns))
         else:
-            self.variance_matrix_ = pd.DataFrame(index=X.columns, columns=X.columns)
+            setattr(self, "variance_matrix_", pd.DataFrame(index=X.columns, columns=X.columns))
 
-        self.standard_errors_ = self._compute_standard_errors(
+        setattr(self, "standard_errors_", self._compute_standard_errors(
             normalize(X, self._norm_mean, self._norm_std), events, start, stop, weights
-        )
-        self.confidence_intervals_ = self._compute_confidence_intervals()
-        self.baseline_cumulative_hazard_ = self._compute_cumulative_baseline_hazard(df, events, start, stop, weights)
-        self.baseline_survival_ = self._compute_baseline_survival()
-        self.event_observed = events
-        self.start_stop_and_events = pd.DataFrame({"event": events, "start": start, "stop": stop})
-        self.weights = weights
+        ))
+        setattr(self, "confidence_intervals_", self._compute_confidence_intervals())
+        setattr(self, "baseline_cumulative_hazard_", self._compute_cumulative_baseline_hazard(df, events, start, stop, weights))
+        setattr(self, "baseline_survival_", self._compute_baseline_survival())
+        setattr(self, "event_observed", events)
+        setattr(self, "start_stop_and_events", pd.DataFrame({"event": events, "start": start, "stop": stop}))
+        setattr(self, "weights", weights)
 
-        self._n_examples = X.shape[0]
-        self._n_unique = X.index.unique().shape[0]
+        setattr(self, "_n_examples", X.shape[0])
+        setattr(self, "_n_unique", X.index.unique().shape[0])
         return self
 
     def _check_values(self, df, events, start, stop):

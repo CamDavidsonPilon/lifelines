@@ -21,6 +21,90 @@ class SplineFitterMixin:
 
 
 class ProportionalHazardMixin:
+    def _plot_schoenfeld_residuals(self, variable, test_results, residuals_and_duration, plot_n_bootstraps, n, axes):
+        from matplotlib import pyplot as plt
+        axes.append([])
+        print()
+        print("   Bootstrapping lowess lines. May take a moment...")
+        print()
+
+        fig = plt.figure()
+
+        # plot variable against all time transformations.
+        for i, (transform_name, transformer) in enumerate(TimeTransformers().iter(["rank", "km"]), start=1):
+            p_value = test_results.summary.loc[(variable, transform_name), "p"]
+
+            ax = fig.add_subplot(1, 2, i)
+
+            y = residuals_and_duration[variable]
+            tt = transformer(self.durations, self.event_observed, self.weights)[self.event_observed.values]
+
+            ax.scatter(tt, y, alpha=0.75)
+
+            y_lowess = lowess(tt.values, y.values)
+            ax.plot(tt, y_lowess, color="k", alpha=1.0, linewidth=2)
+
+            # bootstrap some possible other lowess lines. This is an approximation of the 100% confidence intervals
+            for _ in range(plot_n_bootstraps):
+                ix = sorted(np.random.choice(n, n))
+                tt_ = tt.values[ix]
+                y_lowess = lowess(tt_, y.values[ix])
+                ax.plot(tt_, y_lowess, color="k", alpha=0.30)
+
+            best_xlim = ax.get_xlim()
+            ax.hlines(0, 0, tt.max(), linestyles="dashed", linewidths=1)
+            ax.set_xlim(best_xlim)
+
+            ax.set_xlabel("%s-transformed time\n(p=%.4f)" % (transform_name, p_value), fontsize=10)
+            axes[-1].append(ax)
+
+        fig.suptitle("Scaled Schoenfeld residuals of '%s'" % variable, fontsize=14)
+        plt.tight_layout()
+        plt.subplots_adjust(top=0.90)
+
+    def _print_failure_advice(self, variable, Xs, advice):
+        values = Xs["beta_"][variable]
+        value_counts = values.value_counts()
+        n_uniques = value_counts.shape[0]
+
+        # Arbitrary chosen to check for ability to use strata col.
+        # This should capture dichotomous / low cardinality values.
+        if n_uniques <= 6 and value_counts.min() >= 5:
+            print(
+                fill(
+                    "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [E] below.".format(
+                        n_uniques, variable
+                    ),
+                    width=100,
+                )
+            )
+        else:
+            print(
+                fill(
+                    """   Advice 1: the functional form of the variable '{var}' might be incorrect. That is, there may be non-linear terms missing. The proportional hazard test used is very sensitive to incorrect functional forms. See documentation in link [D] below on how to specify a functional form.""".format(
+                        var=variable
+                    ),
+                    width=100,
+                ),
+                end="\n\n",
+            )
+            print(
+                fill(
+                    """   Advice 2: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}', ...]` in the call in `.fit`. See documentation in link [B] below.""".format(
+                        var=variable
+                    ),
+                    width=100,
+                ),
+                end="\n\n",
+            )
+            print(
+                fill(
+                    """   Advice 3: try adding an interaction term with your time variable. See documentation in link [C] below.""",
+                    width=100,
+                ),
+                end="\n\n",
+            )
+
     def check_assumptions(
         self,
         training_df: DataFrame,
@@ -114,45 +198,7 @@ class ProportionalHazardMixin:
 
             # plot is done (regardless of test result) whenever `show_plots = True`
             if show_plots:
-                axes.append([])
-                print()
-                print("   Bootstrapping lowess lines. May take a moment...")
-                print()
-                from matplotlib import pyplot as plt
-
-                fig = plt.figure()
-
-                # plot variable against all time transformations.
-                for i, (transform_name, transformer) in enumerate(TimeTransformers().iter(["rank", "km"]), start=1):
-                    p_value = test_results.summary.loc[(variable, transform_name), "p"]
-
-                    ax = fig.add_subplot(1, 2, i)
-
-                    y = residuals_and_duration[variable]
-                    tt = transformer(self.durations, self.event_observed, self.weights)[self.event_observed.values]
-
-                    ax.scatter(tt, y, alpha=0.75)
-
-                    y_lowess = lowess(tt.values, y.values)
-                    ax.plot(tt, y_lowess, color="k", alpha=1.0, linewidth=2)
-
-                    # bootstrap some possible other lowess lines. This is an approximation of the 100% confidence intervals
-                    for _ in range(plot_n_bootstraps):
-                        ix = sorted(np.random.choice(n, n))
-                        tt_ = tt.values[ix]
-                        y_lowess = lowess(tt_, y.values[ix])
-                        ax.plot(tt_, y_lowess, color="k", alpha=0.30)
-
-                    best_xlim = ax.get_xlim()
-                    ax.hlines(0, 0, tt.max(), linestyles="dashed", linewidths=1)
-                    ax.set_xlim(best_xlim)
-
-                    ax.set_xlabel("%s-transformed time\n(p=%.4f)" % (transform_name, p_value), fontsize=10)
-                    axes[-1].append(ax)
-
-                fig.suptitle("Scaled Schoenfeld residuals of '%s'" % variable, fontsize=14)
-                plt.tight_layout()
-                plt.subplots_adjust(top=0.90)
+                self._plot_schoenfeld_residuals(variable, test_results, residuals_and_duration, plot_n_bootstraps, n, axes)
 
             if np.round(minimum_observed_p_value, 2) > p_value_threshold:
                 continue
@@ -187,47 +233,7 @@ class ProportionalHazardMixin:
             )
 
             if advice:
-                values = Xs["beta_"][variable]
-                value_counts = values.value_counts()
-                n_uniques = value_counts.shape[0]
-
-                # Arbitrary chosen to check for ability to use strata col.
-                # This should capture dichotomous / low cardinality values.
-                if n_uniques <= 6 and value_counts.min() >= 5:
-                    print(
-                        fill(
-                            "   Advice: with so few unique values (only {0}), you can include `strata=['{1}', ...]` in the call in `.fit`. See documentation in link [E] below.".format(
-                                n_uniques, variable
-                            ),
-                            width=100,
-                        )
-                    )
-                else:
-                    print(
-                        fill(
-                            """   Advice 1: the functional form of the variable '{var}' might be incorrect. That is, there may be non-linear terms missing. The proportional hazard test used is very sensitive to incorrect functional forms. See documentation in link [D] below on how to specify a functional form.""".format(
-                                var=variable
-                            ),
-                            width=100,
-                        ),
-                        end="\n\n",
-                    )
-                    print(
-                        fill(
-                            """   Advice 2: try binning the variable '{var}' using pd.cut, and then specify it in `strata=['{var}', ...]` in the call in `.fit`. See documentation in link [B] below.""".format(
-                                var=variable
-                            ),
-                            width=100,
-                        ),
-                        end="\n\n",
-                    )
-                    print(
-                        fill(
-                            """   Advice 3: try adding an interaction term with your time variable. See documentation in link [C] below.""",
-                            width=100,
-                        ),
-                        end="\n\n",
-                    )
+                self._print_failure_advice(variable, Xs, advice)
         #################
 
         if advice and counter > 0:

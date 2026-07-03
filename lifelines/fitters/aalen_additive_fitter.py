@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import warnings
+from typing import Any
 from datetime import datetime, UTC
 import time
 
@@ -78,6 +79,25 @@ class AalenAdditiveFitter(RegressionFitter):
     weights: array
         The event_observed variable provided
     """
+    _time_fit_was_called: str
+    duration_col: str
+    event_col: str
+    weights_col: str
+    formula: Any
+    _n_examples: int
+    durations: np.ndarray
+    event_observed: np.ndarray
+    weights: np.ndarray
+    _norm_std: pd.Series
+    hazards_: pd.DataFrame
+    cumulative_hazards_: pd.DataFrame
+    cumulative_variance_: pd.DataFrame
+    confidence_intervals_: pd.DataFrame
+    _index: pd.Index
+    _predicted_hazards_: np.ndarray
+    regressors: Any
+    _concordance_score_: float
+
     _KNOWN_MODEL = True
 
     def __init__(self, fit_intercept=True, alpha=0.05, coef_penalizer=0.0, smoothing_penalizer=0.0):
@@ -153,43 +173,47 @@ class AalenAdditiveFitter(RegressionFitter):
             aaf.print_summary()
 
         """
-        self._time_fit_was_called = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S") + " UTC"
+        setattr(self, "_time_fit_was_called", datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S") + " UTC")
 
         df = df.copy()
 
-        self.duration_col = duration_col
-        self.event_col = event_col
-        self.weights_col = weights_col
-        self.formula = formula
+        setattr(self, "duration_col", duration_col)
+        setattr(self, "event_col", event_col)
+        setattr(self, "weights_col", weights_col)
+        setattr(self, "formula", formula)
 
-        self._n_examples = df.shape[0]
+        setattr(self, "_n_examples", df.shape[0])
 
         X, T, E, weights = self._preprocess_dataframe(df)
 
-        self.durations = T.copy()
-        self.event_observed = E.copy()
-        self.weights = weights.copy()
+        setattr(self, "durations", T.copy())
+        setattr(self, "event_observed", E.copy())
+        setattr(self, "weights", weights.copy())
 
-        self._norm_std = X.std(0)
+        norm_std = X.std(0)
 
         # if we included an intercept, we need to fix not divide by zero.
         if self.fit_intercept:
-            self._norm_std["Intercept"] = 1.0
+            norm_std["Intercept"] = 1.0
         else:
             # a _intercept was provided
-            self._norm_std[self._norm_std < 1e-8] = 1.0
+            norm_std[norm_std < 1e-8] = 1.0
+        setattr(self, "_norm_std", norm_std)
 
-        self.hazards_, self.cumulative_hazards_, self.cumulative_variance_ = self._fit_model(
+        hazards_, cumulative_hazards_, cumulative_variance_ = self._fit_model(
             normalize(X, 0, self._norm_std), T, E, weights, show_progress
         )
-        self.hazards_ /= self._norm_std
-        self.cumulative_hazards_ /= self._norm_std
-        self.cumulative_variance_ /= self._norm_std
-        self.confidence_intervals_ = self._compute_confidence_intervals()
+        hazards_ /= self._norm_std
+        cumulative_hazards_ /= self._norm_std
+        cumulative_variance_ /= self._norm_std
+        setattr(self, "hazards_", hazards_)
+        setattr(self, "cumulative_hazards_", cumulative_hazards_)
+        setattr(self, "cumulative_variance_", cumulative_variance_)
+        setattr(self, "confidence_intervals_", self._compute_confidence_intervals())
 
-        self._index = self.hazards_.index
+        setattr(self, "_index", self.hazards_.index)
 
-        self._predicted_hazards_ = self.predict_cumulative_hazard(df).iloc[-1].values.ravel()
+        setattr(self, "_predicted_hazards_", self.predict_cumulative_hazard(df).iloc[-1].values.ravel())
         return self
 
     def _fit_model(self, X, T, E, weights, show_progress):
@@ -291,7 +315,7 @@ It's important to know that the naive variance estimates of the coefficients are
             if (W <= 0).any():
                 raise ValueError("values in weight column %s must be positive." % self.weights_col)
 
-        self.regressors = utils.CovariateParameterMappings({"beta_": self.formula}, df, force_intercept=self.fit_intercept)
+        setattr(self, "regressors", utils.CovariateParameterMappings({"beta_": self.formula}, df, force_intercept=self.fit_intercept))
         X = self.regressors.transform_df(df)["beta_"]
 
         T = T.astype(float)
@@ -490,7 +514,7 @@ It's important to know that the naive variance estimates of the coefficients are
         """
         # pylint: disable=access-member-before-definition
         if hasattr(self, "_predicted_hazards_"):
-            self._concordance_score_ = concordance_index(self.durations, -self._predicted_hazards_, self.event_observed)
+            setattr(self, "_concordance_score_", concordance_index(self.durations, -self._predicted_hazards_, self.event_observed))
             del self._predicted_hazards_
             return self._concordance_score_
         return self._concordance_score_

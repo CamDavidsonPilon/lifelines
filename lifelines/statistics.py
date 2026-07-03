@@ -675,6 +675,40 @@ def pairwise_logrank_test(
 def difference_of_restricted_mean_survival_time_test(model1, model2, t):
     pass
 
+def _compute_multivariate_logrank_weights(weightings, n_i, ev_i, event_durations, event_observed, d_i, kwargs):
+    from lifelines import KaplanMeierFitter
+    if weightings is None:
+        w_i = np.ones(d_i.shape[0])
+    elif weightings == "wilcoxon":
+        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Wilcoxon")
+        w_i = n_i
+    elif weightings == "tarone-ware":
+        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Tarone-Ware")
+        w_i = np.sqrt(n_i)
+    elif weightings == "peto":
+        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Peto")
+        w_i = np.cumprod(1.0 - (ev_i.sum(1)) / (n_i + 1))  # Peto-Peto's modified survival estimates.
+    elif weightings == "fleming-harrington":
+        if "p" in kwargs:
+            p = kwargs["p"]
+            if p < 0:
+                raise ValueError("p must be non-negative.")
+        else:
+            raise ValueError("Must provide keyword argument p for Flemington-Harrington test statistic")
+        if "q" in kwargs:
+            q = kwargs["q"]
+            if q < 0:
+                raise ValueError("q must be non-negative.")
+        else:
+            raise ValueError("Must provide keyword argument q for Flemington-Harrington test statistic")
+        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Flemington-Harrington")
+        kmf = KaplanMeierFitter().fit(event_durations, event_observed=event_observed)
+        s = kmf.survival_function_.to_numpy().flatten()[:-1]  # Left-continuous Kaplan-Meier survival estimate.
+        w_i = np.power(s, p) * np.power(1.0 - s, q)
+    else:
+        raise ValueError("Invalid value for weightings.")
+    return w_i
+
 
 def multivariate_logrank_test(
     event_durations, groups, event_observed=None, weights=None, t_0=-1, weightings=None, **kwargs
@@ -793,36 +827,7 @@ def multivariate_logrank_test(
     ev_i = n_ij.mul(d_i / n_i, axis="index")
 
     # compute weightings for log-rank alternatives
-    if weightings is None:
-        w_i = np.ones(d_i.shape[0])
-    elif weightings == "wilcoxon":
-        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Wilcoxon")
-        w_i = n_i
-    elif weightings == "tarone-ware":
-        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Tarone-Ware")
-        w_i = np.sqrt(n_i)
-    elif weightings == "peto":
-        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Peto")
-        w_i = np.cumprod(1.0 - (ev_i.sum(1)) / (n_i + 1))  # Peto-Peto's modified survival estimates.
-    elif weightings == "fleming-harrington":
-        if "p" in kwargs:
-            p = kwargs["p"]
-            if p < 0:
-                raise ValueError("p must be non-negative.")
-        else:
-            raise ValueError("Must provide keyword argument p for Flemington-Harrington test statistic")
-        if "q" in kwargs:
-            q = kwargs["q"]
-            if q < 0:
-                raise ValueError("q must be non-negative.")
-        else:
-            raise ValueError("Must provide keyword argument q for Flemington-Harrington test statistic")
-        kwargs["test_name"] = kwargs["test_name"].replace("logrank", "Flemington-Harrington")
-        kmf = KaplanMeierFitter().fit(event_durations, event_observed=event_observed)
-        s = kmf.survival_function_.to_numpy().flatten()[:-1]  # Left-continuous Kaplan-Meier survival estimate.
-        w_i = np.power(s, p) * np.power(1.0 - s, q)
-    else:
-        raise ValueError("Invalid value for weightings.")
+    w_i = _compute_multivariate_logrank_weights(weightings, n_i, ev_i, event_durations, event_observed, d_i, kwargs)
 
     # apply weights to observed and expected
     N_j = obs.mul(w_i, axis=0).sum(0).values

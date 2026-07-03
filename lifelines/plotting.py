@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import warnings
-from typing import Union, Optional, Iterable
+from typing import Union, Optional, Iterable, Any
 from scipy import stats as stats
 
 import pandas as pd
@@ -395,6 +395,77 @@ def remove_ticks(ax, x=False, y=False):
     return ax
 
 
+def _get_counts_at_tick(fitters, tick, at_risk_count_from_start_of_period, rows_to_show, n_rows):
+    counts = []
+    for f in fitters:
+        if at_risk_count_from_start_of_period:
+            event_table_slice = f.event_table.assign(at_risk=lambda x: x.at_risk)
+        else:
+            event_table_slice = f.event_table.assign(
+                at_risk=lambda x: x.at_risk - x.removed
+            )
+        if not event_table_slice.loc[:tick].empty:
+            event_table_slice = (
+                event_table_slice.loc[:tick, ["at_risk", "censored", "observed"]]
+                .agg(
+                    {
+                        "at_risk": lambda x: x.tail(1).values.item(),
+                        "censored": "sum",
+                        "observed": "sum",
+                    }
+                )
+                .rename(
+                    {
+                        "at_risk": "At risk",
+                        "censored": "Censored",
+                        "observed": "Events",
+                    }
+                )
+                .fillna(0)
+            )
+            counts.extend([int(np.asarray(c).item()) for c in event_table_slice.loc[rows_to_show]])
+        else:
+            counts.extend([0 for _ in range(n_rows)])
+    return counts
+
+
+def _format_tick_label(tick, counts, rows_to_show, labels, n_rows, is_first_tick):
+    lbl = ""
+    if not is_first_tick:
+        for i, c in enumerate(counts):
+            if n_rows > 1 and i % n_rows == 0 and i > 0:
+                lbl += "\n\n"
+            lbl += "\n{}".format(c)
+        return lbl
+
+    max_length = len(str(max(counts)))
+    if n_rows > 1:
+        for i, c in enumerate(counts):
+            if i % n_rows == 0:
+                prefix = "\n" if i > 0 else ""
+                if is_latex_enabled():
+                    lbl += prefix + r"\textbf{%s}" % labels[int(i / n_rows)] + "\n"
+                else:
+                    lbl += prefix + r"%s" % labels[int(i / n_rows)] + "\n"
+            l = rows_to_show[i % n_rows]
+            s = (
+                "{}".format(l.rjust(10, " "))
+                + (" " * (max_length - len(str(c)) + 3))
+                + "{{:>{}d}}\n".format(max_length)
+            )
+            lbl += s.format(c)
+    else:
+        lbl += rows_to_show[0] + "\n"
+        for i, c in enumerate(counts):
+            s = (
+                "{}".format(labels[i].rjust(10, " "))
+                + (" " * (max_length - len(str(c)) + 3))
+                + "{{:>{}d}}\n".format(max_length)
+            )
+            lbl += s.format(c)
+    return lbl
+
+
 def add_at_risk_counts(
     *fitters,
     labels: Optional[Union[Iterable, bool]] = None,
@@ -518,106 +589,32 @@ def add_at_risk_counts(
     remove_ticks(ax2, x=True, y=True)
 
     ticklabels = []
+    first_tick = ax2.get_xticks()[0]
 
     for tick in ax2.get_xticks():
-        lbl = ""
-
-        # Get counts at tick
-        counts = []
-        for f in fitters:
-            # this is a messy:
-            # a) to align with R (and intuition), we do a subtraction off the at_risk column
-            # b) we group by the tick intervals
-            # c) we want to start at 0, so we give it it's own interval
-            if at_risk_count_from_start_of_period:
-                event_table_slice = f.event_table.assign(at_risk=lambda x: x.at_risk)
-            else:
-                event_table_slice = f.event_table.assign(
-                    at_risk=lambda x: x.at_risk - x.removed
-                )
-            if not event_table_slice.loc[:tick].empty:
-                event_table_slice = (
-                    event_table_slice.loc[:tick, ["at_risk", "censored", "observed"]]
-                    .agg(
-                        {
-                            # `Series.tail(1).values` is a 1D array of length 1. In NumPy>=2.4,
-                            # `int(np.array([1]))` raises `TypeError: only 0-dimensional arrays can be converted to Python scalars`.
-                            # Extract a Python scalar for compatibility.
-                            "at_risk": lambda x: x.tail(1).values.item(),
-                            "censored": "sum",
-                            "observed": "sum",
-                        }
-                    )  # see #1385
-                    .rename(
-                        {
-                            "at_risk": "At risk",
-                            "censored": "Censored",
-                            "observed": "Events",
-                        }
-                    )
-                    .fillna(0)
-                )
-                counts.extend([int(np.asarray(c).item()) for c in event_table_slice.loc[rows_to_show]])
-            else:
-                counts.extend([0 for _ in range(n_rows)])
-        if n_rows > 1:
-            if tick == ax2.get_xticks()[0]:
-                max_length = len(str(max(counts)))
-                for i, c in enumerate(counts):
-                    if i % n_rows == 0:
-                        if is_latex_enabled():
-                            lbl += (
-                                ("\n" if i > 0 else "")
-                                + r"\textbf{%s}" % labels[int(i / n_rows)]
-                                + "\n"
-                            )
-                        else:
-                            lbl += (
-                                ("\n" if i > 0 else "")
-                                + r"%s" % labels[int(i / n_rows)]
-                                + "\n"
-                            )
-                    l = rows_to_show[i % n_rows]
-                    s = (
-                        "{}".format(l.rjust(10, " "))
-                        + (" " * (max_length - len(str(c)) + 3))
-                        + "{{:>{}d}}\n".format(max_length)
-                    )
-
-                    lbl += s.format(c)
-            else:
-                # Create tick label
-                lbl += ""
-                for i, c in enumerate(counts):
-                    if i % n_rows == 0 and i > 0:
-                        lbl += "\n\n"
-                    s = "\n{}"
-                    lbl += s.format(c)
-        else:
-            # if only one row to show, show in "condensed" version
-            if tick == ax2.get_xticks()[0]:
-                max_length = len(str(max(counts)))
-
-                lbl += rows_to_show[0] + "\n"
-
-                for i, c in enumerate(counts):
-                    s = (
-                        "{}".format(labels[i].rjust(10, " "))
-                        + (" " * (max_length - len(str(c)) + 3))
-                        + "{{:>{}d}}\n".format(max_length)
-                    )
-                    lbl += s.format(c)
-            else:
-                # Create tick label
-                lbl += ""
-                for i, c in enumerate(counts):
-                    s = "\n{}"
-                    lbl += s.format(c)
+        counts = _get_counts_at_tick(fitters, tick, at_risk_count_from_start_of_period, rows_to_show, n_rows)
+        lbl = _format_tick_label(tick, counts, rows_to_show, labels, n_rows, tick == first_tick)
         ticklabels.append(lbl)
     # Align labels to the right so numbers can be compared easily
     ax2.set_xticklabels(ticklabels, ha="right", **kwargs)
 
     return ax
+
+
+def _draw_interval_censored_line(ax, i, entry, lower_bound, upper_bound, event_observed_color, event_right_censored_color, left_truncated):
+    if np.isposinf(_iloc(upper_bound, i)):
+        c = event_right_censored_color
+        ax.hlines(i, _iloc(entry, i), _iloc(lower_bound, i), color=c, lw=1.5)
+    else:
+        c = event_observed_color
+        ax.hlines(i, _iloc(entry, i), _iloc(upper_bound, i), color=c, lw=1.5)
+        if _iloc(lower_bound, i) == _iloc(upper_bound, i):
+            ax.scatter(_iloc(lower_bound, i), i, color=c, marker="o", s=13)
+        else:
+            ax.scatter(_iloc(lower_bound, i), i, color=c, marker=">", s=13)
+            ax.scatter(_iloc(upper_bound, i), i, color=c, marker="<", s=13)
+    if left_truncated:
+        ax.hlines(i, 0, _iloc(entry, i), color=c, lw=1.0, linestyle="--")
 
 
 def plot_interval_censored_lifetimes(
@@ -692,19 +689,7 @@ def plot_interval_censored_lifetimes(
     if entry is None:
         entry = np.zeros(N)
     for i in range(N):
-        if np.isposinf(_iloc(upper_bound, i)):
-            c = event_right_censored_color
-            ax.hlines(i, _iloc(entry, i), _iloc(lower_bound, i), color=c, lw=1.5)
-        else:
-            c = event_observed_color
-            ax.hlines(i, _iloc(entry, i), _iloc(upper_bound, i), color=c, lw=1.5)
-            if _iloc(lower_bound, i) == _iloc(upper_bound, i):
-                ax.scatter(_iloc(lower_bound, i), i, color=c, marker="o", s=13)
-            else:
-                ax.scatter(_iloc(lower_bound, i), i, color=c, marker=">", s=13)
-                ax.scatter(_iloc(upper_bound, i), i, color=c, marker="<", s=13)
-        if left_truncated:
-            ax.hlines(i, 0, _iloc(entry, i), color=c, lw=1.0, linestyle="--")
+        _draw_interval_censored_line(ax, i, entry, lower_bound, upper_bound, event_observed_color, event_right_censored_color, left_truncated)
     if label_plot_bars:
         ax.set_yticks(range(0, N))
         ax.set_yticklabels(lower_bound.index)
@@ -1032,6 +1017,18 @@ def _plot_estimate(
 
 
 class PlotEstimateConfig:
+    censor_styles: dict
+    loc: Any
+    iloc: Any
+    show_censors: bool
+    ax: Any
+    colour: Any
+    logx: bool
+    kwargs: dict
+    estimate_: Any
+    confidence_interval_: Any
+    predict_at_times: Any
+
     def __init__(
         self,
         cls,
@@ -1046,7 +1043,7 @@ class PlotEstimateConfig:
     ):
         from matplotlib import pyplot as plt
 
-        self.censor_styles = coalesce(censor_styles, {})
+        setattr(self, "censor_styles", coalesce(censor_styles, {}))
 
         if ax is None:
             ax = plt.gca()
@@ -1055,19 +1052,19 @@ class PlotEstimateConfig:
         set_kwargs_drawstyle(kwargs)
         set_kwargs_label(kwargs, cls)
 
-        self.loc = loc
-        self.iloc = iloc
-        self.show_censors = show_censors
+        setattr(self, "loc", loc)
+        setattr(self, "iloc", iloc)
+        setattr(self, "show_censors", show_censors)
         # plot censors
-        self.ax = ax
-        self.colour = kwargs["color"]
-        self.logx = logx
-        self.kwargs = kwargs
+        setattr(self, "ax", ax)
+        setattr(self, "colour", kwargs["color"])
+        setattr(self, "logx", logx)
+        setattr(self, "kwargs", kwargs)
 
         if isinstance(estimate, str):
-            self.estimate_ = getattr(cls, estimate)
-            self.confidence_interval_ = getattr(cls, "confidence_interval_" + estimate)
-            self.predict_at_times = getattr(cls, estimate + "at_times")
+            setattr(self, "estimate_", getattr(cls, estimate))
+            setattr(self, "confidence_interval_", getattr(cls, "confidence_interval_" + estimate))
+            setattr(self, "predict_at_times", getattr(cls, estimate + "at_times"))
         else:
-            self.estimate_ = estimate
-            self.confidence_interval_ = kwargs.pop("confidence_intervals")
+            setattr(self, "estimate_", estimate)
+            setattr(self, "confidence_interval_", kwargs.pop("confidence_intervals"))

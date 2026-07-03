@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
+from typing import Any
 import numpy as np
 import pandas as pd
 
@@ -25,6 +26,20 @@ class BreslowFlemingHarringtonFitter(NonParametricUnivariateFitter):
       The alpha value associated with the confidence intervals.
 
     """
+    _label: str
+    durations: np.ndarray
+    event_observed: np.ndarray
+    timeline: np.ndarray
+    entry: np.ndarray
+    event_table: pd.DataFrame
+    weights: np.ndarray
+    survival_function_: pd.DataFrame
+    confidence_interval_: pd.DataFrame
+    confidence_interval_survival_function_: pd.DataFrame
+    confidence_interval_cumulative_density: pd.DataFrame
+    _estimation_method: str
+    _estimate_name: str
+    plot_survival_function: Any
 
     @CensoringType.right_censoring
     def fit(
@@ -68,7 +83,7 @@ class BreslowFlemingHarringtonFitter(NonParametricUnivariateFitter):
           self, with new properties like ``survival_function_``.
 
         """
-        self._label = coalesce(label, self._label, "BFH_estimate")
+        setattr(self, "_label", coalesce(label, self._label, "BFH_estimate"))
         alpha = coalesce(alpha, self.alpha)
 
         naf = NelsonAalenFitter(alpha=alpha)
@@ -80,28 +95,26 @@ class BreslowFlemingHarringtonFitter(NonParametricUnivariateFitter):
             entry=entry,
             ci_labels=ci_labels,
         )
-        self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights = (
-            naf.durations,
-            naf.event_observed,
-            naf.timeline,
-            naf.entry,
-            naf.event_table,
-            naf.weights,
-        )
+        setattr(self, "durations", naf.durations)
+        setattr(self, "event_observed", naf.event_observed)
+        setattr(self, "timeline", naf.timeline)
+        setattr(self, "entry", naf.entry)
+        setattr(self, "event_table", naf.event_table)
+        setattr(self, "weights", naf.weights)
 
         # estimation
-        self.survival_function_ = np.exp(-naf.cumulative_hazard_)
-        self.confidence_interval_ = np.exp(-naf.confidence_interval_)
-        self.confidence_interval_survival_function_ = self.confidence_interval_
-        self.confidence_interval_cumulative_density = 1 - self.confidence_interval_
+        setattr(self, "survival_function_", np.exp(-naf.cumulative_hazard_))
+        setattr(self, "confidence_interval_", np.exp(-naf.confidence_interval_))
+        setattr(self, "confidence_interval_survival_function_", self.confidence_interval_)
+        setattr(self, "confidence_interval_cumulative_density", 1 - self.confidence_interval_)
         self.confidence_interval_cumulative_density[:] = np.fliplr(self.confidence_interval_cumulative_density.values)
 
         # estimation methods
-        self._estimation_method = "survival_function_"
-        self._estimate_name = "survival_function_"
+        setattr(self, "_estimation_method", "survival_function_")
+        setattr(self, "_estimate_name", "survival_function_")
 
         # plotting functions
-        self.plot_survival_function = self.plot
+        setattr(self, "plot_survival_function", self.plot)
         return self
 
     def survival_function_at_times(self, times, label=None) -> pd.Series:

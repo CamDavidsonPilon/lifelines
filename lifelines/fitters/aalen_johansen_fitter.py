@@ -3,6 +3,7 @@ from textwrap import dedent
 import numpy as np
 import pandas as pd
 import warnings
+from typing import Any
 
 from lifelines.fitters import NonParametricUnivariateFitter
 from lifelines.utils import _preprocess_inputs, inv_normal_cdf, CensoringType, coalesce, LinearAccumulator, QuadraticAccumulator
@@ -58,6 +59,18 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
     paper; Edwards JK, Hester LL, Gokhale M, Lesko CR. Methodologic Issues When Estimating Risks in
     Pharmacoepidemiology. Curr Epidemiol Rep. 2016;3(4):285-296.
     """
+    label_cmprisk: str
+    durations: np.ndarray
+    event_observed: np.ndarray
+    _estimation_method: str
+    _estimate_name: str
+    timeline: np.ndarray
+    _label: str
+    cumulative_density_: pd.DataFrame
+    event_table: pd.DataFrame
+    variance_: pd.DataFrame
+    confidence_interval_: pd.DataFrame
+    confidence_interval_cumulative_density_: pd.DataFrame
 
     def __init__(self, jitter_level=0.0001, seed=None, alpha=0.05, calculate_variance=True, **kwargs):
         NonParametricUnivariateFitter.__init__(self, alpha=alpha, **kwargs)
@@ -125,7 +138,7 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
         # Creating label for event of interest & indicator for that event
         event_of_interest = int(event_of_interest)
         cmprisk_label = "CIF_" + str(event_of_interest)
-        self.label_cmprisk = "observed_" + str(event_of_interest)
+        setattr(self, "label_cmprisk", "observed_" + str(event_of_interest))
 
         # Fitting Kaplan-Meier for either event of interest OR competing risk
         km = KaplanMeierFitter().fit(durations, event_observed=event_observed, timeline=timeline, entry=entry, weights=weights)
@@ -135,9 +148,11 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
 
         # Setting up table for calculations and to return to user
         event_spec = pd.Series(event_observed) == event_of_interest
-        self.durations, self.event_observed, *_, event_table, weights = _preprocess_inputs(
+        durations_preprocessed, event_observed_preprocessed, *_, event_table, weights = _preprocess_inputs(
             durations=durations, event_observed=event_spec, timeline=timeline, entry=entry, weights=weights
         )
+        setattr(self, "durations", durations_preprocessed)
+        setattr(self, "event_observed", event_observed_preprocessed)
         event_spec_times = event_table["observed"]
         event_spec_times = event_spec_times.rename(self.label_cmprisk)
         aj = pd.concat([aj, event_spec_times], axis=1).reset_index()
@@ -148,24 +163,27 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
         aj = aj.set_index("event_at")
 
         # Setting attributes
-        self._estimation_method = "cumulative_density_"
-        self._estimate_name = "cumulative_density_"
-        self.timeline = km.timeline
+        setattr(self, "_estimation_method", "cumulative_density_")
+        setattr(self, "_estimate_name", "cumulative_density_")
+        setattr(self, "timeline", km.timeline)
 
-        self._label = coalesce(label, self._label, "AJ_estimate")
-        self.cumulative_density_ = pd.DataFrame(aj[cmprisk_label])
+        setattr(self, "_label", coalesce(label, self._label, "AJ_estimate"))
+        setattr(self, "cumulative_density_", pd.DataFrame(aj[cmprisk_label]))
 
         # Technically, cumulative incidence, but consistent with KaplanMeierFitter
-        self.event_table = aj[["removed", "observed", self.label_cmprisk, "censored", "entrance", "at_risk"]]  # Event table
+        setattr(self, "event_table", aj[["removed", "observed", self.label_cmprisk, "censored", "entrance", "at_risk"]])  # Event table
 
         if self._calc_var:
-            self.variance_, self.confidence_interval_ = self._bounds(
+            variance_, confidence_interval_ = self._bounds(
                 aj["lagged_overall_survival"], alpha=alpha, ci_labels=ci_labels
             )
+            setattr(self, "variance_", variance_)
+            setattr(self, "confidence_interval_", confidence_interval_)
         else:
-            self.variance_, self.confidence_interval_ = None, None
+            setattr(self, "variance_", None)
+            setattr(self, "confidence_interval_", None)
 
-        self.confidence_interval_cumulative_density_ = self.confidence_interval_
+        setattr(self, "confidence_interval_cumulative_density_", self.confidence_interval_)
         return self
 
     def _jitter(self, durations, event, jitter_level, seed=None):

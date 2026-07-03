@@ -1,0 +1,194 @@
+{
+  "lifelines\\lifelines\\calibration.py": {
+    "mi": 74.22483125796377,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\exceptions.py": {
+    "mi": 87.02232382096881,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\generate_datasets.py": {
+    "mi": 55.361764646397226,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\plotting.py": {
+    "mi": 33.969202624255715,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\statistics.py": {
+    "mi": 37.880405285227916,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\version.py": {
+    "mi": 100.0,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\__init__.py": {
+    "mi": 100.0,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\datasets\\dfcv_dataset.py": {
+    "mi": 100.0,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\datasets\\__init__.py": {
+    "mi": 24.353524021647544,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\aalen_additive_fitter.py": {
+    "mi": 47.80617882675349,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\aalen_johansen_fitter.py": {
+    "mi": 57.9490964240436,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\breslow_fleming_harrington_fitter.py": {
+    "mi": 85.14608070472947,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\coxph_fitter.py": {
+    "mi": 0.0,
+    "rank": "C"
+  },
+  "lifelines\\lifelines\\fitters\\cox_time_varying_fitter.py": {
+    "mi": 35.35548354981177,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\crc_spline_fitter.py": {
+    "mi": 75.17560947940123,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\exponential_fitter.py": {
+    "mi": 44.613919203866665,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\generalized_gamma_fitter.py": {
+    "mi": 63.66737261371415,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\generalized_gamma_regression_fitter.py": {
+    "mi": 61.50754602518016,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\kaplan_meier_fitter.py": {
+    "mi": 51.41381819147571,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\log_logistic_aft_fitter.py": {
+    "mi": 53.605111059510214,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\log_logistic_fitter.py": {
+    "mi": 60.54295220207834,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\log_normal_aft_fitter.py": {
+    "mi": 59.05985946153465,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\log_normal_fitter.py": {
+    "mi": 69.79814427336565,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\mixins.py": {
+    "mi": 61.622718894634524,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\mixture_cure_fitter.py": {
+    "mi": 65.89759208140056,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\nelson_aalen_fitter.py": {
+    "mi": 60.24538662320502,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\npmle.py": {
+    "mi": 48.8725880372952,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\piecewise_exponential_fitter.py": {
+    "mi": 57.42890622734711,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\piecewise_exponential_regression_fitter.py": {
+    "mi": 69.39291800686965,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\spline_fitter.py": {
+    "mi": 61.50640409697134,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\weibull_aft_fitter.py": {
+    "mi": 62.095898269883385,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\weibull_fitter.py": {
+    "mi": 40.452619608833736,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\fitters\\__init__.py": {
+    "mi": 0.0,
+    "rank": "C"
+  },
+  "lifelines\\lifelines\\tests\\test_estimation.py": {
+    "mi": 0.0,
+    "rank": "C"
+  },
+  "lifelines\\lifelines\\tests\\test_generate_datasets.py": {
+    "mi": 69.09202804288479,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\tests\\test_npmle.py": {
+    "mi": 54.94838385135706,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\tests\\test_plotting.py": {
+    "mi": 10.140223503992644,
+    "rank": "B"
+  },
+  "lifelines\\lifelines\\tests\\test_statistics.py": {
+    "mi": 40.24606479361471,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\tests\\__init__.py": {
+    "mi": 100.0,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\tests\\utils\\test_btree.py": {
+    "mi": 65.2025336620715,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\tests\\utils\\test_concordance.py": {
+    "mi": 57.15248715279785,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\tests\\utils\\test_utils.py": {
+    "mi": 0.8868035312635391,
+    "rank": "C"
+  },
+  "lifelines\\lifelines\\utils\\btree.py": {
+    "mi": 64.74831848498782,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\utils\\concordance.py": {
+    "mi": 53.483535874011515,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\utils\\lowess.py": {
+    "mi": 73.32488552691711,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\utils\\printer.py": {
+    "mi": 37.72845973332177,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\utils\\safe_exp.py": {
+    "mi": 56.58706317983883,
+    "rank": "A"
+  },
+  "lifelines\\lifelines\\utils\\__init__.py": {
+    "mi": 13.97542820169842,
+    "rank": "B"
+  }
+}

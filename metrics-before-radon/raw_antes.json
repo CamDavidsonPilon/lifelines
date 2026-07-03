@@ -1,0 +1,434 @@
+{
+  "lifelines\\lifelines\\calibration.py": {
+    "loc": 106,
+    "lloc": 53,
+    "sloc": 49,
+    "comments": 10,
+    "multi": 24,
+    "blank": 24,
+    "single_comments": 9
+  },
+  "lifelines\\lifelines\\exceptions.py": {
+    "loc": 28,
+    "lloc": 14,
+    "sloc": 14,
+    "comments": 2,
+    "multi": 0,
+    "blank": 12,
+    "single_comments": 2
+  },
+  "lifelines\\lifelines\\generate_datasets.py": {
+    "loc": 328,
+    "lloc": 168,
+    "sloc": 149,
+    "comments": 9,
+    "multi": 88,
+    "blank": 78,
+    "single_comments": 13
+  },
+  "lifelines\\lifelines\\plotting.py": {
+    "loc": 1073,
+    "lloc": 407,
+    "sloc": 628,
+    "comments": 37,
+    "multi": 264,
+    "blank": 153,
+    "single_comments": 28
+  },
+  "lifelines\\lifelines\\statistics.py": {
+    "loc": 974,
+    "lloc": 292,
+    "sloc": 367,
+    "comments": 20,
+    "multi": 357,
+    "blank": 237,
+    "single_comments": 13
+  },
+  "lifelines\\lifelines\\version.py": {
+    "loc": 4,
+    "lloc": 2,
+    "sloc": 2,
+    "comments": 1,
+    "multi": 0,
+    "blank": 1,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\__init__.py": {
+    "loc": 51,
+    "lloc": 24,
+    "sloc": 46,
+    "comments": 2,
+    "multi": 0,
+    "blank": 3,
+    "single_comments": 2
+  },
+  "lifelines\\lifelines\\datasets\\dfcv_dataset.py": {
+    "loc": 84,
+    "lloc": 8,
+    "sloc": 78,
+    "comments": 1,
+    "multi": 0,
+    "blank": 5,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\datasets\\__init__.py": {
+    "loc": 574,
+    "lloc": 87,
+    "sloc": 59,
+    "comments": 1,
+    "multi": 377,
+    "blank": 137,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\fitters\\aalen_additive_fitter.py": {
+    "loc": 592,
+    "lloc": 246,
+    "sloc": 270,
+    "comments": 11,
+    "multi": 187,
+    "blank": 124,
+    "single_comments": 11
+  },
+  "lifelines\\lifelines\\fitters\\aalen_johansen_fitter.py": {
+    "loc": 313,
+    "lloc": 105,
+    "sloc": 126,
+    "comments": 22,
+    "multi": 111,
+    "blank": 59,
+    "single_comments": 17
+  },
+  "lifelines\\lifelines\\fitters\\breslow_fleming_harrington_fitter.py": {
+    "loc": 118,
+    "lloc": 29,
+    "sloc": 50,
+    "comments": 5,
+    "multi": 44,
+    "blank": 20,
+    "single_comments": 4
+  },
+  "lifelines\\lifelines\\fitters\\coxph_fitter.py": {
+    "loc": 3286,
+    "lloc": 1280,
+    "sloc": 1602,
+    "comments": 130,
+    "multi": 936,
+    "blank": 624,
+    "single_comments": 124
+  },
+  "lifelines\\lifelines\\fitters\\cox_time_varying_fitter.py": {
+    "loc": 869,
+    "lloc": 385,
+    "sloc": 507,
+    "comments": 36,
+    "multi": 184,
+    "blank": 148,
+    "single_comments": 30
+  },
+  "lifelines\\lifelines\\fitters\\crc_spline_fitter.py": {
+    "loc": 91,
+    "lloc": 39,
+    "sloc": 45,
+    "comments": 2,
+    "multi": 19,
+    "blank": 25,
+    "single_comments": 2
+  },
+  "lifelines\\lifelines\\fitters\\exponential_fitter.py": {
+    "loc": 80,
+    "lloc": 17,
+    "sloc": 15,
+    "comments": 1,
+    "multi": 49,
+    "blank": 15,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\fitters\\generalized_gamma_fitter.py": {
+    "loc": 176,
+    "lloc": 55,
+    "sloc": 71,
+    "comments": 2,
+    "multi": 72,
+    "blank": 31,
+    "single_comments": 2
+  },
+  "lifelines\\lifelines\\fitters\\generalized_gamma_regression_fitter.py": {
+    "loc": 190,
+    "lloc": 62,
+    "sloc": 69,
+    "comments": 4,
+    "multi": 76,
+    "blank": 41,
+    "single_comments": 4
+  },
+  "lifelines\\lifelines\\fitters\\kaplan_meier_fitter.py": {
+    "loc": 550,
+    "lloc": 153,
+    "sloc": 225,
+    "comments": 15,
+    "multi": 230,
+    "blank": 81,
+    "single_comments": 14
+  },
+  "lifelines\\lifelines\\fitters\\log_logistic_aft_fitter.py": {
+    "loc": 181,
+    "lloc": 51,
+    "sloc": 52,
+    "comments": 2,
+    "multi": 89,
+    "blank": 38,
+    "single_comments": 2
+  },
+  "lifelines\\lifelines\\fitters\\log_logistic_fitter.py": {
+    "loc": 115,
+    "lloc": 37,
+    "sloc": 34,
+    "comments": 2,
+    "multi": 56,
+    "blank": 23,
+    "single_comments": 2
+  },
+  "lifelines\\lifelines\\fitters\\log_normal_aft_fitter.py": {
+    "loc": 193,
+    "lloc": 55,
+    "sloc": 63,
+    "comments": 1,
+    "multi": 92,
+    "blank": 37,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\fitters\\log_normal_fitter.py": {
+    "loc": 102,
+    "lloc": 42,
+    "sloc": 39,
+    "comments": 1,
+    "multi": 43,
+    "blank": 19,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\fitters\\mixins.py": {
+    "loc": 284,
+    "lloc": 102,
+    "sloc": 168,
+    "comments": 8,
+    "multi": 56,
+    "blank": 52,
+    "single_comments": 8
+  },
+  "lifelines\\lifelines\\fitters\\mixture_cure_fitter.py": {
+    "loc": 127,
+    "lloc": 48,
+    "sloc": 46,
+    "comments": 1,
+    "multi": 55,
+    "blank": 25,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\fitters\\nelson_aalen_fitter.py": {
+    "loc": 272,
+    "lloc": 103,
+    "sloc": 142,
+    "comments": 6,
+    "multi": 87,
+    "blank": 39,
+    "single_comments": 4
+  },
+  "lifelines\\lifelines\\fitters\\npmle.py": {
+    "loc": 318,
+    "lloc": 178,
+    "sloc": 191,
+    "comments": 17,
+    "multi": 31,
+    "blank": 79,
+    "single_comments": 17
+  },
+  "lifelines\\lifelines\\fitters\\piecewise_exponential_fitter.py": {
+    "loc": 88,
+    "lloc": 25,
+    "sloc": 23,
+    "comments": 1,
+    "multi": 48,
+    "blank": 16,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\fitters\\piecewise_exponential_regression_fitter.py": {
+    "loc": 128,
+    "lloc": 63,
+    "sloc": 56,
+    "comments": 3,
+    "multi": 39,
+    "blank": 31,
+    "single_comments": 2
+  },
+  "lifelines\\lifelines\\fitters\\spline_fitter.py": {
+    "loc": 107,
+    "lloc": 28,
+    "sloc": 31,
+    "comments": 1,
+    "multi": 57,
+    "blank": 18,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\fitters\\weibull_aft_fitter.py": {
+    "loc": 197,
+    "lloc": 48,
+    "sloc": 67,
+    "comments": 2,
+    "multi": 91,
+    "blank": 37,
+    "single_comments": 2
+  },
+  "lifelines\\lifelines\\fitters\\weibull_fitter.py": {
+    "loc": 104,
+    "lloc": 24,
+    "sloc": 20,
+    "comments": 1,
+    "multi": 60,
+    "blank": 23,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\fitters\\__init__.py": {
+    "loc": 3642,
+    "lloc": 1394,
+    "sloc": 1923,
+    "comments": 58,
+    "multi": 1008,
+    "blank": 661,
+    "single_comments": 50
+  },
+  "lifelines\\lifelines\\tests\\test_estimation.py": {
+    "loc": 5781,
+    "lloc": 3493,
+    "sloc": 4102,
+    "comments": 116,
+    "multi": 419,
+    "blank": 1160,
+    "single_comments": 100
+  },
+  "lifelines\\lifelines\\tests\\test_generate_datasets.py": {
+    "loc": 35,
+    "lloc": 26,
+    "sloc": 26,
+    "comments": 1,
+    "multi": 0,
+    "blank": 8,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\tests\\test_npmle.py": {
+    "loc": 99,
+    "lloc": 70,
+    "sloc": 69,
+    "comments": 4,
+    "multi": 0,
+    "blank": 26,
+    "single_comments": 4
+  },
+  "lifelines\\lifelines\\tests\\test_plotting.py": {
+    "loc": 966,
+    "lloc": 779,
+    "sloc": 804,
+    "comments": 15,
+    "multi": 0,
+    "blank": 149,
+    "single_comments": 13
+  },
+  "lifelines\\lifelines\\tests\\test_statistics.py": {
+    "loc": 581,
+    "lloc": 323,
+    "sloc": 353,
+    "comments": 3,
+    "multi": 87,
+    "blank": 138,
+    "single_comments": 3
+  },
+  "lifelines\\lifelines\\tests\\__init__.py": {
+    "loc": 0,
+    "lloc": 0,
+    "sloc": 0,
+    "comments": 0,
+    "multi": 0,
+    "blank": 0,
+    "single_comments": 0
+  },
+  "lifelines\\lifelines\\tests\\utils\\test_btree.py": {
+    "loc": 39,
+    "lloc": 29,
+    "sloc": 29,
+    "comments": 2,
+    "multi": 0,
+    "blank": 8,
+    "single_comments": 2
+  },
+  "lifelines\\lifelines\\tests\\utils\\test_concordance.py": {
+    "loc": 82,
+    "lloc": 54,
+    "sloc": 58,
+    "comments": 3,
+    "multi": 0,
+    "blank": 21,
+    "single_comments": 3
+  },
+  "lifelines\\lifelines\\tests\\utils\\test_utils.py": {
+    "loc": 1058,
+    "lloc": 638,
+    "sloc": 814,
+    "comments": 19,
+    "multi": 0,
+    "blank": 232,
+    "single_comments": 12
+  },
+  "lifelines\\lifelines\\utils\\btree.py": {
+    "loc": 117,
+    "lloc": 79,
+    "sloc": 71,
+    "comments": 14,
+    "multi": 19,
+    "blank": 13,
+    "single_comments": 14
+  },
+  "lifelines\\lifelines\\utils\\concordance.py": {
+    "loc": 303,
+    "lloc": 123,
+    "sloc": 119,
+    "comments": 51,
+    "multi": 73,
+    "blank": 60,
+    "single_comments": 51
+  },
+  "lifelines\\lifelines\\utils\\lowess.py": {
+    "loc": 64,
+    "lloc": 31,
+    "sloc": 27,
+    "comments": 7,
+    "multi": 22,
+    "blank": 8,
+    "single_comments": 7
+  },
+  "lifelines\\lifelines\\utils\\printer.py": {
+    "loc": 191,
+    "lloc": 106,
+    "sloc": 156,
+    "comments": 2,
+    "multi": 0,
+    "blank": 33,
+    "single_comments": 2
+  },
+  "lifelines\\lifelines\\utils\\safe_exp.py": {
+    "loc": 100,
+    "lloc": 11,
+    "sloc": 9,
+    "comments": 1,
+    "multi": 72,
+    "blank": 18,
+    "single_comments": 1
+  },
+  "lifelines\\lifelines\\utils\\__init__.py": {
+    "loc": 2015,
+    "lloc": 837,
+    "sloc": 933,
+    "comments": 77,
+    "multi": 587,
+    "blank": 424,
+    "single_comments": 71
+  }
+}

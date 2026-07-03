@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import warnings
+from typing import Any
 import numpy as np
 import pandas as pd
 
@@ -55,18 +56,37 @@ class NelsonAalenFitter(UnivariateFitter):
         A summary of the life table
 
     """
+    alpha: float
+    nelson_aalen_smoothing: bool
+    _variance_f: Any
+    _additive_f: Any
+    durations: np.ndarray
+    event_observed: np.ndarray
+    timeline: np.ndarray
+    entry: np.ndarray
+    event_table: pd.DataFrame
+    weights: np.ndarray
+    _label: str
+    cumulative_hazard_: pd.DataFrame
+    confidence_interval_: pd.DataFrame
+    confidence_interval_cumulative_hazard_: pd.DataFrame
+    _cumulative_sq: pd.Series
+    _estimation_method: str
+    _estimate_name: str
+    plot_cumulative_hazard: Any
+    ci_labels: list
 
     def __init__(self, alpha=0.05, nelson_aalen_smoothing=True, **kwargs):
         super(NelsonAalenFitter, self).__init__(alpha=alpha, **kwargs)
-        self.alpha = alpha
-        self.nelson_aalen_smoothing = nelson_aalen_smoothing
+        setattr(self, "alpha", alpha)
+        setattr(self, "nelson_aalen_smoothing", nelson_aalen_smoothing)
 
         if self.nelson_aalen_smoothing:
-            self._variance_f = self._variance_f_smooth
-            self._additive_f = self._additive_f_smooth
+            setattr(self, "_variance_f", self._variance_f_smooth)
+            setattr(self, "_additive_f", self._additive_f_smooth)
         else:
-            self._variance_f = self._variance_f_discrete
-            self._additive_f = self._additive_f_discrete
+            setattr(self, "_variance_f", self._variance_f_discrete)
+            setattr(self, "_additive_f", self._additive_f_discrete)
 
     @CensoringType.right_censoring
     def fit(
@@ -130,27 +150,33 @@ class NelsonAalenFitter(UnivariateFitter):
                     StatisticalWarning,
                 )
 
-        (self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights) = _preprocess_inputs(
+        _durations, _event_observed, _timeline, _entry, _event_table, _weights = _preprocess_inputs(
             durations, event_observed, timeline, entry, weights
         )
+        setattr(self, "durations", _durations)
+        setattr(self, "event_observed", _event_observed)
+        setattr(self, "timeline", _timeline)
+        setattr(self, "entry", _entry)
+        setattr(self, "event_table", _event_table)
+        setattr(self, "weights", _weights)
 
         cumulative_hazard_, cumulative_sq_ = _additive_estimate(
             self.event_table, self.timeline, self._additive_f, self._variance_f, False
         )
 
         # estimates
-        self._label = coalesce(label, self._label, "NA_estimate")
-        self.cumulative_hazard_ = pd.DataFrame(cumulative_hazard_, columns=[self._label])
-        self.confidence_interval_ = self._bounds(cumulative_sq_.values[:, None], alpha if alpha else self.alpha, ci_labels)
-        self.confidence_interval_cumulative_hazard_ = self.confidence_interval_
-        self._cumulative_sq = cumulative_sq_
+        setattr(self, "_label", coalesce(label, self._label, "NA_estimate"))
+        setattr(self, "cumulative_hazard_", pd.DataFrame(cumulative_hazard_, columns=[self._label]))
+        setattr(self, "confidence_interval_", self._bounds(cumulative_sq_.values[:, None], alpha if alpha else self.alpha, ci_labels))
+        setattr(self, "confidence_interval_cumulative_hazard_", self.confidence_interval_)
+        setattr(self, "_cumulative_sq", cumulative_sq_)
 
         # estimation methods
-        self._estimation_method = "cumulative_hazard_"
-        self._estimate_name = "cumulative_hazard_"
+        setattr(self, "_estimation_method", "cumulative_hazard_")
+        setattr(self, "_estimate_name", "cumulative_hazard_")
 
         # plotting
-        self.plot_cumulative_hazard = self.plot
+        setattr(self, "plot_cumulative_hazard", self.plot)
 
         return self
 
@@ -168,7 +194,7 @@ class NelsonAalenFitter(UnivariateFitter):
         if ci_labels is None:
             ci_labels = ["%s_lower_%g" % (self._label, 1 - alpha), "%s_upper_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
-        self.ci_labels = ci_labels
+        setattr(self, "ci_labels", ci_labels)
 
         cum_hazard_ = self.cumulative_hazard_.values
         df[ci_labels[0]] = cum_hazard_ * np.exp(-z * np.sqrt(cumulative_sq_) / np.where(cum_hazard_ == 0, 1, cum_hazard_))
