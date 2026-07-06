@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from typing import Callable
+from unittest.mock import patch
+
 import numpy as np
 import pandas as pd
 import numpy.testing as npt
@@ -9,6 +12,7 @@ from lifelines import statistics as stats
 from lifelines import CoxPHFitter, KaplanMeierFitter, WeibullFitter, WeibullAFTFitter
 from lifelines.exceptions import StatisticalWarning
 from lifelines.datasets import load_waltons, load_g3, load_lymphoma, load_dd, load_regression_dataset, load_leukemia
+from lifelines.utils.safe_exp import safe_exp
 
 
 def test_sample_size_necessary_under_cph():
@@ -205,7 +209,6 @@ def test_log_rank_test_on_waltons_dataset_with_case_weights():
     waltonT1 = df.loc[ix]["T"]
     waltonT2 = df.loc[~ix]["T"]
     result = stats.logrank_test(waltonT1, waltonT2)
-    print(result)
 
     dfw = df.groupby(["T", "E", "group"]).size().reset_index().rename(columns={0: "weights"})
     ixw = dfw["group"] == "miR-137"
@@ -594,3 +597,51 @@ def test_weibull_aft_fitter_predict_expectation():
     # Check that using the conditional after argument gives the same result as the unconditional expectation when the conditional after times are all zero
     conditional_expectations = aft.predict_expectation(df, conditional_after=np.zeros(df.shape[0]))
     assert np.isclose(predicted_expectations, conditional_expectations).all()
+
+
+def test_weibull_aft_fitter_predict_expectation_with_conditional_after():
+    aft = WeibullAFTFitter()
+    df = load_regression_dataset()
+    aft.fit(df, duration_col="T", event_col="E")
+
+    def make_fake_prep(rho: float) -> Callable:
+        def fake_prep(X, ancillary_X) -> tuple[np.ndarray, np.ndarray]:
+            output = WeibullAFTFitter._prep_inputs_for_prediction_and_return_scores(aft, X, ancillary_X)
+            return output[0], np.full_like(output[1], rho, dtype=float)
+
+        return fake_prep
+
+    def make_fake_cumulative_hazard(rho: float) -> Callable:
+        def fake_cumulative_hazard(params, T, Xs) -> np.ndarray:
+            lambda_params = params["lambda_"]
+            log_lambda_ = Xs["lambda_"] @ lambda_params
+
+            return safe_exp(rho * (np.log(np.clip(T, 1e-100, np.inf)) - log_lambda_))
+
+        return fake_cumulative_hazard
+
+    conditional_after_times = np.arange(start=1, stop=df.shape[0] + 1, step=1)
+
+    # When the shape parameter equals 1, we are dealing with an exponential distribution.
+    # In that case the conditional and unconditional expectations should be equal, regardless of the conditional_after times.
+    with patch.object(aft, "_cumulative_hazard", make_fake_cumulative_hazard(1.0)):
+        with patch.object(aft, "_prep_inputs_for_prediction_and_return_scores", make_fake_prep(1.0)):
+            unconditional_expectations = aft.predict_expectation(df)
+            conditional_expectations = aft.predict_expectation(df, conditional_after=conditional_after_times)
+            assert np.isclose(unconditional_expectations, conditional_expectations).all()
+
+    # When the shape parameter is greater than 1, the hazard increases over time.
+    # Strictly positive conditional_after times should thus lead to strictly lower conditional expectations.
+    with patch.object(aft, "_cumulative_hazard", make_fake_cumulative_hazard(2.0)):
+        with patch.object(aft, "_prep_inputs_for_prediction_and_return_scores", make_fake_prep(2.0)):
+            unconditional_expectations = aft.predict_expectation(df)
+            conditional_expectations = aft.predict_expectation(df, conditional_after=conditional_after_times)
+            assert (conditional_expectations < unconditional_expectations).all()
+
+    # When the shape parameter is less than 1, the hazard decreases over time.
+    # Strictly positive conditional_after times should thus lead to strictly higher conditional expectations.
+    with patch.object(aft, "_cumulative_hazard", make_fake_cumulative_hazard(0.5)):
+        with patch.object(aft, "_prep_inputs_for_prediction_and_return_scores", make_fake_prep(0.5)):
+            unconditional_expectations = aft.predict_expectation(df)
+            conditional_expectations = aft.predict_expectation(df, conditional_after=conditional_after_times)
+            assert (conditional_expectations > unconditional_expectations).all()
