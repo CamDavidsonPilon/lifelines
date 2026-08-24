@@ -963,6 +963,64 @@ def test_rmst_variance():
     assert abs(utils.restricted_mean_survival_time(expf, t=t, return_variance=True)[1] - actual_var) < 0.001
 
 
+def test_rmst_variance_of_kaplan_meier_matches_survRM2():
+    # issue #1682: return_variance=True on a KaplanMeierFitter must return the sampling
+    # variance of the RMST estimator (Klein & Moeschberger 2003, eq. 4.4.4), not the
+    # variance of the truncated random variable.
+    # Reference values from R's survRM2::rmst2 on the waltons miR-137 group at tau=10:
+    # RMST = 9.794, SE = 0.123.
+    df = load_waltons()
+    ix = df["group"] == "miR-137"
+    kmf = KaplanMeierFitter().fit(df.loc[ix]["T"], df.loc[ix]["E"])
+
+    mean, var = utils.restricted_mean_survival_time(kmf, t=10, return_variance=True)
+    assert abs(mean - 9.794) < 0.001
+    assert abs(np.sqrt(var) - 0.123) < 0.0005
+
+
+def test_rmst_variance_of_kaplan_meier_equals_greenwood_formula_computed_by_hand():
+    # Var(RMST) = sum_i [int_{t_i}^{tau} S(u) du]^2 * d_i / (n_i * (n_i - d_i)),
+    # summed over distinct event times t_i <= tau. Computed here directly from the
+    # raw data, independent of the library implementation.
+    T = np.array([1.0, 2.0, 2.0, 3.0, 5.0, 6.0, 8.0, 9.0])
+    E = np.array([1, 1, 0, 1, 1, 0, 1, 0])
+    tau = 7.0
+
+    event_times = np.unique(T[(E == 1) & (T <= tau)])
+    surv, d_, n_ = [], [], []
+    S = 1.0
+    for t_i in event_times:
+        n_i = (T >= t_i).sum()
+        d_i = ((T == t_i) & (E == 1)).sum()
+        S *= 1 - d_i / n_i
+        surv.append(S), d_.append(d_i), n_.append(n_i)
+
+    grid = np.append(event_times, tau)
+    expected_var = 0.0
+    for i in range(len(event_times)):
+        integral_ti_to_tau = (np.diff(grid[i:]) * np.array(surv[i:])).sum()
+        expected_var += integral_ti_to_tau**2 * d_[i] / (n_[i] * (n_[i] - d_[i]))
+
+    kmf = KaplanMeierFitter().fit(T, E)
+    _, var = utils.restricted_mean_survival_time(kmf, t=tau, return_variance=True)
+    assert abs(var - expected_var) < 1e-10
+
+
+def test_rmst_variance_of_non_km_models_warns_that_it_is_not_a_sampling_variance():
+    # issue #1682: for non-KM inputs the returned "variance" is still the variance of the
+    # truncated random variable (kept for backwards compatibility), so users must be warned
+    # that it cannot be used for standard errors or hypothesis tests.
+    T = np.random.exponential(2, 100)
+    expf = ExponentialFitter().fit(T)
+
+    with pytest.warns(exceptions.StatisticalWarning, match="sampling variance"):
+        utils.restricted_mean_survival_time(expf, t=1.0, return_variance=True)
+
+    kmf = KaplanMeierFitter().fit(T)
+    with pytest.warns(exceptions.StatisticalWarning, match="sampling variance"):
+        utils.restricted_mean_survival_time(kmf.survival_function_, t=1.0, return_variance=True)
+
+
 def test_find_best_parametric_model():
     T = np.random.exponential(2, 1000)
     E = np.ones_like(T)
