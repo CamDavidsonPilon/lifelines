@@ -20,7 +20,7 @@ import pandas as pd
 import formulaic
 
 from lifelines.utils.concordance import concordance_index
-from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError
+from lifelines.exceptions import ConvergenceWarning, ApproximationWarning, ConvergenceError, StatisticalWarning
 
 
 __all__ = [
@@ -224,6 +224,19 @@ def restricted_mean_survival_time(
         This can be a univariate model, or a pandas DataFrame. The former will provide a more accurate estimate however.
     t: float
         The upper limit of the integration in the RMST.
+    return_variance: bool
+        If True, also return a variance along with the RMST.
+
+        If the input is a ``KaplanMeierFitter`` fit to right-censored data, this is the sampling variance
+        of the RMST *estimator*, computed with the Greenwood-based formula of Klein & Moeschberger (2003),
+        eq. 4.4.4 (the same estimator used by R's ``survRM2::rmst2``). Its square root is a standard error,
+        suitable for confidence intervals and hypothesis tests.
+
+        For any other input (a parametric model, or a precomputed survival function DataFrame), the value
+        returned is :math:`E[\min(T, t)^2] - E[\min(T, t)]^2`, the variance of the *truncated random
+        variable* — a property of the fitted distribution, **not** the sampling variance of the estimator.
+        It is not suitable for standard errors, confidence intervals or hypothesis tests, and a
+        ``StatisticalWarning`` is emitted.
 
     Example
     --------
@@ -244,15 +257,65 @@ def restricted_mean_survival_time(
     -------
     https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/1471-2288-13-152#Sec27
 
+    Klein, J. P., & Moeschberger, M. L. (2003). Survival Analysis: Techniques for Censored and Truncated
+    Data (2nd ed.), Section 4.5, eq. 4.4.4. Springer.
+
     """
+    import lifelines
+
     t = coalesce(t, np.inf)
 
     mean = _expected_value_of_survival_up_to_t(model_or_survival_function, t)
     if return_variance:
+        is_right_censored_km = isinstance(
+            model_or_survival_function, lifelines.KaplanMeierFitter
+        ) and CensoringType.is_right_censoring(model_or_survival_function)
+        if is_right_censored_km:
+            return (mean, _sampling_variance_of_km_rmst(model_or_survival_function, t))
+        warnings.warn(
+            "The variance returned is the variance of the truncated random variable min(T, t) — a property of "
+            "the fitted distribution — NOT the sampling variance of the RMST estimator. It is not suitable for "
+            "standard errors, confidence intervals or hypothesis tests. Fit a KaplanMeierFitter to right-censored "
+            "data and pass the fitter (not its survival function) to get the estimator's sampling variance.",
+            StatisticalWarning,
+        )
         sq = _expected_value_of_survival_squared_up_to_t(model_or_survival_function, t)
         return (mean, sq - mean**2)
     else:
         return mean
+
+
+def _sampling_variance_of_km_rmst(model, t: float) -> float:
+    r"""
+    Sampling variance of the Kaplan-Meier RMST estimator :math:`\hat{\mu}(t) = \int_0^t \hat{S}(u) du`,
+    using the Greenwood-based formula of Klein & Moeschberger (2003), eq. 4.4.4:
+
+    .. math:: \widehat{\text{Var}}[\hat{\mu}(t)] = \sum_{i: t_i \le t} \left[ \int_{t_i}^{t} \hat{S}(u) du \right]^2 \frac{d_i}{n_i (n_i - d_i)}
+
+    where the sum is over distinct event times :math:`t_i`, with :math:`d_i` events out of
+    :math:`n_i` at risk. This matches R's ``survRM2::rmst2``.
+    """
+    event_table = model.event_table
+    events = event_table.loc[(event_table.index > 0) & (event_table.index <= t) & (event_table["observed"] > 0)]
+    if events.empty:
+        return 0.0
+
+    event_times = events.index.values.astype(float)
+    d = events["observed"].values.astype(float)
+    n = events["at_risk"].values.astype(float)
+
+    # S is a step function that only changes at event times, so on [t_i, t_{i+1}) it equals S(t_i).
+    surv_at_events = np.atleast_1d(np.asarray(model.predict(event_times)))
+    widths = np.diff(np.append(event_times, t))
+    # avoid 0 * inf = nan when t == inf and the survival function reaches 0 at the last event time
+    with np.errstate(invalid="ignore"):
+        areas = np.where(surv_at_events == 0.0, 0.0, widths * surv_at_events)
+    # tail_integrals[i] = integral of S from t_i to t
+    tail_integrals = np.cumsum(areas[::-1])[::-1]
+
+    # when n_i == d_i (everyone remaining dies), the Greenwood term is conventionally 0 (as in survRM2).
+    variance_terms = np.where(n > d, d / (n * (n - d)), 0.0)
+    return float((tail_integrals**2 * variance_terms).sum())
 
 
 def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = np.inf) -> float:
