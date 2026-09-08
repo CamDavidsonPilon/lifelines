@@ -128,10 +128,12 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
         self.label_cmprisk = "observed_" + str(event_of_interest)
 
         # Fitting Kaplan-Meier for either event of interest OR competing risk
-        km = KaplanMeierFitter().fit(durations, event_observed=event_observed, timeline=timeline, entry=entry, weights=weights)
+        # The survival factors must be evaluated at every event time. A requested
+        # reporting grid must not remove factors from the incidence calculation.
+        km = KaplanMeierFitter().fit(durations, event_observed=event_observed, entry=entry, weights=weights)
         aj = km.event_table
         aj["overall_survival"] = km.survival_function_
-        aj["lagged_overall_survival"] = aj["overall_survival"].shift()
+        aj["lagged_overall_survival"] = aj["overall_survival"].shift(fill_value=1.0)
 
         # Setting up table for calculations and to return to user
         event_spec = pd.Series(event_observed) == event_of_interest
@@ -144,13 +146,12 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
 
         # Estimator of Cumulative Incidence (Density) Function
         aj[cmprisk_label] = (aj[self.label_cmprisk] / aj["at_risk"] * aj["lagged_overall_survival"]).cumsum()
-        aj.loc[0, cmprisk_label] = 0  # Setting initial CIF to be zero
         aj = aj.set_index("event_at")
 
         # Setting attributes
         self._estimation_method = "cumulative_density_"
         self._estimate_name = "cumulative_density_"
-        self.timeline = km.timeline
+        self.timeline = km.timeline if timeline is None else np.sort(np.asarray(timeline, dtype=float))
 
         self._label = coalesce(label, self._label, "AJ_estimate")
         self.cumulative_density_ = pd.DataFrame(aj[cmprisk_label])
@@ -164,6 +165,14 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
             )
         else:
             self.variance_, self.confidence_interval_ = None, None
+
+        # Compute incidence and its variance on the complete event grid first,
+        # then sample the right-continuous estimates at the requested times.
+        if timeline is not None:
+            self.cumulative_density_ = self.cumulative_density_.reindex(self.timeline, method="ffill")
+            if self._calc_var:
+                self.variance_ = self.variance_.reindex(self.timeline, method="ffill")
+                self.confidence_interval_ = self.confidence_interval_.reindex(self.timeline, method="ffill")
 
         self.confidence_interval_cumulative_density_ = self.confidence_interval_
         return self

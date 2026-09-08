@@ -5641,6 +5641,52 @@ class TestAalenJohansenFitter:
     def kmfitter(self):
         return KaplanMeierFitter()
 
+    @pytest.mark.parametrize("timeline", [[0, 2, 4, 6], [0, 3, 6], [1.5, 4.5, 6.5], [6, 2, 0, 4], [0, 1, 2, 3, 4, 5, 6]])
+    @pytest.mark.parametrize("cause", [1, 2])
+    @pytest.mark.parametrize("calculate_variance", [False, True])
+    def test_reporting_timeline_preserves_incidence(self, timeline, cause, calculate_variance):
+        durations = [1, 2, 3, 4, 5, 6]
+        events = [0, 1, 1, 2, 2, 0]
+        full = AalenJohansenFitter(calculate_variance=calculate_variance).fit(durations, events, cause)
+        sampled = AalenJohansenFitter(calculate_variance=calculate_variance).fit(durations, events, cause, timeline=timeline)
+        grid = np.sort(np.asarray(timeline, dtype=float))
+        # One censor at t=1 leaves five at risk. Each event adds exactly 1/5.
+        expected = sum((grid >= t) * 0.2 for t, event in zip(durations, events) if event == cause)
+        npt.assert_array_equal(sampled.timeline, grid)
+        npt.assert_array_equal(sampled.cumulative_density_.index, grid)
+        npt.assert_allclose(sampled.cumulative_density_.iloc[:, 0], expected)
+        if calculate_variance:
+            assert_series_equal(sampled.variance_, full.variance_.reindex(grid, method="ffill"))
+            assert_frame_equal(sampled.confidence_interval_, full.confidence_interval_.reindex(grid, method="ffill"))
+
+    @pytest.mark.parametrize("cause", [1, 2])
+    def test_reporting_timeline_with_jitter_and_weights(self, cause):
+        durations = [1, 2, 2, 4, 5, 6]
+        events = [0, 1, 2, 1, 2, 0]
+        weights = [2, 1, 3, 2, 4, 1]
+        with pytest.warns(Warning, match="Tied event times"):
+            full = AalenJohansenFitter(seed=12).fit(durations, events, cause, weights=weights)
+        with pytest.warns(Warning, match="Tied event times"):
+            sampled = AalenJohansenFitter(seed=12).fit(durations, events, cause, weights=weights, timeline=[0, 3, 6])
+        npt.assert_allclose(sampled.durations, full.durations)
+        assert_frame_equal(sampled.cumulative_density_, full.cumulative_density_.reindex([0.0, 3.0, 6.0], method="ffill"))
+        assert_series_equal(sampled.variance_, full.variance_.reindex([0.0, 3.0, 6.0], method="ffill"))
+        assert_frame_equal(sampled.confidence_interval_, full.confidence_interval_.reindex([0.0, 3.0, 6.0], method="ffill"))
+
+    @pytest.mark.parametrize("cause", [1, 2])
+    @pytest.mark.parametrize("weights", [None, [3, 2, 1, 2]])
+    def test_incidence_includes_events_at_time_zero(self, cause, weights):
+        durations = [0, 1, 2, 3]
+        events = [1, 2, 1, 0]
+        grid = np.array([0.0, 1.0, 2.0, 3.0])
+        zero = AalenJohansenFitter().fit(durations, events, cause, weights=weights)
+        shifted = AalenJohansenFitter().fit(np.asarray(durations) + 1, events, cause, weights=weights)
+        frequencies = np.ones(4) if weights is None else np.asarray(weights)
+        expected = np.cumsum(frequencies * (np.asarray(events) == cause)) / frequencies.sum()
+        npt.assert_allclose(zero.predict(grid), expected)
+        npt.assert_allclose(zero.predict(grid), shifted.predict(grid + 1))
+        npt.assert_allclose(zero.variance_, shifted.variance_.iloc[1:])
+
     def test_jitter(self, fitter):
         d = pd.Series([1, 1, 1])
         e = fitter._jitter(durations=d, event=pd.Series([1, 1, 1]), jitter_level=0.01)
