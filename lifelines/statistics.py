@@ -858,8 +858,8 @@ def _chisq_test_p_value(U, degrees_freedom) -> float:
 class TimeTransformers:
 
     TIME_TRANSFOMERS = {
-        # using cumsum is kinda hacky (but smart), should be np.argsort but I run into problems later.
-        "rank": lambda t, c, w: np.cumsum(c),
+        # Rank observed event times, averaging ties independently of row or stratum order.
+        "rank": lambda t, c, w: pd.Series(t).where(np.asarray(c, dtype=bool)).rank(method="average"),
         "identity": lambda t, c, w: t,
         "log": lambda t, c, w: np.log(t),
         "km": lambda t, c, w: (1 - KaplanMeierFitter().fit(t, c, weights=w).survival_function_.loc[t, "KM_estimate"]),
