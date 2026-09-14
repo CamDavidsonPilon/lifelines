@@ -5641,6 +5641,13 @@ class TestAalenJohansenFitter:
     def kmfitter(self):
         return KaplanMeierFitter()
 
+    def test_plot_cumulative_density_returns_axis(self, fitter, duration, event_observed):
+        # documented as returning a pyplot axis, like the other fitters' plot methods
+        from matplotlib.axes import Axes
+
+        fitter.fit(duration, event_observed, event_of_interest=1)
+        assert isinstance(fitter.plot_cumulative_density(), Axes)
+
     def test_jitter(self, fitter):
         d = pd.Series([1, 1, 1])
         e = fitter._jitter(durations=d, event=pd.Series([1, 1, 1]), jitter_level=0.01)
