@@ -310,4 +310,4 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
         """
         if not self._calc_var:
             kwargs["ci_show"] = False
-        _plot_estimate(self, estimate=self._estimate_name, **kwargs)
+        return _plot_estimate(self, estimate=self._estimate_name, **kwargs)
