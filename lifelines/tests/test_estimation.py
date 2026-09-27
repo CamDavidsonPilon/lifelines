@@ -3248,6 +3248,14 @@ class TestCoxPHFitter:
         cph_spline.fit(rossi, "week", "arrest")
         cph_spline.compute_followup_hazard_ratios(rossi, [15, 25, 35, 45])
 
+    def test_compute_followup_hazard_ratios_preserves_formula(self, cph, rossi):
+        cph.fit(rossi, "week", "arrest", formula="fin + age + race")
+
+        result = cph.compute_followup_hazard_ratios(rossi, [rossi["week"].max()])
+
+        assert_index_equal(result.columns, cph.hazard_ratios_.index)
+        assert_series_equal(result.iloc[0], cph.hazard_ratios_, check_names=False)
+
     def test_model_can_accept_null_covariates(self, cph, rossi):
         cph.fit(rossi[["week", "arrest"]], "week", "arrest")
         assert True

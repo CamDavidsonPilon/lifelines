@@ -287,6 +287,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
 
         """
         self.strata = utils._to_list_or_singleton(utils.coalesce(strata, self.strata))
+        self.formula = formula
         self._model = self._fit_model(
             df,
             duration_col,
@@ -858,6 +859,7 @@ class CoxPHFitter(RegressionFitter, ProportionalHazardMixin):
                 weights_col=self.weights_col,
                 cluster_col=self.cluster_col,
                 entry_col=self.entry_col,
+                formula=self.formula,
             )
             results[t] = model.hazard_ratios_
         return DataFrame(results).T
