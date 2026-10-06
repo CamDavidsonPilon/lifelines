@@ -510,6 +510,8 @@ def add_at_risk_counts(
     # Set limit
     min_time, max_time = ax.get_xlim()
     ax2.set_xlim(min_time, max_time)
+    # Keep the counts aligned with the plot if the x-limits of ax change afterwards
+    ax.callbacks.connect("xlim_changed", lambda changed_ax: ax2.set_xlim(changed_ax.get_xlim()))
     # Set ticks to kwarg or visible ticks
     if xticks is None:
         xticks = [xtick for xtick in ax.get_xticks() if min_time <= xtick <= max_time]

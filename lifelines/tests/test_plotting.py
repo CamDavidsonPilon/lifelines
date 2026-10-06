@@ -61,6 +61,24 @@ def test_add_at_risk_counts_is_numpy_scalar_compatible():
     plt.close(ax.figure)
 
 
+def test_add_at_risk_counts_follows_xlim_changes():
+    # Regression test for https://github.com/CamDavidsonPilon/lifelines/issues/1667:
+    # changing the x-limits after adding the counts left them aligned with the old limits.
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg", force=True)
+    from matplotlib import pyplot as plt
+
+    kmf = KaplanMeierFitter().fit(np.linspace(1, 69, 100), np.ones(100))
+    ax = kmf.plot_survival_function()
+    add_at_risk_counts(kmf, ax=ax, xticks=[0, 6, 12, 18, 24])
+    (counts_ax,) = [other for other in ax.figure.axes if other is not ax]
+
+    ax.set_xlim(0, 24)
+    assert counts_ax.get_xlim() == ax.get_xlim()
+    np.testing.assert_array_equal(counts_ax.get_xticks(), [0, 6, 12, 18, 24])
+    plt.close(ax.figure)
+
+
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting:
     @pytest.fixture
