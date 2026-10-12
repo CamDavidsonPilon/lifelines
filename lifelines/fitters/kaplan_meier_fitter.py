@@ -360,6 +360,11 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
             self.weights,
         ) = _preprocess_inputs(durations, event_observed, timeline, entry, weights)
 
+        if not is_left_censoring:
+            # At the final time everyone still at risk is removed (observed or censored).
+            # Avoid cancellation between cumulative entrances and prior removals.
+            self.event_table.at[self.event_table.index[-1], "at_risk"] = self.event_table["removed"].iloc[-1]
+
         alpha = alpha if alpha else self.alpha
         log_estimate, cumulative_sq_ = _additive_estimate(
             self.event_table, self.timeline, self._additive_f, self._additive_var, is_left_censoring
@@ -520,24 +525,36 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
         # See https://www.math.wustl.edu/%7Esawyer/handouts/greenwood.pdf
         z = inv_normal_cdf(1 - alpha / 2)
         df = pd.DataFrame(index=self.timeline)
-        v = np.log(estimate_.values)
-
         if ci_labels is None:
             ci_labels = ["%s_lower_%g" % (self._label, 1 - alpha), "%s_upper_%g" % (self._label, 1 - alpha)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) - z * np.sqrt(cumulative_sq_.values[:, None]) / v))
-        df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) + z * np.sqrt(cumulative_sq_.values[:, None]) / v))
+        with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+            v = np.log(estimate_.values)
+            df[ci_labels[0]] = np.exp(-np.exp(np.log(-v) - z * np.sqrt(cumulative_sq_.values[:, None]) / v))
+            df[ci_labels[1]] = np.exp(-np.exp(np.log(-v) + z * np.sqrt(cumulative_sq_.values[:, None]) / v))
         return df.fillna(1.0)
 
+    def _population_and_remainder(self, population, deaths):
+        population = population.astype(float)
+        remainder = population - deaths
+        # Summation/subtraction can leave a few ulps on either side of exhaustion.
+        # Use the counts' scale, without an absolute floor that would erase small weights.
+        tolerance = 8 * np.finfo(float).eps * np.maximum(population.abs(), deaths.abs())
+        if (remainder < -tolerance).any():
+            raise ValueError("The weighted deaths exceed the population at risk.")
+        return population, remainder.mask(remainder.abs() <= tolerance, 0.0)
+
     def _additive_f(self, population, deaths):
-        np.seterr(invalid="ignore", divide="ignore")
-        return np.log(population - deaths) - np.log(population)
+        population, remainder = self._population_and_remainder(population, deaths)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            return np.log(remainder) - np.log(population)
 
     def _additive_var(self, population, deaths):
-        np.seterr(divide="ignore")
-        population = population.astype("uint64")
-        return (deaths / (population * (population - deaths))).replace([np.inf], 0)
+        population, remainder = self._population_and_remainder(population, deaths)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            # Keep the existing zero-increment convention when the risk set is exhausted.
+            return (deaths / (population * remainder)).mask(remainder == 0, 0.0)
 
     def plot_cumulative_hazard(self, **kwargs):
         raise NotImplementedError(

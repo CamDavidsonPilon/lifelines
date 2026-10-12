@@ -862,7 +862,9 @@ def _additive_estimate(events, timeline, _additive_f, _additive_var, reverse):
 
     if reverse:
         events = events.sort_index(ascending=False)
-        at_risk = events["entrance"].sum() - events["removed"].cumsum().shift(1).fillna(0)
+        # In reverse time the risk set contains removals at this time and earlier.
+        # Sum those counts directly to avoid cancellation at the empty risk set.
+        at_risk = events["removed"].iloc[::-1].cumsum().iloc[::-1]
 
         deaths = events["observed"]
 
