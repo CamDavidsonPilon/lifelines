@@ -59,7 +59,7 @@ We will perform a light transform to this dataset to modify it into the "long" f
 
       base_df = pd.DataFrame([
         {'id': 1, 'duration': 10, 'event': True, 'var1': 0.1},
-        {'id': 2, 'duration': 12, 'event': True, 'var1': 0.5}
+        {'id': 2, 'duration': 12, 'event': False, 'var1': 0.5}
       ])
 
       base_df = to_long_format(base_df, duration_col="duration")
