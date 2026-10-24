@@ -579,3 +579,25 @@ def test_statistical_result_has_correct_decimal():
     output = results.to_ascii(decimals=10, test=1)
     numbers = re.findall(r"\d+\.\d{10}\b", output)
     assert len(numbers) >= 3
+
+
+def test_survival_difference_at_fixed_point_in_time_test_uses_step_variance():
+    # Klein et al. (2007) statistic with the Kaplan-Meier estimate and the
+    # Greenwood sum both evaluated as step functions at the point in time.
+    TA = [1, 2, 3, 4, 5, 8, 9, 10, 12, 14]
+    EA = [1, 1, 0, 1, 1, 1, 0, 1, 1, 0]
+    TB = [2, 3, 6.5, 7, 9, 11, 13, 15, 16, 18, 20, 21]
+    EB = [0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0]
+    kmfA = KaplanMeierFitter().fit(TA, EA)
+    kmfB = KaplanMeierFitter().fit(TB, EB)
+
+    # hand computation at t = 6: A has events at 1, 2, 4, 5; B at 3
+    sA = (9 / 10) * (8 / 9) * (6 / 7) * (5 / 6)
+    gA = 1 / (10 * 9) + 1 / (9 * 8) + 1 / (7 * 6) + 1 / (6 * 5)
+    sB = 10 / 11
+    gB = 1 / (11 * 10)
+    X = (np.log(-np.log(sA)) - np.log(-np.log(sB))) ** 2 / (gA / np.log(sA) ** 2 + gB / np.log(sB) ** 2)
+
+    for t in [5.0, 6.0, 6.4]:  # both curves are constant on [5, 6.5)
+        result = stats.survival_difference_at_fixed_point_in_time_test(t, kmfA, kmfB)
+        npt.assert_allclose(result.test_statistic, X, rtol=1e-10)
