@@ -340,6 +340,18 @@ def power_under_cph(n_exp, n_con, p_exp, p_con, postulated_hazard_ratio, alpha=0
     )
 
 
+def _step_function_at(df_or_series, t):
+    """
+    Value at time t of a right-continuous step function stored at its jump
+    times, e.g. the Greenwood sum of a Kaplan-Meier fit. Unlike
+    ``interpolate_at_times`` this does not interpolate linearly between the
+    jump times, so it is consistent with ``predict(t)`` of the survival function.
+    """
+    values = np.asarray(df_or_series).reshape(df_or_series.shape[0])
+    ix = np.searchsorted(df_or_series.index.values, t, side="right") - 1
+    return values[max(ix, 0)]
+
+
 def survival_difference_at_fixed_point_in_time_test(point_in_time, fitterA, fitterB, **result_kwargs) -> StatisticalResult:
     """
     Often analysts want to compare the survival-ness of groups at specific times, rather than comparing the entire survival curves against each other.
@@ -384,8 +396,8 @@ def survival_difference_at_fixed_point_in_time_test(point_in_time, fitterA, fitt
         results = survival_difference_at_fixed_point_in_time_test(12.0, kmf1, kmf2)
 
         results.print_summary()
-        print(results.p_value)        # 0.77
-        print(results.test_statistic) # 0.09
+        print(results.p_value)        # 0.75
+        print(results.test_statistic) # 0.10
 
     Notes
     -----
@@ -416,12 +428,12 @@ def survival_difference_at_fixed_point_in_time_test(point_in_time, fitterA, fitt
     from lifelines.fitters import NonParametricUnivariateFitter, ParametricUnivariateFitter
 
     if isinstance(fitterA, NonParametricUnivariateFitter):
-        sigma_sqA = interpolate_at_times_and_return_pandas(fitterA._cumulative_sq_, point_in_time)
+        sigma_sqA = _step_function_at(fitterA._cumulative_sq_, point_in_time)
     elif isinstance(fitterA, ParametricUnivariateFitter):
         sigma_sqA = fitterA._compute_variance_of_transform(fitterA._survival_function, [point_in_time]).squeeze()
 
     if isinstance(fitterB, NonParametricUnivariateFitter):
-        sigma_sqB = interpolate_at_times_and_return_pandas(fitterB._cumulative_sq_, point_in_time)
+        sigma_sqB = _step_function_at(fitterB._cumulative_sq_, point_in_time)
     elif isinstance(fitterB, ParametricUnivariateFitter):
         sigma_sqB = fitterB._compute_variance_of_transform(fitterB._survival_function, [point_in_time]).squeeze()
 
