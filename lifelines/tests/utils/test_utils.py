@@ -387,6 +387,24 @@ def test_cross_validator_returns_k_results():
     assert len(results) == 5
 
 
+@pytest.mark.parametrize("index_kind", ["duplicate", "constant", "multiindex"])
+def test_cross_validator_does_not_depend_on_index_labels(index_kind):
+    df = load_regression_dataset()
+    original = df.copy()
+    expected = utils.k_fold_cross_validation(CoxPHFitter(), df, duration_col="T", event_col="E", k=3, seed=42)
+    if index_kind == "duplicate":
+        df.index = np.arange(len(df)) // 2
+    elif index_kind == "constant":
+        df.index = ["subject"] * len(df)
+    else:
+        df.index = pd.MultiIndex.from_arrays([np.arange(len(df)) // 2, np.zeros(len(df), dtype=int)])
+    input_copy = df.copy()
+    actual = utils.k_fold_cross_validation(CoxPHFitter(), df, duration_col="T", event_col="E", k=3, seed=42)
+    np.testing.assert_allclose(actual, expected)
+    pd.testing.assert_frame_equal(df, input_copy)
+    pd.testing.assert_frame_equal(df.reset_index(drop=True), original)
+
+
 def test_cross_validator_returns_fitters_k_results():
     cf = CoxPHFitter()
     fitters = [cf, cf]

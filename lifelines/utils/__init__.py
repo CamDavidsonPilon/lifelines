@@ -762,7 +762,7 @@ def k_fold_cross_validation(
         event_col = "E"
         df[event_col] = 1.0
 
-    df = df.reindex(np.random.permutation(df.index)).sort_values(event_col)
+    df = df.iloc[np.random.permutation(n)].sort_values(event_col)
 
     assignments = np.array((n // k + 1) * list(range(1, k + 1)))
     assignments = assignments[:n]
