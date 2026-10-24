@@ -629,7 +629,7 @@ def survival_events_from_table(survival_table, observed_deaths_col="observed", c
 
 
 def datetimes_to_durations(
-    start_times, end_times, fill_date=datetime.today(), freq="D", dayfirst=False, na_values=None, format=None
+    start_times, end_times, fill_date=None, freq="D", dayfirst=False, na_values=None, format=None
 ):
     """
     This is a very flexible function for transforming arrays of start_times and end_times
@@ -641,9 +641,10 @@ def datetimes_to_durations(
         iterable representing start times. These can be strings, or datetime objects.
     end_times: an array, Series or DataFrame
         iterable representing end times. These can be strings, or datetimes. These values can be None, or an empty string, which corresponds to censorship.
-    fill_date: a datetime, array, Series or DataFrame, optional (default=datetime.Today())
+    fill_date: a datetime, array, Series or DataFrame, optional
         the date to use if end_times is a missing or empty. This corresponds to last date
-        of observation. Anything after this date is also censored.
+        of observation. Anything after this date is also censored. If omitted or None,
+        use the current date and time when the function is called.
     freq: string, optional (default='D')
         the units of time to use.  See Pandas 'freq'. Default 'D' for days.
     dayfirst: bool, optional (default=False)
@@ -674,6 +675,8 @@ def datetimes_to_durations(
         E # array([ True, False,  True])
 
     """
+    if fill_date is None:
+        fill_date = datetime.today()
     fill_date_ = pd.Series(fill_date).squeeze()
     freq_string = "timedelta64[%s]" % freq
     start_times = pd.Series(start_times).copy()

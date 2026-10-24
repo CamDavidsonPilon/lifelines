@@ -176,6 +176,21 @@ def test_qth_survival_times_with_duplicate_q_returns_valid_index_and_shape():
     npt.assert_almost_equal(actual.index.values, q.values)
 
 
+def test_datetimes_to_durations_default_cutoff_is_evaluated_on_each_call(monkeypatch):
+    dates = iter([pd.Timestamp("2020-01-02"), pd.Timestamp("2020-01-03")])
+
+    class Clock:
+        @staticmethod
+        def today():
+            return next(dates).to_pydatetime()
+
+    monkeypatch.setattr(utils, "datetime", Clock)
+    for expected_duration in [1, 2]:
+        durations, observed = utils.datetimes_to_durations(["2020-01-01"], [None])
+        npt.assert_array_equal(durations, [expected_duration])
+        npt.assert_array_equal(observed, [False])
+
+
 def test_datetimes_to_durations_with_different_frequencies():
     # days
     start_date = ["2013-10-10 0:00:00", "2013-10-09", "2012-10-10"]
