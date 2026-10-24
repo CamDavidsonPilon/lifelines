@@ -137,6 +137,13 @@ def test_qth_survival_time_accepts_a_model():
     assert utils.qth_survival_time(0.8, kmf) > 0
 
 
+@pytest.mark.parametrize("survival, expected", [(1.0, np.inf), (0.5, 42), (0.4, 42), (0.0, 42)])
+def test_qth_survival_time_with_single_row_dataframe(survival, expected):
+    sf = pd.DataFrame({"survival": [survival]}, index=[42])
+    assert utils.qth_survival_time(0.5, sf) == expected
+    assert utils.qth_survival_time(0.5, sf.iloc[:, 0]) == expected
+
+
 def test_qth_survival_time_with_dataframe():
     sf_df_no_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0])
     sf_df_index = pd.DataFrame([1.0, 0.75, 0.5, 0.25, 0.0], index=[10, 20, 30, 40, 50])

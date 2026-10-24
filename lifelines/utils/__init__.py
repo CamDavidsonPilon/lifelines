@@ -174,7 +174,7 @@ def qth_survival_time(q: float, model_or_survival_function) -> float:
             raise ValueError(
                 "Expecting a DataFrame (or Series) with a single column. Provide that or use utils.qth_survival_times."
             )
-        return qth_survival_time(q, model_or_survival_function.T.squeeze())
+        return qth_survival_time(q, model_or_survival_function.iloc[:, 0])
     elif isinstance(model_or_survival_function, pd.Series):
         if model_or_survival_function.iloc[-1] > q:
             return np.inf
