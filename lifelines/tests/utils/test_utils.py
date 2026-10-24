@@ -18,6 +18,20 @@ from lifelines import exceptions
 from lifelines.utils.safe_exp import safe_exp
 
 
+@pytest.mark.parametrize("size", [100, 1000])
+@pytest.mark.parametrize("sign", [-1, 1])
+@pytest.mark.parametrize("tied", [False, True])
+def test_complete_separation_rank_correlation_is_independent_of_row_order(size, sign, tied):
+    durations = np.arange(size)
+    if tied:
+        durations //= 2
+    order = np.random.default_rng(0).permutation(size)
+    durations = pd.Series(durations[order])
+    df = pd.DataFrame({"covariate": sign * durations})
+    with pytest.warns(exceptions.ConvergenceWarning, match="high sample correlation"):
+        utils.check_complete_separation_close_to_perfect_correlation(df, durations)
+
+
 def test_format_p_values():
     assert utils.format_p_value(2)(0.004) == "<0.005"
     assert utils.format_p_value(3)(0.004) == "0.004"

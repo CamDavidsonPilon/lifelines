@@ -1150,10 +1150,10 @@ def check_complete_separation_close_to_perfect_correlation(df: pd.DataFrame, dur
         df = df.sample(n=500, random_state=0)
         durations = durations.sample(n=500, random_state=0)
 
-    rank_durations = durations.argsort()
+    rank_durations = stats.rankdata(durations)
     for col, series in df.items():
         with np.errstate(invalid="ignore", divide="ignore"):
-            rank_series = series.values.argsort()
+            rank_series = stats.rankdata(series)
             if abs(pearson_correlation(rank_durations, rank_series)) >= THRESHOLD:
                 warning_text = (
                     "Column %s has high sample correlation with the duration column. This may harm convergence. This could be a form of 'complete separation'. \
