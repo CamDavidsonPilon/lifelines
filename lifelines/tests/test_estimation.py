@@ -3166,6 +3166,39 @@ class TestCoxPHFitter:
         npt.assert_allclose(cph.summary.loc["AIDSY", "se(coef)"], 0.24630, rtol=3)
         npt.assert_allclose(cph.log_likelihood_, -95.15478, rtol=2)
 
+    def test_baseline_cumulative_hazard_with_entry_col_against_R(self, cph):
+        """
+        library(survival)
+        df = read.csv("~/code/lifelines/lifelines/datasets/multicenter_aids_cohort.tsv", sep="\t")
+        r = coxph(Surv(W, T, D) ~ AIDSY, data=df, ties="breslow")
+        tail(basehaz(r, centered=TRUE), 1)
+        """
+        df = load_multicenter_aids_cohort_study()
+        cph.fit(df, "T", "D", entry_col="W")
+        npt.assert_allclose(cph.baseline_cumulative_hazard_.iloc[-1, 0], 0.84822, rtol=1e-3)
+
+    def test_baseline_cumulative_hazard_with_entry_col_is_invariant_to_splitting_intervals(self, cph):
+        # Splitting each subject's follow-up into several (start, stop] rows describes the same data,
+        # so the baseline cumulative hazard at the original times should not change.
+        rng = np.random.RandomState(42)
+        n = 100
+        x = rng.randn(n)
+        t = -np.log(rng.rand(n)) / (0.1 * np.exp(0.5 * x))
+        c = rng.exponential(15.0, size=n)
+        time, event = np.minimum(t, c), (t <= c).astype(int)
+
+        one_row = pd.DataFrame({"start": 0.0, "stop": time, "event": event, "x": x})
+        rows = []
+        for i in range(n):
+            cuts = np.linspace(0.0, time[i], 6)
+            for j in range(5):
+                rows.append({"start": cuts[j], "stop": cuts[j + 1], "event": event[i] * (j == 4), "x": x[i]})
+        five_rows = pd.DataFrame(rows)
+
+        H_one_row = cph.fit(one_row, "stop", "event", entry_col="start").baseline_cumulative_hazard_
+        H_five_rows = cph.fit(five_rows, "stop", "event", entry_col="start").baseline_cumulative_hazard_
+        assert_frame_equal(H_one_row, H_five_rows.loc[H_one_row.index])
+
     def test_formulas_can_be_used_for_inference(self, rossi, cph, cph_spline, cph_pieces):
         cph.fit(rossi, "week", "arrest", formula="age + race")
         assert cph.summary.index.tolist() == ["age", "race"]

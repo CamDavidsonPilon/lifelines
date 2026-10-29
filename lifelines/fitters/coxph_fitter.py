@@ -1392,6 +1392,8 @@ estimate the variances. See paper "Variance estimation when using inverse probab
         predicted_partial_hazards_ = (
             pd.DataFrame(np.exp(dot(X, beta_)), columns=["P"]).assign(T=T.values, E=E.values, W=weights.values).set_index(X.index)
         )
+        if entries is not None:
+            predicted_partial_hazards_["entry"] = entries.values
         baseline_hazard_ = self._compute_baseline_hazards(predicted_partial_hazards_)
         baseline_cumulative_hazard_ = self._compute_baseline_cumulative_hazard(baseline_hazard_)
 
@@ -2523,6 +2525,13 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         ind_hazards["E"] *= ind_hazards["W"]
         ind_hazards_summed_over_durations = ind_hazards.groupby("T")[["P", "E"]].sum()
         ind_hazards_summed_over_durations["P"] = ind_hazards_summed_over_durations["P"].loc[::-1].cumsum()
+        if "entry" in ind_hazards:
+            # with delayed entry, rows are only at risk at t if entry < t, so remove the rows that have not entered yet
+            order = np.argsort(ind_hazards["entry"].values, kind="mergesort")
+            sorted_entries = ind_hazards["entry"].values[order]
+            cum_P_by_entry = np.r_[0.0, ind_hazards["P"].values[order].cumsum()]
+            ix = np.searchsorted(sorted_entries, ind_hazards_summed_over_durations.index.values, side="left")
+            ind_hazards_summed_over_durations["P"] -= cum_P_by_entry[-1] - cum_P_by_entry[ix]
         baseline_hazard = pd.DataFrame(
             ind_hazards_summed_over_durations["E"] / ind_hazards_summed_over_durations["P"], columns=[name]
         )
