@@ -149,6 +149,9 @@ def qth_survival_times(q, survival_functions) -> Union[pd.DataFrame, float]:
         return survival_times
 
 
+_QTH_SURVIVAL_TOLERANCE = np.sqrt(np.finfo(float).eps)
+
+
 def qth_survival_time(q: float, model_or_survival_function) -> float:
     """
     Returns the time when a single survival function reaches the qth percentile, that is,
@@ -176,9 +179,14 @@ def qth_survival_time(q: float, model_or_survival_function) -> float:
             )
         return qth_survival_time(q, model_or_survival_function.T.squeeze())
     elif isinstance(model_or_survival_function, pd.Series):
-        if model_or_survival_function.iloc[-1] > q:
+        # Survival curves are products/exp-sums of floats, so a curve that is
+        # exactly q in exact arithmetic (e.g. a Kaplan-Meier value of 1/2) can be
+        # stored as q*(1 +/- 1e-16). Compare with a small tolerance so the result
+        # does not depend on rounding (R's quantile.survfit uses the same idea).
+        q_tol = q + _QTH_SURVIVAL_TOLERANCE
+        if model_or_survival_function.iloc[-1] > q_tol:
             return np.inf
-        return model_or_survival_function.index[(-model_or_survival_function).searchsorted([-q])[0]]
+        return model_or_survival_function.index[(-model_or_survival_function).searchsorted([-q_tol])[0]]
     else:
         raise ValueError(
             "Unable to compute median of object %s - should be a DataFrame, Series or lifelines univariate model"

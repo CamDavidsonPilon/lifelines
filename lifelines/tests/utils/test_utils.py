@@ -96,6 +96,23 @@ def test_median():
     assert utils.median_survival_times(sv) == 500
 
 
+@pytest.mark.parametrize("n", [4, 6, 8, 12, 14, 18, 22, 26])
+def test_km_median_with_exact_half_does_not_depend_on_rounding(n):
+    # n uncensored distinct times 1..n: S(n/2) is exactly 1/2, so the first time
+    # with S(t) <= 1/2 is n/2. Before the fix the float KM value 0.5000000000000001
+    # made several n return n/2 + 1.
+    from lifelines import KaplanMeierFitter
+
+    T = np.arange(1, n + 1)
+    kmf = KaplanMeierFitter().fit(T, np.ones(n))
+    assert kmf.median_survival_time_ == n / 2
+    if n % 4 == 0:
+        assert utils.qth_survival_time(0.75, kmf.survival_function_) == n / 4
+    # duplicating every subject leaves the KM curve unchanged, so the median must not move
+    kmf2 = KaplanMeierFitter().fit(np.repeat(T, 2), np.ones(2 * n))
+    assert kmf2.median_survival_time_ == kmf.median_survival_time_
+
+
 def test_median_accepts_series():
     sv = pd.Series(1 - np.linspace(0, 1, 1000))
     assert utils.median_survival_times(sv) == 500
