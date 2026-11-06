@@ -2496,6 +2496,23 @@ class TestLogNormalAFTFitter:
     def aft(self):
         return LogNormalAFTFitter()
 
+    @pytest.mark.parametrize("p, age_z", [(1e-20, None), (0.5, 9.0), (0.5, 38.0), (0.05, -np.inf)])
+    def test_predict_percentile_preserves_small_survival_probabilities(self, aft, rossi, p, age_z):
+        aft.fit(rossi, "week", "arrest")
+        subject = rossi.iloc[[0]]
+        median = aft.predict_median(subject).iloc[0]
+        sigma = np.exp(aft.params_.loc[("sigma_", "Intercept")])
+
+        age = 0 if age_z is None else median * np.exp(sigma * age_z)
+        conditional_after = None if age_z is None else [age]
+        prediction = aft.predict_percentile(subject, p=p, conditional_after=conditional_after)
+
+        assert_index_equal(prediction.index, subject.index)
+        assert np.isfinite(prediction.iloc[0])
+        z = np.log((age + prediction.iloc[0]) / median) / sigma
+        log_survival_at_age = 0 if age_z is None else norm.logsf(age_z)
+        assert norm.logsf(z) - log_survival_at_age == pytest.approx(np.log(p))
+
     def test_coefs_with_fitted_ancillary_params(self, aft, rossi):
         """
         library('flexsurv')
