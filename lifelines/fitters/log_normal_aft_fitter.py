@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from autograd import numpy as np
 from autograd.scipy.stats import norm
-from scipy.special import erfinv
+from scipy.special import ndtri
 import pandas as pd
 
 from lifelines.utils import _get_index
@@ -152,16 +152,17 @@ class LogNormalAFTFitter(ParametericAFTRegressionFitter):
         """
         exp_mu_, sigma_ = self._prep_inputs_for_prediction_and_return_scores(df, ancillary)
 
-        if conditional_after is None:
-            return pd.Series(exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p) - 1)), index=_get_index(df))
-        else:
+        survival_probability = p
+        if conditional_after is not None:
             conditional_after = np.asarray(conditional_after)
-            Z = (np.log(conditional_after) - np.log(exp_mu_)) / sigma_
-            S = norm.sf(Z)
+            with np.errstate(divide="ignore"):
+                Z = (np.log(conditional_after) - np.log(exp_mu_)) / sigma_
+                survival_probability = np.exp(np.log(p) + norm.logsf(Z))
+        else:
+            conditional_after = 0
 
-            return pd.Series(
-                exp_mu_ * np.exp(np.sqrt(2) * sigma_ * erfinv(2 * (1 - p * S) - 1)) - conditional_after, index=_get_index(df)
-            )
+        # Invert the survival probability directly to avoid rounding 1 - p to one.
+        return pd.Series(exp_mu_ * np.exp(-sigma_ * ndtri(survival_probability)) - conditional_after, index=_get_index(df))
 
     def predict_expectation(self, df: pd.DataFrame, ancillary: Optional[pd.DataFrame] = None) -> pd.Series:
         """
