@@ -915,6 +915,26 @@ def test_rmst_works_at_kaplan_meier_with_left_censoring():
     assert abs(results[1] - 0) < 0.0001
 
 
+@pytest.mark.parametrize("fit_method", ["fit", "fit_left_censoring"])
+@pytest.mark.parametrize("timeline", [[0, 4], [1, 3, 4]])
+@pytest.mark.parametrize("t", [0, 2.5, 4, np.inf])
+def test_kaplan_meier_rmst_uses_event_times_with_custom_timeline(fit_method, timeline, t):
+    durations = [1, 2, 3, 4]
+    model = getattr(KaplanMeierFitter(), fit_method)(durations, timeline=timeline)
+    restricted = np.minimum(durations, t)
+
+    assert utils.restricted_mean_survival_time(model, t) == pytest.approx(restricted.mean())
+    assert utils.restricted_mean_survival_time(model, t, return_variance=True) == pytest.approx(
+        (restricted.mean(), restricted.var())
+    )
+
+
+def test_kaplan_meier_rmst_with_censoring_and_delayed_entry():
+    model = KaplanMeierFitter().fit([2, 3, 4], event_observed=[1, 0, 1], entry=[0, 1, 1], timeline=[0, 4])
+
+    assert utils.restricted_mean_survival_time(model, 3.5, return_variance=True) == pytest.approx((3.0, 0.5))
+
+
 def test_rmst_works_with_return_variance():
     # issue 1578
     T = [1, 2, 3, 4, 10]

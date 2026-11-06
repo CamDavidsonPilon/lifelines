@@ -222,6 +222,8 @@ def restricted_mean_survival_time(
 
     model_or_survival_function: lifelines model or DataFrame
         This can be a univariate model, or a pandas DataFrame. The former will provide a more accurate estimate however.
+        For right- or left-censored Kaplan-Meier models, integration uses the fitted event times even if a custom
+        timeline was supplied for the displayed survival curve.
     t: float
         The upper limit of the integration in the RMST.
 
@@ -255,6 +257,29 @@ def restricted_mean_survival_time(
         return mean
 
 
+def _kaplan_meier_survival_moment(model, t, moment):
+    if t <= 0:
+        return 0.0
+
+    event_times = model.event_table.index.to_numpy()
+    bounds = np.concatenate(([0], event_times[(event_times > 0) & (event_times < t)], [t]))
+    reverse = CensoringType.is_left_censoring(model)
+    log_estimate, _ = _additive_estimate(model.event_table, bounds[:-1], model._additive_f, model._additive_var, reverse)
+    survival = np.exp(log_estimate)
+    if reverse:
+        survival = 1 - survival
+    # Survival is one before the first time in the event table.
+    survival = survival.fillna(1).to_numpy()
+
+    # A zero tail contributes no area, even at an infinite horizon.
+    nonzero = survival != 0
+    starts, stops = bounds[:-1][nonzero], bounds[1:][nonzero]
+    widths = stops - starts
+    if moment == 2:
+        widths *= stops + starts
+    return float(widths @ survival[nonzero])
+
+
 def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = np.inf) -> float:
 
     import lifelines
@@ -272,6 +297,8 @@ def _expected_value_of_survival_up_to_t(model_or_survival_function, t: float = n
         model = model_or_survival_function
         # if KM, we can compute exactly
         if isinstance(model, lifelines.KaplanMeierFitter):
+            if not CensoringType.is_interval_censoring(model):
+                return _kaplan_meier_survival_moment(model, t, moment=1)
             sf = model.survival_function_.loc[:t]
             sf = pd.concat((sf, pd.DataFrame([model.predict(t)], index=[t], columns=sf.columns))).sort_index()
             sf = sf.reset_index()
@@ -317,6 +344,8 @@ def _expected_value_of_survival_squared_up_to_t(
     elif isinstance(model_or_survival_function, lifelines.fitters.UnivariateFitter):
         # lifelines model
         model = model_or_survival_function
+        if isinstance(model, lifelines.KaplanMeierFitter) and not CensoringType.is_interval_censoring(model):
+            return _kaplan_meier_survival_moment(model, t, moment=2)
         return 2 * quad(lambda tau: (tau * model.predict(tau)), 0, t, epsabs=1.49e-10, epsrel=1e-10)[0]
     else:
         raise ValueError("Can't compute value for object %s" % model_or_survival_function)
