@@ -1652,6 +1652,18 @@ class TestBreslowFlemingHarringtonFitter:
 
         bfh.fit(observations, entry=births)
 
+    def test_confidence_interval_columns_are_correctly_ordered(self):
+        # Converting the Nelson-Aalen cumulative hazard's CI to a survival-function
+        # CI via exp(-x) reverses which bound is larger, since exp(-x) is decreasing.
+        # The lower/upper columns must be flipped back to match their labels.
+        bfh = BreslowFlemingHarringtonFitter()
+        bfh.fit(np.random.exponential(5, size=50), event_observed=np.random.binomial(1, 0.8, size=50))
+
+        for ci in (bfh.confidence_interval_, bfh.confidence_interval_cumulative_density):
+            lower_col = [c for c in ci.columns if "lower" in c][0]
+            upper_col = [c for c in ci.columns if "upper" in c][0]
+            assert (ci[lower_col] <= ci[upper_col]).all()
+
 
 class TestParametricRegressionFitter:
     @pytest.fixture
