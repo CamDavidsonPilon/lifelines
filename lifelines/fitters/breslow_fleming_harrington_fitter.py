@@ -91,7 +91,11 @@ class BreslowFlemingHarringtonFitter(NonParametricUnivariateFitter):
 
         # estimation
         self.survival_function_ = np.exp(-naf.cumulative_hazard_)
+        # exp(-x) is decreasing, so the column that bounds the cumulative hazard
+        # from below now bounds the survival function from above: flip the
+        # columns back so the "lower"/"upper" labels match the actual values.
         self.confidence_interval_ = np.exp(-naf.confidence_interval_)
+        self.confidence_interval_[:] = np.fliplr(self.confidence_interval_.values)
         self.confidence_interval_survival_function_ = self.confidence_interval_
         self.confidence_interval_cumulative_density = 1 - self.confidence_interval_
         self.confidence_interval_cumulative_density[:] = np.fliplr(self.confidence_interval_cumulative_density.values)
