@@ -816,7 +816,7 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
             deaths = events_at_t & (stops_at_t == t)
 
             death_counts = (weights_at_t.squeeze() * deaths).sum()  # should always be atleast 1.
-            baseline_hazard_.loc[t] = death_counts / hazards_at_t.sum()
+            baseline_hazard_.loc[t] = death_counts / (hazards_at_t * weights_at_t).sum()
 
         return baseline_hazard_.cumsum()
 

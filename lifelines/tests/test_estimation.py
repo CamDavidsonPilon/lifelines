@@ -5103,6 +5103,25 @@ class TestAalenAdditiveFitter:
 
 
 class TestCoxTimeVaryingFitter:
+    @pytest.mark.parametrize("weights", [[1.0, 1.0, 1.0], [3.0, 2.0, 1.0], [0.75, 0.5, 0.25], [6.0, 4.0, 2.0]])
+    def test_baseline_hazard_uses_case_weights(self, weights):
+        df = pd.DataFrame(
+            {
+                "id": [1, 2, 3],
+                "start": [0, 0, 1],
+                "stop": [2, 4, 3],
+                "event": [1, 1, 0],
+                "weight": weights,
+            }
+        )
+        model = CoxTimeVaryingFitter().fit(
+            df, id_col="id", start_col="start", stop_col="stop", event_col="event", weights_col="weight"
+        )
+        # At t=2 all three subjects are at risk; at t=4 only subject 2 remains.
+        first_increment = weights[0] / sum(weights)
+        npt.assert_allclose(model.baseline_cumulative_hazard_.index, [2, 4])
+        npt.assert_allclose(model.baseline_cumulative_hazard_.iloc[:, 0], [first_increment, first_increment + 1])
+
     @pytest.fixture()
     def ctv(self):
         return CoxTimeVaryingFitter()
