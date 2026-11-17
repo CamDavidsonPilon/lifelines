@@ -227,21 +227,20 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
         for _, r in df.iterrows():
             F_t = float(r["Ft"])
 
-            first_term_coefficient = r["observed"] / r["at_risk"] / (r["at_risk"] - r["observed"])
-            first_term_function.add_quadratic_term(a = first_term_coefficient, b = F_t)
-    
             second_term += (
-                (r["lagS"] ** 2)
-                * r[self.label_cmprisk]
-                * (r["at_risk"] - r[self.label_cmprisk])
-                / (r["at_risk"] ** 3)
+                (r["lagS"] ** 2) * r[self.label_cmprisk] * (r["at_risk"] - r[self.label_cmprisk]) / (r["at_risk"] ** 3)
             )
-            
-            third_term_coefficient = r["lagS"] * r[self.label_cmprisk] / (r["at_risk"] ** 2)
-            third_term_function.add_linear_term(a = third_term_coefficient, b = F_t)
 
             variance = first_term_function.evaluate(F_t) + second_term - 2 * third_term_function.evaluate(F_t)
             all_vars.append(variance)
+
+            # The current event adds zero to the terms involving differences in incidence.
+            # Once the risk set is exhausted, survival is zero and incidence stays constant.
+            if r["observed"] < r["at_risk"]:
+                first_term_coefficient = r["observed"] / r["at_risk"] / (r["at_risk"] - r["observed"])
+                first_term_function.add_quadratic_term(a=first_term_coefficient, b=F_t)
+            third_term_coefficient = r["lagS"] * r[self.label_cmprisk] / (r["at_risk"] ** 2)
+            third_term_function.add_linear_term(a=third_term_coefficient, b=F_t)
         df["variance"] = all_vars
 
         # Calculating Confidence Intervals

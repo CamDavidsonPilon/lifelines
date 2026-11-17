@@ -5722,6 +5722,26 @@ class TestAalenJohansenFitter:
         fitter.fit(duration, event_observed, event_of_interest=2)
         npt.assert_allclose(ci_from_sas, np.array(fitter.confidence_interval_))
 
+    @pytest.mark.parametrize(
+        "events, weights, incidence",
+        [
+            ([1, 2, 1, 2], None, 0.5),
+            ([1, 2, 2, 1], None, 0.5),
+            ([1, 2, 1], [1, 1, 2], 0.75),
+            ([1, 2, 2], [0.1, 0.1, 0.1], 1 / 3),
+        ],
+        ids=["competing-event-last", "target-event-last", "frequency-weights", "fractional-weights"],
+    )
+    def test_variance_at_final_observed_event(self, fitter, events, weights, incidence):
+        fitter.fit(np.arange(1, len(events) + 1), events, event_of_interest=1, weights=weights)
+
+        # With complete follow-up, the terminal CIF estimates a proportion.
+        total_weight = sum(weights) if weights is not None else len(events)
+        npt.assert_allclose(fitter.cumulative_density_.iloc[-1, 0], incidence)
+        npt.assert_allclose(fitter.variance_.iloc[-1], incidence * (1 - incidence) / total_weight)
+        interval = fitter.confidence_interval_.iloc[-1].to_numpy()
+        assert 0 < interval.min() < incidence < interval.max() < 1
+
 
 class TestMixtureCureFitter:
     @flaky
