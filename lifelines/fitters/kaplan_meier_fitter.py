@@ -383,6 +383,7 @@ class KaplanMeierFitter(NonParametricUnivariateFitter):
             self.cumulative_density_ = pd.DataFrame(np.exp(log_estimate), columns=[self._label])
             self.survival_function_ = 1 - self.cumulative_density_
             self.confidence_interval_ = 1 - self._bounds(self.cumulative_density_, cumulative_sq_, alpha, ci_labels)
+            self.confidence_interval_[:] = np.fliplr(self.confidence_interval_.values)
 
         else:
             self.survival_function_ = pd.DataFrame(np.exp(log_estimate), columns=[self._label])
