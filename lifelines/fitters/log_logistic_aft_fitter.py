@@ -76,7 +76,9 @@ class LogLogisticAFTFitter(ParametericAFTRegressionFitter):
     _primary_parameter_name = "alpha_"
 
     def __init__(self, alpha=0.05, penalizer=0.0, l1_ratio=0.0, fit_intercept=True, model_ancillary=False):
-        super(LogLogisticAFTFitter, self).__init__(alpha, penalizer, l1_ratio, fit_intercept)
+        super(LogLogisticAFTFitter, self).__init__(
+            alpha, penalizer, l1_ratio, fit_intercept, model_ancillary=model_ancillary
+        )
 
     def _cumulative_hazard(self, params, T, Xs):
         alpha_params = params["alpha_"]
