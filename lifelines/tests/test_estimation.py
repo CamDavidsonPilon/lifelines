@@ -5101,6 +5101,27 @@ class TestAalenAdditiveFitter:
         npt.assert_allclose(actual["var2"], -0.0776583514, rtol=1e-06)
         npt.assert_allclose(actual["var3"], 0.5515174017, rtol=1e-06)
 
+    def test_cumulative_variance_scales_inversely_with_squared_covariate_scale(self, regression_dataset):
+        df = regression_dataset.copy()
+        df["E"] = 1
+        df_scaled = df.copy()
+        scale = 10.0
+        df_scaled["var1"] = df_scaled["var1"] * scale
+
+        aaf = AalenAdditiveFitter(coef_penalizer=0.0, smoothing_penalizer=0.0).fit(df, "T", "E")
+        aaf_scaled = AalenAdditiveFitter(coef_penalizer=0.0, smoothing_penalizer=0.0).fit(df_scaled, "T", "E")
+
+        npt.assert_allclose(
+            aaf_scaled.cumulative_hazards_["var1"].values,
+            aaf.cumulative_hazards_["var1"].values / scale,
+            rtol=1e-6,
+        )
+        npt.assert_allclose(
+            aaf_scaled.cumulative_variance_["var1"].values,
+            aaf.cumulative_variance_["var1"].values / (scale**2),
+            rtol=1e-6,
+        )
+
 
 class TestCoxTimeVaryingFitter:
     @pytest.fixture()
