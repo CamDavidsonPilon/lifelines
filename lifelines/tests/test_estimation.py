@@ -1636,6 +1636,18 @@ class TestNelsonAalenFitter:
         naf.fit(y, event_observed=None, timeline=range(0, int(y.max())))
         assert (naf._cumulative_sq >= 0).all()
 
+    def test_smoothed_hazard_confidence_intervals_ordering(self, waltons_dataset):
+        naf = NelsonAalenFitter().fit(waltons_dataset["T"], waltons_dataset["E"])
+        bandwidth = 5.0
+        hazard = naf.smoothed_hazard_(bandwidth).iloc[:, 0]
+        ci = naf.smoothed_hazard_confidence_intervals_(bandwidth)
+
+        positive = hazard > 0
+        assert positive.any()
+        assert (ci.loc[positive, naf.ci_labels[0]] <= hazard.loc[positive]).all()
+        assert (hazard.loc[positive] <= ci.loc[positive, naf.ci_labels[1]]).all()
+        assert (ci.loc[positive, naf.ci_labels[0]] < ci.loc[positive, naf.ci_labels[1]]).any()
+
 
 class TestBreslowFlemingHarringtonFitter:
     def test_BHF_fit_when_KMF_throws_an_error(self):

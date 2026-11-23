@@ -243,8 +243,8 @@ class NelsonAalenFitter(UnivariateFitter):
             * np.dot(epanechnikov_kernel(timeline[:, None], timeline[C][None, :], bandwidth) ** 2, var_hazard_.values[C])
         )
         values = {
-            self.ci_labels[0]: hazard_ * np.exp(z * std_hazard_ / hazard_),
-            self.ci_labels[1]: hazard_ * np.exp(-z * std_hazard_ / hazard_),
+            self.ci_labels[0]: hazard_ * np.exp(-z * std_hazard_ / hazard_),
+            self.ci_labels[1]: hazard_ * np.exp(z * std_hazard_ / hazard_),
         }
         return pd.DataFrame(values, index=timeline)
 
