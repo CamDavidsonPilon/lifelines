@@ -418,12 +418,12 @@ def survival_difference_at_fixed_point_in_time_test(point_in_time, fitterA, fitt
     if isinstance(fitterA, NonParametricUnivariateFitter):
         sigma_sqA = interpolate_at_times_and_return_pandas(fitterA._cumulative_sq_, point_in_time)
     elif isinstance(fitterA, ParametricUnivariateFitter):
-        sigma_sqA = fitterA._compute_variance_of_transform(fitterA._survival_function, [point_in_time]).squeeze()
+        sigma_sqA = fitterA._compute_variance_of_transform(fitterA._survival_function, [point_in_time]).squeeze() / sA_t**2
 
     if isinstance(fitterB, NonParametricUnivariateFitter):
         sigma_sqB = interpolate_at_times_and_return_pandas(fitterB._cumulative_sq_, point_in_time)
     elif isinstance(fitterB, ParametricUnivariateFitter):
-        sigma_sqB = fitterB._compute_variance_of_transform(fitterB._survival_function, [point_in_time]).squeeze()
+        sigma_sqB = fitterB._compute_variance_of_transform(fitterB._survival_function, [point_in_time]).squeeze() / sB_t**2
 
     X = (clog(sA_t) - clog(sB_t)) ** 2 / (sigma_sqA / log(sA_t) ** 2 + sigma_sqB / log(sB_t) ** 2)
     p_value = _chisq_test_p_value(X, 1)
