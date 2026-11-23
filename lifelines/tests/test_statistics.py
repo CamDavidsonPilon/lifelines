@@ -541,6 +541,30 @@ def test_survival_difference_at_fixed_point_in_time_test_parametric():
     assert result.p_value < 0.05
 
 
+def test_survival_difference_at_fixed_point_in_time_test_parametric_variance():
+    from autograd import numpy as anp
+
+    df = load_waltons()
+    ix = df["group"] == "miR-137"
+    wf1 = WeibullFitter().fit(df.loc[ix]["T"], df.loc[ix]["E"])
+    wf2 = WeibullFitter().fit(df.loc[~ix]["T"], df.loc[~ix]["E"])
+
+    t = 20.0
+    result = stats.survival_difference_at_fixed_point_in_time_test(t, wf1, wf2)
+
+    s1 = wf1.predict(t)
+    s2 = wf2.predict(t)
+    var_clog1 = wf1._compute_variance_of_transform(
+        lambda params, times: anp.log(-anp.log(wf1._survival_function(params, times))), [t]
+    ).squeeze()
+    var_clog2 = wf2._compute_variance_of_transform(
+        lambda params, times: anp.log(-anp.log(wf2._survival_function(params, times))), [t]
+    ).squeeze()
+
+    expected_X = (np.log(-np.log(s1)) - np.log(-np.log(s2))) ** 2 / (var_clog1 + var_clog2)
+    npt.assert_allclose(result.test_statistic, expected_X, rtol=1e-6)
+
+
 def test_survival_difference_at_fixed_point_in_time_test_left_censoring():
     T1 = np.random.exponential(1e-6, size=1000)
     T2 = np.random.exponential(1e-6, size=1000)
