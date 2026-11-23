@@ -2549,6 +2549,15 @@ class TestLogLogisticAFTFitter:
             baseline_survival / (1 - baseline_survival) * factor**expon, accelerated_survival / (1 - accelerated_survival)
         )
 
+    def test_model_ancillary_init_arg_is_forwarded(self, rossi):
+        aft = LogLogisticAFTFitter(model_ancillary=True)
+        assert aft.model_ancillary is True
+
+        aft.fit(rossi, "week", "arrest")
+        aft_explicit = LogLogisticAFTFitter().fit(rossi, "week", "arrest", ancillary=True)
+
+        assert_frame_equal(aft.summary, aft_explicit.summary)
+
 
 class TestWeibullAFTFitter:
     @pytest.fixture
