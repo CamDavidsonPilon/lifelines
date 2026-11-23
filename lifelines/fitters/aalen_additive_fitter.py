@@ -184,7 +184,7 @@ class AalenAdditiveFitter(RegressionFitter):
         )
         self.hazards_ /= self._norm_std
         self.cumulative_hazards_ /= self._norm_std
-        self.cumulative_variance_ /= self._norm_std
+        self.cumulative_variance_ /= self._norm_std**2
         self.confidence_intervals_ = self._compute_confidence_intervals()
 
         self._index = self.hazards_.index
