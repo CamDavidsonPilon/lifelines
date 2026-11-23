@@ -79,6 +79,7 @@ class BreslowFlemingHarringtonFitter(NonParametricUnivariateFitter):
             label=self._label,
             entry=entry,
             ci_labels=ci_labels,
+            weights=weights,
         )
         self.durations, self.event_observed, self.timeline, self.entry, self.event_table, self.weights = (
             naf.durations,

@@ -1652,6 +1652,18 @@ class TestBreslowFlemingHarringtonFitter:
 
         bfh.fit(observations, entry=births)
 
+    def test_weights_are_forwarded_to_nelson_aalen(self):
+        df = pd.DataFrame({"T": [1, 1, 1, 2, 3, 3, 4], "E": [1, 1, 1, 0, 1, 1, 1]})
+        bfh_unweighted = BreslowFlemingHarringtonFitter().fit(df["T"], df["E"])
+
+        df_grouped = df.groupby(["T", "E"]).size().reset_index(name="weights")
+        bfh_weighted = BreslowFlemingHarringtonFitter().fit(
+            df_grouped["T"], df_grouped["E"], weights=df_grouped["weights"]
+        )
+
+        assert_frame_equal(bfh_weighted.survival_function_, bfh_unweighted.survival_function_)
+        assert_frame_equal(bfh_weighted.confidence_interval_, bfh_unweighted.confidence_interval_)
+
 
 class TestParametricRegressionFitter:
     @pytest.fixture
