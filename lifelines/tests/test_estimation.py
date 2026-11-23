@@ -1523,6 +1523,23 @@ class TestKaplanMeierFitter:
         kmf.fit(T, entry=entries)
         assert np.all((kmf.survival_function_.diff().dropna() <= 0))
 
+    def test_left_censoring_confidence_interval_ordering(self):
+        T = [1, 2, 2, 3, 4, 5, 6, 7, 8, 9]
+        E = [1, 0, 1, 1, 0, 1, 1, 0, 1, 1]
+        kmf = KaplanMeierFitter().fit_left_censoring(T, E)
+
+        sf = kmf.survival_function_.iloc[:, 0]
+        sf_ci = kmf.confidence_interval_survival_function_
+        assert (sf_ci.iloc[:, 0] <= sf + 1e-12).all()
+        assert (sf <= sf_ci.iloc[:, 1] + 1e-12).all()
+        assert (sf_ci.iloc[:, 0] < sf_ci.iloc[:, 1]).any()
+
+        cdf = kmf.cumulative_density_.iloc[:, 0]
+        cdf_ci = kmf.confidence_interval_cumulative_density_
+        assert (cdf_ci.iloc[:, 0] <= cdf + 1e-12).all()
+        assert (cdf <= cdf_ci.iloc[:, 1] + 1e-12).all()
+        assert (cdf_ci.iloc[:, 0] < cdf_ci.iloc[:, 1]).any()
+
 
 class TestNelsonAalenFitter:
     def nelson_aalen(self, lifetimes, observed=None):
