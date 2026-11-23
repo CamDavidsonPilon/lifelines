@@ -61,6 +61,25 @@ def test_add_at_risk_counts_is_numpy_scalar_compatible():
     plt.close(ax.figure)
 
 
+@pytest.mark.parametrize("rows_to_show", [None, ["At risk"]])
+def test_add_at_risk_counts_can_hide_labels(rows_to_show):
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg", force=True)
+    from matplotlib import pyplot as plt
+
+    kmf = KaplanMeierFitter().fit([1, 2, 3], label="Cohort A")
+    fig, ax = plt.subplots()
+    try:
+        add_at_risk_counts(kmf, labels=False, rows_to_show=rows_to_show, xticks=[0], ax=ax)
+        tick_label = fig.axes[1].get_xticklabels()[0].get_text()
+        assert "At risk" in tick_label
+        assert "3" in tick_label
+        assert "Cohort A" not in tick_label
+        assert "None" not in tick_label
+    finally:
+        plt.close(fig)
+
+
 @pytest.mark.skipif("DISPLAY" not in os.environ, reason="requires display")
 class TestPlotting:
     @pytest.fixture

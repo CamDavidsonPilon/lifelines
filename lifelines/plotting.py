@@ -484,7 +484,7 @@ def add_at_risk_counts(
     if labels is None:
         labels = [f._label for f in fitters]
     elif labels is False:
-        labels = [None] * len(fitters)
+        labels = [""] * len(fitters)
     if rows_to_show is None:
         rows_to_show = ["At risk", "Censored", "Events"]
     else:
