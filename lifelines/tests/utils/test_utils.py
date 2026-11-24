@@ -1056,3 +1056,25 @@ class TestAccumulators:
         TestAccumulators._check_equality(float(-3), function.evaluate(1))
         TestAccumulators._check_equality(float(-9), function.evaluate(2))
 
+
+def test_lowess_bounds_and_singular_fallback():
+    from lifelines.utils.lowess import lowess
+
+    # ceil(f * n) >= n previously raised IndexError
+    x = np.array([1.0, 2.0, 3.0, 4.0])
+    y = np.array([2.0, 4.0, 6.0, 8.0])
+    yest = lowess(x, y, f=1.0)
+    npt.assert_allclose(yest, y, atol=1e-12)
+
+    # n = 2 with default f = 2/3 has ceil(4/3) == 2 == n
+    yest_two = lowess(np.array([0.0, 1.0]), np.array([3.0, 5.0]))
+    npt.assert_allclose(yest_two, [3.0, 5.0], atol=1e-12)
+
+    # Constant x makes the 2x2 local regression matrix singular;
+    # fallback should be weighted mean rather than 0.
+    x_const = np.array([5.0, 5.0, 5.0, 5.0])
+    y_vals = np.array([10.0, 12.0, 14.0, 16.0])
+    yest_const = lowess(x_const, y_vals, f=0.5)
+    npt.assert_allclose(yest_const, np.full(4, 13.0), atol=1e-12)
+
+
