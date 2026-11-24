@@ -333,6 +333,23 @@ class TestParametricUnivariateFitters:
             f.print_summary(style="html", decimals=4, columns=["coef", "p"])
             f.print_summary(style="latex", decimals=4, columns=["coef", "p"])
 
+    def test_nelder_mead_skips_autograd_jac(self, monkeypatch):
+        import lifelines.fitters as fitters_mod
+
+        calls = []
+        orig_minimize = fitters_mod.minimize
+
+        def spy_minimize(*args, **kwargs):
+            calls.append((kwargs.get("method"), kwargs.get("jac")))
+            return orig_minimize(*args, **kwargs)
+
+        monkeypatch.setattr(fitters_mod, "minimize", spy_minimize)
+        T = np.random.weibull(1.5, size=200) * 10.0
+        wf = WeibullFitter().fit(T)
+        assert calls == [("Nelder-Mead", False), (wf._scipy_fit_method, True)]
+        assert np.isfinite(wf.log_likelihood_)
+
+
 
 class TestUnivariateFitters:
     @pytest.fixture
