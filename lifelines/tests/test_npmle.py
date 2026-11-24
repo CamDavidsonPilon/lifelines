@@ -97,3 +97,34 @@ def test_max_lower_bound_less_than_min_upper_bound():
     # KaplanMeier
     model = KaplanMeierFitter()
     model.fit_interval_censoring(lower_bound=left0, upper_bound=right0)
+
+
+def test_em_line_search_preserves_simplex_normalization():
+    import warnings
+
+    left, right = [1, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        p_one_step, _ = npmle(left, right, max_iter=1, fit_method="em")
+    npt.assert_allclose(p_one_step.sum(), 1.0, rtol=1e-12, atol=1e-12)
+
+
+def test_scipy_fit_guards_boundary_and_warns_on_non_convergence():
+    import warnings
+    from lifelines.exceptions import ConvergenceWarning
+
+    left, right = [1, 8, 8, 7, 7, 17, 37, 46, 46, 45], [7, 8, 10, 16, 14, np.inf, 44, np.inf, np.inf, np.inf]
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        npmle(left, right, fit_method="scipy")
+
+    # Boundary guard prevents log(0) / divide-by-zero RuntimeWarnings
+    numeric_warns = [
+        w for w in caught if issubclass(w.category, RuntimeWarning) and not issubclass(w.category, ConvergenceWarning)
+    ]
+    assert len(numeric_warns) == 0
+
+    # Non-convergence must emit ConvergenceWarning rather than failing silently
+    conv_warns = [w for w in caught if issubclass(w.category, ConvergenceWarning)]
+    assert len(conv_warns) >= 1
+
