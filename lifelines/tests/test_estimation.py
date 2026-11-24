@@ -5623,6 +5623,36 @@ log-likelihood ratio test = 15.11 on 4 df
 
         assert True
 
+    def test_nr_r_precision_and_consistent_ll_hessian(self, heart):
+        # 1) log_likelihood_ and _hessian_ must match the returned params_ even when stopping early
+        ctv = CoxTimeVaryingFitter()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            ctv.fit(heart, id_col="id", event_col="event", fit_options={"max_steps": 2})
+
+        df_norm = (heart[["age", "year", "surgery", "transplant"]] - ctv._norm_mean) / ctv._norm_std
+        beta_norm = (ctv.params_ * ctv._norm_std).values
+        h_expected, _, ll_expected = ctv._get_gradients(
+            df_norm.values,
+            heart["event"].astype(bool).values,
+            heart["start"].values,
+            heart["stop"].values,
+            np.ones(len(heart)),
+            beta_norm,
+        )
+        npt.assert_allclose(ctv.log_likelihood_, ll_expected, rtol=1e-12, atol=1e-12)
+        npt.assert_allclose(ctv._hessian_, h_expected, rtol=1e-12, atol=1e-12)
+
+        # 2) r_precision criterion should actually trigger early stopping
+        ctv_loose = CoxTimeVaryingFitter().fit(
+            heart, id_col="id", event_col="event", fit_options={"r_precision": 1e-2, "precision": 1e-12}
+        )
+        ctv_tight = CoxTimeVaryingFitter().fit(
+            heart, id_col="id", event_col="event", fit_options={"r_precision": 0.0, "precision": 1e-12}
+        )
+        assert not np.allclose(ctv_loose.params_.values, ctv_tight.params_.values, atol=1e-6)
+        assert ctv_loose.log_likelihood_ < ctv_tight.log_likelihood_
+
 
 class TestAalenJohansenFitter:
     @pytest.fixture  # pytest fixtures are functions that are "executed" before every test
