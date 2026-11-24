@@ -378,6 +378,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
 
         i = 0
         converging = True
+        delta = np.zeros_like(beta)
         ll, previous_ll = 0, 0
         start_time = time.time()
 
@@ -385,6 +386,7 @@ class CoxTimeVaryingFitter(SemiParametricRegressionFitter, ProportionalHazardMix
         step_size = step_sizer.next()
 
         while converging:
+            beta += delta
             i += 1
 
             if self.strata is None:
@@ -455,7 +457,7 @@ https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergen
             # convergence criteria
             if norm_delta < precision:
                 converging, completed = False, True
-            elif previous_ll > 0 and abs(ll - previous_ll) / (-previous_ll) < r_precision:
+            elif previous_ll != 0 and abs(ll - previous_ll) / (-previous_ll) < r_precision:
                 # this is what R uses by default with r_precision=1e-9
                 converging, completed = False, True
             elif newton_decrement < precision:
@@ -474,9 +476,8 @@ See https://stats.stackexchange.com/questions/11109/how-to-deal-with-perfect-sep
                 )
                 converging, completed = False, False
 
+            previous_ll = ll
             step_size = step_sizer.update(norm_delta).next()
-
-            beta += delta
 
         if show_progress and completed:
             print("Convergence completed after %d iterations." % (i))
