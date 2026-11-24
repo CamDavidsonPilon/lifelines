@@ -5,7 +5,7 @@ import pandas as pd
 import warnings
 
 from lifelines.fitters import NonParametricUnivariateFitter
-from lifelines.utils import _preprocess_inputs, inv_normal_cdf, CensoringType, coalesce, LinearAccumulator, QuadraticAccumulator
+from lifelines.utils import _preprocess_inputs, inv_normal_cdf, CensoringType, coalesce
 from lifelines import KaplanMeierFitter
 from lifelines.plotting import _plot_estimate
 
@@ -219,30 +219,26 @@ class AalenJohansenFitter(NonParametricUnivariateFitter):
             ci_labels = ["%s_upper_%g" % (self._label, ci), "%s_lower_%g" % (self._label, ci)]
         assert len(ci_labels) == 2, "ci_labels should be a length 2 array."
 
-        # Use prefix sum algorithm to reduce time complexity to O(n), by cumulatively updating terms.
-        first_term_function = QuadraticAccumulator()
-        second_term = 0
-        third_term_function = LinearAccumulator()
-        all_vars = []
-        for _, r in df.iterrows():
-            F_t = float(r["Ft"])
+        # Vectorized O(n) prefix sums for the three variance terms:
+        #   first_term  = sum_{i<=t} a_i * (F_t - F_i)^2
+        #               = F_t^2 * sum(a_i) - 2 * F_t * sum(a_i * F_i) + sum(a_i * F_i^2)
+        #   second_term = sum_{i<=t} lagS_i^2 * d_{j,i} * (n_i - d_{j,i}) / n_i^3
+        #   third_term  = sum_{i<=t} c_i * (F_t - F_i) = F_t * sum(c_i) - sum(c_i * F_i)
+        F_t = df["Ft"].to_numpy(dtype=float)
+        observed = df["observed"].to_numpy(dtype=float)
+        at_risk = df["at_risk"].to_numpy(dtype=float)
+        lagS = df["lagS"].to_numpy(dtype=float)
+        cmprisk = df[self.label_cmprisk].to_numpy(dtype=float)
 
-            first_term_coefficient = r["observed"] / r["at_risk"] / (r["at_risk"] - r["observed"])
-            first_term_function.add_quadratic_term(a = first_term_coefficient, b = F_t)
-    
-            second_term += (
-                (r["lagS"] ** 2)
-                * r[self.label_cmprisk]
-                * (r["at_risk"] - r[self.label_cmprisk])
-                / (r["at_risk"] ** 3)
-            )
-            
-            third_term_coefficient = r["lagS"] * r[self.label_cmprisk] / (r["at_risk"] ** 2)
-            third_term_function.add_linear_term(a = third_term_coefficient, b = F_t)
+        a = observed / at_risk / (at_risk - observed)
+        first_term = np.cumsum(a * (F_t**2)) - 2.0 * F_t * np.cumsum(a * F_t) + (F_t**2) * np.cumsum(a)
 
-            variance = first_term_function.evaluate(F_t) + second_term - 2 * third_term_function.evaluate(F_t)
-            all_vars.append(variance)
-        df["variance"] = all_vars
+        second_term = np.cumsum((lagS**2) * cmprisk * (at_risk - cmprisk) / (at_risk**3))
+
+        c = lagS * cmprisk / (at_risk**2)
+        third_term = F_t * np.cumsum(c) - np.cumsum(c * F_t)
+
+        df["variance"] = first_term + second_term - 2.0 * third_term
 
         # Calculating Confidence Intervals
         df["F_transformed"] = np.log(-np.log(df["Ft"]))
