@@ -4913,6 +4913,33 @@ log-likelihood ratio test = 33.27 on 7 df
         with pytest.raises(IndexError):
             cph.check_assumptions(rossi)
 
+    def test_compute_score_within_strata_vectorized_matches_direct(self, rossi):
+        cph = CoxPHFitter().fit(rossi, "week", "arrest", robust=True)
+        X, T, E, W, entries, _, _ = cph._preprocess_dataframe(rossi)
+        X_norm = (X - cph._norm_mean) / cph._norm_std
+
+        got = cph._compute_score_within_strata(X_norm, T, E, W, entries)
+
+        # Direct O(n^2*d) reference implementation
+        Xv, Ev, Wv = X_norm.values, E.values.astype(int), W.values
+        beta = cph.params_.values * cph._norm_std.values
+        phi_s = np.exp(np.dot(Xv, beta))
+        risk_phi_x = (Xv * (Wv * phi_s)[:, None])[::-1].cumsum(0)[::-1]
+        risk_phi = (Wv * phi_s)[::-1].cumsum()[::-1][:, None]
+        expected = np.zeros_like(Xv)
+        for i in range(len(Xv)):
+            xi = Xv[i : i + 1]
+            score = -phi_s[i] * (
+                (Ev[: i + 1] * Wv[: i + 1] / risk_phi[: i + 1].T).T * (xi - risk_phi_x[: i + 1] / risk_phi[: i + 1])
+            ).sum(0)
+            if Ev[i]:
+                score = score + (xi - risk_phi_x[i] / risk_phi[i])
+            expected[i, :] = score
+        expected *= Wv[:, None]
+
+        npt.assert_allclose(got, expected, rtol=1e-12, atol=1e-12)
+
+
 
 class TestAalenAdditiveFitter:
     @pytest.fixture()

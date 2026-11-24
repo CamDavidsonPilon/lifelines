@@ -2108,7 +2108,6 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         beta = self.params_.values * self._norm_std
 
         E = E.astype(int)
-        score_residuals = zeros((n, d))
 
         phi_s = exp(dot(X, beta))
 
@@ -2117,21 +2116,14 @@ See https://stats.stackexchange.com/q/11109/11867 for more.\n",
         risk_phi_x_history = (X * (weights * phi_s)[:, None])[::-1].cumsum(0)[::-1]
         risk_phi_history = (weights * phi_s)[::-1].cumsum()[::-1][:, None]
 
-        # Iterate forwards
-        for i in range(0, n):
+        # Vectorized O(n*d) prefix sums equivalent to the O(n^2*d) forward loop:
+        #   sum_{j<=i} r_j * (x_i - x_bar_j) = x_i * sum_{j<=i} r_j - sum_{j<=i} (r_j * x_bar_j)
+        x_bar = risk_phi_x_history / risk_phi_history
+        r = (E * weights)[:, None] / risk_phi_history
+        cum_r = r.cumsum(0)
+        cum_r_xbar = (r * x_bar).cumsum(0)
 
-            xi = X[i : i + 1]
-            phi_i = phi_s[i]
-
-            score = -phi_i * (
-                (E[: i + 1] * weights[: i + 1] / risk_phi_history[: i + 1].T).T  # this is constant-ish, and could be cached
-                * (xi - risk_phi_x_history[: i + 1] / risk_phi_history[: i + 1])
-            ).sum(0)
-
-            if E[i]:
-                score = score + (xi - risk_phi_x_history[i] / risk_phi_history[i])
-
-            score_residuals[i, :] = score
+        score_residuals = -phi_s[:, None] * (X * cum_r - cum_r_xbar) + E[:, None] * (X - x_bar)
 
         return score_residuals * weights[:, None]
 
