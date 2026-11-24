@@ -5722,6 +5722,35 @@ class TestAalenJohansenFitter:
         fitter.fit(duration, event_observed, event_of_interest=2)
         npt.assert_allclose(ci_from_sas, np.array(fitter.confidence_interval_))
 
+    def test_vectorized_variance_matches_direct_formula(self):
+        rng = np.random.default_rng(123)
+        T = rng.exponential(5.0, size=150)
+        E = rng.choice([0, 1, 2], size=150, p=[0.2, 0.5, 0.3])
+        aj = AalenJohansenFitter(calculate_variance=True, seed=123).fit(T, E, event_of_interest=1)
+
+        # Direct O(n^2) reference from the textbook Aalen-Johansen variance formula
+        df = aj.event_table.copy()
+        F = aj.cumulative_density_.iloc[:, 0].to_numpy(dtype=float)
+        obs = df["observed"].to_numpy(dtype=float)
+        n_risk = df["at_risk"].to_numpy(dtype=float)
+        d_j = df[aj.label_cmprisk].to_numpy(dtype=float)
+        km = KaplanMeierFitter().fit(T, E != 0, timeline=df.index)
+        lagS = km.survival_function_.shift(1).fillna(1.0).iloc[:, 0].to_numpy(dtype=float)
+
+        a = obs / n_risk / (n_risk - obs)
+        b = (lagS**2) * d_j * (n_risk - d_j) / (n_risk**3)
+        c = lagS * d_j / (n_risk**2)
+        expected = np.array(
+            [
+                np.sum(a[: i + 1] * (F[i] - F[: i + 1]) ** 2)
+                + np.sum(b[: i + 1])
+                - 2.0 * np.sum(c[: i + 1] * (F[i] - F[: i + 1]))
+                for i in range(len(F))
+            ]
+        )
+        npt.assert_allclose(aj.variance_.to_numpy(dtype=float), expected, rtol=1e-12, atol=1e-12, equal_nan=True)
+
+
 
 class TestMixtureCureFitter:
     @flaky
