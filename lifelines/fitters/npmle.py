@@ -195,7 +195,8 @@ def scipy_minimize_fit(turnbull_interval_lookup, turnbull_intervals, weights, to
     def negative_log_likelihood(p, turnbull_interval_lookup, weights):
         P = cumulative_sum(p)
         ix = anp.array(list(turnbull_interval_lookup.values()))
-        return -(weights * anp.log(P[ix[:, 1] + 1] - P[ix[:, 0]])).sum()
+        interval_probs = anp.clip(P[ix[:, 1] + 1] - P[ix[:, 0]], 1e-15, np.inf)
+        return -(weights * anp.log(interval_probs)).sum()
 
     def con(p):
         return p.sum() - 1
@@ -215,6 +216,8 @@ def scipy_minimize_fit(turnbull_interval_lookup, turnbull_intervals, weights, to
         tol=tol,
         options={"disp": verbose},
     )
+    if not results.success:
+        warnings.warn("scipy minimize did not converge: %s" % results.message, ConvergenceWarning)
     return results.x
 
 
@@ -238,6 +241,7 @@ def expectation_maximization_fit(
         delta = log_odds(new_p) - log_odds(p)
         for alpha in np.array([1.0, 1.25, 1.95]):
             p_temp = probs(log_odds(p) + alpha * delta)
+            p_temp = p_temp / p_temp.sum()
             ll_temp = log_likelihood(p_temp, turnbull_lookup, weights)
             if best_ll < ll_temp:
                 best_ll = ll_temp
