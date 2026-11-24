@@ -554,11 +554,12 @@ class ParametricUnivariateFitter(UnivariateFitter):
             ):
 
                 initial_value = self._initial_values if previous_results is None else utils._to_1d_array(previous_results.x)
+                use_jac = method != "Nelder-Mead"
 
                 results = minimize(
-                    value_and_grad(negative_log_likelihood),  # pylint: disable=no-value-for-parameter
+                    value_and_grad(negative_log_likelihood) if use_jac else negative_log_likelihood,  # pylint: disable=no-value-for-parameter
                     initial_value,
-                    jac=True,
+                    jac=use_jac,
                     method=method,
                     args=(Ts, E, entry, weights),
                     bounds=self._bounds,
