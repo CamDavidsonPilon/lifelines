@@ -37,7 +37,7 @@ def lowess(x, y, f=2.0 / 3.0, iterations=1):
     function will run faster with a smaller number of iterations.
     """
     n = len(x)
-    r = int(ceil(f * n))
+    r = min(int(ceil(f * n)), n - 1)
     h = np.clip([np.sort(np.abs(x - x[i]))[r] for i in range(n)], 1e-8, np.inf)
     w = np.clip(np.abs((x[:, None] - x[None, :]) / h), 0.0, 1.0)
     w = (1 - w ** 3) ** 3
@@ -52,9 +52,10 @@ def lowess(x, y, f=2.0 / 3.0, iterations=1):
             # pylint: disable=unexpected-keyword-arg
             try:
                 beta = linalg.solve(A, b, assume_a="pos", check_finite=False)
+                yest[i] = beta[0] + beta[1] * x[i]
             except np.linalg.LinAlgError:
-                beta = [0, 0]
-            yest[i] = beta[0] + beta[1] * x[i]
+                w_sum = np.sum(weights)
+                yest[i] = np.sum(weights * y) / w_sum if w_sum > 0 else y[i]
 
         residuals = y - yest
         s = np.median(np.abs(residuals))
