@@ -267,6 +267,16 @@ def test_survival_table_from_events_with_non_trivial_censorship_column():
     assert_frame_equal(table1, table2)
 
 
+@pytest.mark.parametrize("observed_weight", [1.5, 1e16])
+@pytest.mark.parametrize("censored_column", ["censored", "event_at"])
+def test_survival_table_preserves_fractional_censored_weights(observed_weight, censored_column):
+    columns = ["removed", "observed", censored_column, "entrance", "at_risk"]
+    table = utils.survival_table_from_events([1, 1, 2], [1, 0, 0], weights=[observed_weight, 0.25, 0.75], columns=columns)
+
+    npt.assert_array_equal(table.index, [0, 1, 2])
+    npt.assert_array_equal(table[censored_column], [0, 0.25, 0.75])
+
+
 def test_group_survival_table_from_events_on_waltons_data():
     df = load_waltons()
     g, removed, observed, censored = utils.group_survival_table_from_events(df["group"], df["T"], df["E"])

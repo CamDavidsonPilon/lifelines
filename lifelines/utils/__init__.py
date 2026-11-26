@@ -515,19 +515,22 @@ def survival_table_from_events(
         if np.any(birth_times > death_times):
             raise ValueError("birth time must be less than time of death.")
 
-    if weights is None:
-        weights = 1
+    weights = np.asarray(1 if weights is None else weights)
 
     # deal with deaths and censorships
     df = pd.DataFrame(death_times, columns=["event_at"])
-    df[removed] = np.asarray(weights)
-    df[observed] = np.asarray(weights) * (np.asarray(event_observed).astype(bool))
+    df[removed] = weights
+    observed_mask = np.asarray(event_observed, dtype=bool)
+    df[observed] = weights * observed_mask
+    # The requested output name can also be the group key.
+    censored_weights = object()
+    df[censored_weights] = weights * ~observed_mask
     death_table = df.groupby("event_at").sum()
-    death_table[censored] = (death_table[removed] - death_table[observed]).astype(int)
+    death_table[censored] = death_table.pop(censored_weights)
 
     # deal with late births
     births = pd.DataFrame(birth_times, columns=["event_at"])
-    births[entrance] = np.asarray(weights)
+    births[entrance] = weights
     births_table = births.groupby("event_at").sum()
     event_table = death_table.join(births_table, how="outer", sort=True).fillna(0)  # http://wesmckinney.com/blog/?p=414
     event_table[at_risk] = event_table[entrance].cumsum() - event_table[removed].cumsum().shift(1).fillna(0)
@@ -536,7 +539,7 @@ def survival_table_from_events(
     if (collapse) or (intervals is not None):
         event_table = _group_event_table_by_intervals(event_table, intervals)
 
-    if (np.asarray(weights).astype(int) != weights).any():
+    if (weights.astype(int) != weights).any():
         return event_table.astype(float)
     return event_table.astype(int)
 
