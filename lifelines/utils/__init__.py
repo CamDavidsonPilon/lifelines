@@ -643,7 +643,8 @@ def datetimes_to_durations(
         iterable representing end times. These can be strings, or datetimes. These values can be None, or an empty string, which corresponds to censorship.
     fill_date: a datetime, array, Series or DataFrame, optional (default=datetime.Today())
         the date to use if end_times is a missing or empty. This corresponds to last date
-        of observation. Anything after this date is also censored.
+        of observation. Anything after this date is also censored. Use a datetime or an unambiguous date string,
+        such as "2013-10-12", for the cutoff. The dayfirst and format options apply to start_times and end_times.
     freq: string, optional (default='D')
         the units of time to use.  See Pandas 'freq'. Default 'D' for days.
     dayfirst: bool, optional (default=False)
@@ -674,19 +675,20 @@ def datetimes_to_durations(
         E # array([ True, False,  True])
 
     """
-    fill_date_ = pd.Series(fill_date).squeeze()
+    fill_date_ = pd.to_datetime(pd.Series(fill_date).squeeze())
     freq_string = "timedelta64[%s]" % freq
     start_times = pd.Series(start_times).copy()
     end_times = pd.Series(end_times).copy()
 
     C = ~(pd.isnull(end_times).values | end_times.astype(str).isin(na_values or [""]))
-    end_times[~C] = fill_date_
     start_times_ = pd.to_datetime(start_times, dayfirst=dayfirst, format=format)
-    end_times_ = pd.to_datetime(end_times, dayfirst=dayfirst, errors="coerce", format=format)
-    deaths_after_cutoff = end_times_ > pd.to_datetime(fill_date_)
+    # Parse observation dates before applying the independently formatted cutoff.
+    end_times_ = pd.to_datetime(end_times.where(C), dayfirst=dayfirst, errors="coerce", format=format)
+    end_times_ = pd.to_datetime(end_times_.where(C, fill_date_))
+    deaths_after_cutoff = end_times_ > fill_date_
     C[deaths_after_cutoff] = False
     # Avoid duration info leaking from beyond fill date
-    end_times_[deaths_after_cutoff] = pd.to_datetime(fill_date_)
+    end_times_ = end_times_.mask(deaths_after_cutoff, fill_date_)
 
     T = (end_times_ - start_times_).values.astype(freq_string).astype(float)
     if (T < 0).sum():
