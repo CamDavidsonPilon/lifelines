@@ -225,6 +225,32 @@ def test_datetimes_to_durations_will_handle_dates_above_multi_fill_date2():
     npt.assert_almost_equal(T, np.array([2, 3, 4]))
 
 
+@pytest.mark.parametrize("date_format", [None, "%d/%m/%Y"])
+def test_datetimes_to_durations_accepts_an_iso_cutoff_with_non_iso_dates(date_format):
+    start_date = ["13/10/2013", "14/10/2013", "15/10/2013"]
+    end_date = ["15/10/2013", None, "25/10/2013"]
+    T, E = utils.datetimes_to_durations(start_date, end_date, fill_date="2013-10-18", dayfirst=True, format=date_format)
+    npt.assert_array_equal(T, [2, 4, 3])
+    npt.assert_array_equal(E, [True, False, False])
+
+
+def test_datetimes_to_durations_accepts_iso_cutoff_series_with_non_iso_dates():
+    start_date = pd.Series(["13/10/2013", "14/10/2013", "15/10/2013"], index=[30, 10, 20])
+    end_date = pd.Series(["15/10/2013", "", "25/10/2013"], index=start_date.index)
+    last_observation = pd.Series(["2013-10-18", "2013-10-19", "2013-10-20"], index=start_date.index)
+    T, E = utils.datetimes_to_durations(start_date, end_date, fill_date=last_observation, format="%d/%m/%Y")
+    npt.assert_array_equal(T, [2, 5, 5])
+    npt.assert_array_equal(E, [True, False, False])
+
+
+def test_datetimes_to_durations_accepts_timezone_aware_cutoff_with_all_end_dates_missing():
+    start_date = pd.date_range("2013-10-08", periods=2, tz="UTC")
+    last_observation = pd.Timestamp("2013-10-12", tz="UTC")
+    T, E = utils.datetimes_to_durations(start_date, [None, None], fill_date=last_observation)
+    npt.assert_array_equal(T, [4, 3])
+    npt.assert_array_equal(E, [False, False])
+
+
 def test_datetimes_to_durations_censor():
     start_date = ["2013-10-10", "2013-10-09", "2012-10-10"]
     end_date = ["2013-10-13", None, ""]
